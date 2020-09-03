@@ -28,9 +28,36 @@ type NetworkPluginsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of NetworkPlugins. Edit NetworkPlugins_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	CniPlugins *CniPlugins `json:"cniPlugins,omitempty"`
+
+	//HostNetworking *HostNetworking `json:hostNetworking,omitempty"`
 }
+
+type CniPlugins struct {
+	Multus      *Multus      `json:"multus,omitempty"`
+	Whereabouts *Whereabouts `json:"whereabouts,omitempty"`
+	Sriov       *Sriov       `json:"sriov,omitempty"`
+	NMState     *NMState     `json:"nmstate,omitempty"`
+}
+
+type Whereabouts struct {
+	Namespace        string `json:"namespace,omitempty"`
+	WhereaboutsImage string `json:"whereaboutsImage,omitempty"`
+}
+
+type Multus struct {
+	Namespace   string `json:"namespace,omitempty"`
+	MultusImage string `json:"multusImage,omitempty"`
+}
+
+type Sriov struct {
+	Namespace      string `json:"namespace,omitempty"`
+	SriovCniImage  string `json:"sriovCniImage,omitempty"`
+	SriovDpImage   string `json:"sriovDpImage,omitempty"`
+	SriovConfigMap string `json:"sriovConfigMap,omitempty"`
+}
+
+type NMState struct{}
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins
 type NetworkPluginsStatus struct {

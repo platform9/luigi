@@ -34,10 +34,36 @@ spec:
         spec:
           description: NetworkPluginsSpec defines the desired state of NetworkPlugins
           properties:
-            foo:
-              description: Foo is an example field of NetworkPlugins. Edit NetworkPlugins_types.go
-                to remove/update
-              type: string
+            cniPlugins:
+              properties:
+                multus:
+                  properties:
+                    multusImage:
+                      type: string
+                    namespace:
+                      type: string
+                  type: object
+                nmstate:
+                  type: object
+                sriov:
+                  properties:
+                    namespace:
+                      type: string
+                    sriovCniImage:
+                      type: string
+                    sriovConfigMap:
+                      type: string
+                    sriovDpImage:
+                      type: string
+                  type: object
+                whereabouts:
+                  properties:
+                    namespace:
+                      type: string
+                    whereaboutsImage:
+                      type: string
+                  type: object
+              type: object
           type: object
         status:
           description: NetworkPluginsStatus defines the observed state of NetworkPlugins
