@@ -1,0 +1,7 @@
+apiVersion: plumber.k8snetworking.pf9.io/v1
+kind: NetworkPlugins
+metadata:
+  name: networkplugins-sample
+spec:
+  # Add fields here
+  foo: bar
