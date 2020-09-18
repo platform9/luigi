@@ -26,8 +26,7 @@ import (
 	"os"
 	"reflect"
 	"text/template"
-	//"os"
-	//"path/filepath"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,8 +38,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	plumberv1 "github.com/platform9/luigi/api/v1"
-	"github.com/platform9/luigi/apply"
+	plumberv1 "github.com/platform9/luigi/pkg/api/v1"
+	"github.com/platform9/luigi/pkg/apply"
 )
 
 const (
@@ -294,7 +293,7 @@ func (r *NetworkPluginsReconciler) parseNewTemplates(fileList *[]string) error {
 
 	os.MkdirAll(APPLY_DIR, os.ModePerm)
 
-	if plugins := spec.CniPlugins; plugins != nil {
+	if plugins := spec.KubePlugins; plugins != nil {
 		if plugins.Multus != nil {
 			multusConfig := (*MultusT)(plugins.Multus)
 			err := r.parsePlugin(multusConfig, "create")
@@ -328,22 +327,22 @@ func (r *NetworkPluginsReconciler) parseNewTemplates(fileList *[]string) error {
 
 func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 	// First find out which plugins are missing from new spec vs old spec
-	if r.prevSpec == nil || r.prevSpec.CniPlugins == nil {
+	if r.prevSpec == nil || r.prevSpec.KubePlugins == nil {
 		// Old spec was empty, nothing to delete
 		return nil
 	}
 
-	old := r.prevSpec.CniPlugins
+	old := r.prevSpec.KubePlugins
 	os.MkdirAll(DELETE_DIR, os.ModePerm)
 
-	var noCni bool
-	if r.currentSpec.CniPlugins == nil {
-		noCni = true
+	var noPlugins bool
+	if r.currentSpec.KubePlugins == nil {
+		noPlugins = true
 	} else {
-		noCni = false
+		noPlugins = false
 	}
 
-	if (noCni == true || r.currentSpec.CniPlugins.Multus == nil) && old.Multus != nil {
+	if (noPlugins == true || r.currentSpec.KubePlugins.Multus == nil) && old.Multus != nil {
 		multusConfig := (*MultusT)(old.Multus)
 		err := r.parsePlugin(multusConfig, "delete")
 		if err != nil {
@@ -352,7 +351,7 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 		*fileList = append(*fileList, "multus.yaml")
 	}
 
-	if (noCni == true || r.currentSpec.CniPlugins.Whereabouts == nil) && old.Whereabouts != nil {
+	if (noPlugins == true || r.currentSpec.KubePlugins.Whereabouts == nil) && old.Whereabouts != nil {
 		whereaboutsConfig := (*WhereaboutsT)(old.Whereabouts)
 		err := r.parsePlugin(whereaboutsConfig, "delete")
 		if err != nil {
@@ -361,7 +360,7 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 		*fileList = append(*fileList, "whereabouts.yaml")
 	}
 
-	if (noCni == true || r.currentSpec.CniPlugins.Sriov == nil) && old.Sriov != nil {
+	if (noPlugins == true || r.currentSpec.KubePlugins.Sriov == nil) && old.Sriov != nil {
 		sriovConfig := (*SriovT)(old.Sriov)
 		err := r.parsePlugin(sriovConfig, "delete")
 		if err != nil {

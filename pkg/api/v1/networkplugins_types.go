@@ -28,28 +28,32 @@ type NetworkPluginsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	CniPlugins *CniPlugins `json:"cniPlugins,omitempty"`
-
-	//HostNetworking *HostNetworking `json:hostNetworking,omitempty"`
+	KubePlugins *KubePlugins `json:"cniPlugins,omitempty"`
 }
 
-type CniPlugins struct {
-	Multus      *Multus      `json:"multus,omitempty"`
-	Whereabouts *Whereabouts `json:"whereabouts,omitempty"`
-	Sriov       *Sriov       `json:"sriov,omitempty"`
-	NMState     *NMState     `json:"nmstate,omitempty"`
+// KubePlugins specifies which plugins to install
+type KubePlugins struct {
+	Multus               *Multus               `json:"multus,omitempty"`
+	Whereabouts          *Whereabouts          `json:"whereabouts,omitempty"`
+	Sriov                *Sriov                `json:"sriov,omitempty"`
+	NMState              *NMState              `json:"nmstate,omitempty"`
+	NodeFeatureDiscovery *NodeFeatureDiscovery `json:"nodeFeatureDiscovery,omitempty"`
 }
 
+// Whereabouts plugin specific options we can configure
 type Whereabouts struct {
 	Namespace        string `json:"namespace,omitempty"`
 	WhereaboutsImage string `json:"whereaboutsImage,omitempty"`
 }
 
+// Whereabouts plugin specific options we can configure
 type Multus struct {
 	Namespace   string `json:"namespace,omitempty"`
 	MultusImage string `json:"multusImage,omitempty"`
 }
 
+// SRIOV plugins specific options we can configure
+// This installs two plugins: SRIOV CNI and SRIOV Device Plugin
 type Sriov struct {
 	Namespace      string `json:"namespace,omitempty"`
 	SriovCniImage  string `json:"sriovCniImage,omitempty"`
@@ -57,7 +61,11 @@ type Sriov struct {
 	SriovConfigMap string `json:"sriovConfigMap,omitempty"`
 }
 
+// Network Manager State config - TODO
 type NMState struct{}
+
+// Node Feature Discovery - TODO
+type NodeFeatureDiscovery struct{}
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins
 type NetworkPluginsStatus struct {

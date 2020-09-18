@@ -35,8 +35,10 @@ spec:
           description: NetworkPluginsSpec defines the desired state of NetworkPlugins
           properties:
             cniPlugins:
+              description: KubePlugins specifies which plugins to install
               properties:
                 multus:
+                  description: Whereabouts plugin specific options we can configure
                   properties:
                     multusImage:
                       type: string
@@ -44,8 +46,14 @@ spec:
                       type: string
                   type: object
                 nmstate:
+                  description: Network Manager State config - TODO
+                  type: object
+                nodeFeatureDiscovery:
+                  description: Node Feature Discovery - TODO
                   type: object
                 sriov:
+                  description: 'SRIOV plugins specific options we can configure This
+                    installs two plugins: SRIOV CNI and SRIOV Device Plugin'
                   properties:
                     namespace:
                       type: string
@@ -57,6 +65,7 @@ spec:
                       type: string
                   type: object
                 whereabouts:
+                  description: Whereabouts plugin specific options we can configure
                   properties:
                     namespace:
                       type: string
