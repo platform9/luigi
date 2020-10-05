@@ -1,0 +1,118 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: hoststates.plumber.k8s.pf9.io
+spec:
+  group: plumber.k8s.pf9.io
+  names:
+    kind: HostState
+    listKind: HostStateList
+    plural: hoststates
+    singular: hoststate
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: HostState is the Schema for the hoststates API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: HostStateSpec defines the desired state of HostState
+          properties:
+            interfaceStatus:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
+              items:
+                properties:
+                  deviceId:
+                    type: string
+                  mac:
+                    type: string
+                  mtu:
+                    type: integer
+                  pciAddr:
+                    type: string
+                  pfDriver:
+                    type: string
+                  pfName:
+                    type: string
+                  sriovEnabled:
+                    type: boolean
+                  sriovStatus:
+                    properties:
+                      numVfs:
+                        type: integer
+                      totalVfs:
+                        type: integer
+                      vfs:
+                        items:
+                          properties:
+                            id:
+                              type: integer
+                            mac:
+                              type: string
+                            pciAddr:
+                              type: string
+                            qos:
+                              type: integer
+                            spoofchk:
+                              type: boolean
+                            trust:
+                              type: boolean
+                            vfDriver:
+                              type: string
+                            vlan:
+                              type: integer
+                          required:
+                          - id
+                          - mac
+                          - pciAddr
+                          - qos
+                          - spoofchk
+                          - trust
+                          - vfDriver
+                          - vlan
+                          type: object
+                        type: array
+                    type: object
+                  vendorId:
+                    type: string
+                required:
+                - sriovEnabled
+                type: object
+              type: array
+            sysctlConfig:
+              items:
+                type: string
+              type: array
+          type: object
+        status:
+          description: HostStateStatus defines the observed state of HostState
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

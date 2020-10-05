@@ -34,10 +34,21 @@ type NetworkPluginsSpec struct {
 }
 
 type CniPlugins struct {
-	Multus      *Multus      `json:"multus,omitempty"`
-	Whereabouts *Whereabouts `json:"whereabouts,omitempty"`
-	Sriov       *Sriov       `json:"sriov,omitempty"`
-	NMState     *NMState     `json:"nmstate,omitempty"`
+	Multus               *Multus               `json:"multus,omitempty"`
+	Whereabouts          *Whereabouts          `json:"whereabouts,omitempty"`
+	Sriov                *Sriov                `json:"sriov,omitempty"`
+	HostPlumber          *HostPlumber          `json:"hostPlumber,omitempty"`
+	NodeFeatureDiscovery *NodeFeatureDiscovery `json:"nodeFeatureDiscovery,omitempty"`
+}
+
+type NodeFeatureDiscovery struct {
+	Namespace string `json:"namespace,omitempty"`
+	NfdImage  string `json:"nfdImage,omitempty"`
+}
+
+type HostPlumber struct {
+	Namespace        string `json:"namespace,omitempty"`
+	HostPlumberImage string `json:"hostPlumberImage,omitempty"`
 }
 
 type Whereabouts struct {
@@ -56,8 +67,6 @@ type Sriov struct {
 	SriovDpImage   string `json:"sriovDpImage,omitempty"`
 	SriovConfigMap string `json:"sriovConfigMap,omitempty"`
 }
-
-type NMState struct{}
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins
 type NetworkPluginsStatus struct {

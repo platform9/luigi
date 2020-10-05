@@ -1,0 +1,10 @@
+domain: k8s.pf9.io
+repo: hostplumber
+resources:
+- group: plumber
+  kind: HostConfig
+  version: v1
+- group: plumber
+  kind: HostState
+  version: v1
+version: "2"

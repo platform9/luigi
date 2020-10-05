@@ -24,10 +24,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"text/template"
-	//"os"
-	//"path/filepath"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -40,20 +40,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	plumberv1 "github.com/platform9/luigi/api/v1"
-	"github.com/platform9/luigi/apply"
+	"github.com/platform9/luigi/pkg/apply"
 )
 
 const (
-	DEFAULT_NAMESPACE        = "kube-system"
-	MULTUS_IMAGE             = "nfvpe/multus:v3.6"
-	WHEREABOUTS_IMAGE        = "dougbtv/whereabouts:latest"
-	SRIOV_CNI_IMAGE          = "nfvpe/sriov-cni"
-	SRIOV_DP_IMAGE           = "nfvpe/sriov-device-plugin:v3.2"
-	CONFIG_MAP_NAME          = "pf9-networkplugins-config"
-	TEMPLATE_DIR             = "/etc/plugin_templates/"
-	APPLY_DIR                = TEMPLATE_DIR + "apply/"
-	DELETE_DIR               = TEMPLATE_DIR + "delete/"
-	NETWORKPLUGINS_CONFIGMAP = "pf9-networkplugins-configmap"
+	DefaultNamespace        = "kube-system"
+	MultusImage             = "nfvpe/multus:v3.6"
+	WhereaboutsImage        = "xagent003/whereabouts:latest"
+	SriovCniImage           = "nfvpe/sriov-cni"
+	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.2"
+	HostplumberImage        = "platform9/luigi-plumber:latest"
+	NfdImage                = "k8s.gcr.io/nfd/node-feature-discovery:v0.6.0"
+	TemplateDir             = "/etc/plugin_templates/"
+	CreateDir               = TemplateDir + "create/"
+	DeleteDir               = TemplateDir + "delete/"
+	NetworkPluginsConfigMap = "pf9-networkplugins-config"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -68,166 +69,16 @@ type NetworkPluginsReconciler struct {
 type MultusT plumberv1.Multus
 type WhereaboutsT plumberv1.Whereabouts
 type SriovT plumberv1.Sriov
+type HostPlumberT plumberv1.HostPlumber
+type NodeFeatureDiscoveryT plumberv1.NodeFeatureDiscovery
 
 type ApplyPlugin interface {
-	ParseTemplate(string) error
+	WriteConfigToTemplate(string) error
 	ApplyTemplate(string) error
 }
 
-func createFile(config map[string]interface{}, t *template.Template, filename string) error {
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	err = t.Execute(f, config)
-	if err != nil {
-		fmt.Printf("template.Execute failed: %s\n", err)
-		f.Close()
-		return err
-	}
-	f.Close()
-	return nil
-}
-
-func (multusConfig *MultusT) ParseTemplate(outputDir string) error {
-	config := make(map[string]interface{})
-	if multusConfig.Namespace != "" {
-		config["Namespace"] = multusConfig.Namespace
-	} else {
-		config["Namespace"] = DEFAULT_NAMESPACE
-	}
-
-	if multusConfig.MultusImage != "" {
-		config["MultusImage"] = multusConfig.MultusImage
-	} else {
-		config["MultusImage"] = MULTUS_IMAGE
-	}
-
-	t, err := template.ParseFiles(TEMPLATE_DIR + "multus/multus.yaml")
-	if err != nil {
-		fmt.Printf("ERROR PARSEFILE: %v\n", err)
-		return err
-	}
-
-	if err := createFile(config, t, outputDir+"multus.yaml"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (multusConfig *MultusT) ApplyTemplate(outputDir string) error {
-	fmt.Println("Applying Multus")
-	return nil
-}
-
-func (whereaboutsConfig *WhereaboutsT) ParseTemplate(outputDir string) error {
-	config := make(map[string]interface{})
-	fmt.Println("Rendering Whereabouts...")
-	if whereaboutsConfig.Namespace != "" {
-		config["Namespace"] = whereaboutsConfig.Namespace
-	} else {
-		config["Namespace"] = DEFAULT_NAMESPACE
-	}
-
-	if whereaboutsConfig.WhereaboutsImage != "" {
-		config["WhereaboutsImage"] = whereaboutsConfig.WhereaboutsImage
-	} else {
-		config["WhereaboutsImage"] = WHEREABOUTS_IMAGE
-	}
-
-	t, err := template.ParseFiles(TEMPLATE_DIR + "whereabouts/whereabouts.yaml")
-	if err != nil {
-		fmt.Printf("ERROR PARSEFILE: %v\n", err)
-		return err
-	}
-
-	if err := createFile(config, t, outputDir+"whereabouts.yaml"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (whereaboutsConfig *WhereaboutsT) ApplyTemplate(outputDir string) error {
-	fmt.Println("Applying Whereabouts")
-	return nil
-}
-
-func (sriovConfig *SriovT) ParseTemplate(outputDir string) error {
-	config := make(map[string]interface{})
-	fmt.Println("Rendering Sriov...")
-
-	if sriovConfig.Namespace != "" {
-		config["Namespace"] = sriovConfig.Namespace
-	} else {
-		config["Namespace"] = DEFAULT_NAMESPACE
-	}
-
-	if sriovConfig.SriovCniImage != "" {
-		config["SriovCniImage"] = sriovConfig.SriovCniImage
-	} else {
-		config["SriovCniImage"] = SRIOV_CNI_IMAGE
-	}
-
-	if sriovConfig.SriovDpImage != "" {
-		config["SriovDpImage"] = sriovConfig.SriovDpImage
-	} else {
-		config["SriovDpImage"] = SRIOV_DP_IMAGE
-	}
-
-	// Apply the SRIOV CNI
-	t, err := template.ParseFiles(TEMPLATE_DIR + "sriov/sriov-cni.yaml")
-	if err != nil {
-		fmt.Printf("ERROR PARSEFILE: %v\n", err)
-		return err
-	}
-
-	if err := createFile(config, t, outputDir+"sriov-cni.yaml"); err != nil {
-		return err
-	}
-
-	// Apply the SRIOV Device Plugin
-	t, err = template.ParseFiles(TEMPLATE_DIR + "sriov/sriov-deviceplugin.yaml")
-	if err != nil {
-		fmt.Printf("ERROR PARSEFILE: %v\n", err)
-		return err
-	}
-
-	if err := createFile(config, t, outputDir+"sriov-deviceplugin.yaml"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (sriovConfig *SriovT) ApplyTemplate(outputDir string) error {
-	fmt.Println("Applying SRIOV")
-	return nil
-}
-
-func (r *NetworkPluginsReconciler) parsePlugin(plugin ApplyPlugin, mode string) error {
-	var outputDir string
-	switch mode {
-	case "create":
-		outputDir = APPLY_DIR
-	case "delete":
-		outputDir = DELETE_DIR
-	default:
-		fmt.Printf("Invalid option to parsePlugin: %s\n", mode)
-		return errors.NewBadRequest("Invalid option to parsePlugin")
-	}
-
-	if err := plugin.ParseTemplate(outputDir); err != nil {
-		return err
-	}
-
-	if err := plugin.ApplyTemplate(outputDir); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// +kubebuilder:rbac:groups=plumber.k8snetworking.pf9.io,resources=networkplugins,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=plumber.k8snetworking.pf9.io,resources=networkplugins/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=networkplugins,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=networkplugins/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=*,resources=*,verbs=*
 
 func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -256,25 +107,25 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	var fileList []string
-	err = r.parseNewTemplates(&fileList)
+	err = r.parseNewPlugins(&fileList)
 	if err != nil {
 		fmt.Printf("Error applying templates! %v\n", err)
 		return ctrl.Result{}, err
 	}
 	fmt.Printf("Got fileList = %s\n", fileList)
-	err = r.applyDeleteTemplates(&networkPluginsReq, fileList, "create")
+	err = r.createOrDeletePlugins(&networkPluginsReq, fileList, "create")
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	var fileListDelete []string
-	err = r.parseOldTemplates(&fileListDelete)
+	err = r.parseOldPlugins(&fileListDelete)
 	if err != nil {
 		fmt.Printf("Error applying templates! %v\n", err)
 		return ctrl.Result{}, err
 	}
 	fmt.Printf("Got fileList = %s\n", fileList)
-	err = r.applyDeleteTemplates(&networkPluginsReq, fileListDelete, "delete")
+	err = r.createOrDeletePlugins(&networkPluginsReq, fileListDelete, "delete")
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -289,15 +140,216 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	return ctrl.Result{}, nil
 }
 
-func (r *NetworkPluginsReconciler) parseNewTemplates(fileList *[]string) error {
+func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+	if hostPlumberConfig.Namespace != "" {
+		config["Namespace"] = hostPlumberConfig.Namespace
+	} else {
+		config["Namespace"] = DefaultNamespace
+	}
+
+	if hostPlumberConfig.HostPlumberImage != "" {
+		config["HostPlumberImage"] = hostPlumberConfig.HostPlumberImage
+	} else {
+		config["HostPlumberImage"] = HostplumberImage
+	}
+
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "pf9-hostplumber", "hostplumber.yaml"))
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "hostplumber.yaml")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (hostPlumberConfig *HostPlumberT) ApplyTemplate(outputDir string) error {
+	fmt.Println("Applying PF9 Host Plumber")
+	return nil
+}
+
+func (nfdConfig *NodeFeatureDiscoveryT) WriteConfigToTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+
+	if nfdConfig.NfdImage != "" {
+		config["NfdImage"] = nfdConfig.NfdImage
+	} else {
+		config["NfdImage"] = NfdImage
+	}
+
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "node-feature-discovery", "nfd.yaml"))
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "nfd.yaml")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (nfdConfig *NodeFeatureDiscoveryT) ApplyTemplate(outputDir string) error {
+	fmt.Println("Applying Node Feature Discovery")
+	return nil
+}
+
+func (multusConfig *MultusT) WriteConfigToTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+	if multusConfig.Namespace != "" {
+		config["Namespace"] = multusConfig.Namespace
+	} else {
+		config["Namespace"] = DefaultNamespace
+	}
+
+	if multusConfig.MultusImage != "" {
+		config["MultusImage"] = multusConfig.MultusImage
+	} else {
+		config["MultusImage"] = MultusImage
+	}
+
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "multus", "multus.yaml"))
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "multus.yaml")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (multusConfig *MultusT) ApplyTemplate(outputDir string) error {
+	fmt.Println("Applying Multus")
+	return nil
+}
+
+func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+	fmt.Println("Rendering Whereabouts...")
+	if whereaboutsConfig.Namespace != "" {
+		config["Namespace"] = whereaboutsConfig.Namespace
+	} else {
+		config["Namespace"] = DefaultNamespace
+	}
+
+	if whereaboutsConfig.WhereaboutsImage != "" {
+		config["WhereaboutsImage"] = whereaboutsConfig.WhereaboutsImage
+	} else {
+		config["WhereaboutsImage"] = WhereaboutsImage
+	}
+
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "whereabouts", "whereabouts.yaml"))
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "whereabouts.yaml")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (whereaboutsConfig *WhereaboutsT) ApplyTemplate(outputDir string) error {
+	fmt.Println("Applying Whereabouts")
+	return nil
+}
+
+func (sriovConfig *SriovT) WriteConfigToTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+	fmt.Println("Rendering Sriov...")
+
+	if sriovConfig.Namespace != "" {
+		config["Namespace"] = sriovConfig.Namespace
+	} else {
+		config["Namespace"] = DefaultNamespace
+	}
+
+	if sriovConfig.SriovCniImage != "" {
+		config["SriovCniImage"] = sriovConfig.SriovCniImage
+	} else {
+		config["SriovCniImage"] = SriovCniImage
+	}
+
+	if sriovConfig.SriovDpImage != "" {
+		config["SriovDpImage"] = sriovConfig.SriovDpImage
+	} else {
+		config["SriovDpImage"] = SriovDpImage
+	}
+
+	// Apply the SRIOV CNI
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "sriov", "sriov-cni.yaml"))
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, outputDir+"sriov-cni.yaml"); err != nil {
+		return err
+	}
+
+	// Apply the SRIOV Device Plugin
+	t, err = template.ParseFiles(filepath.Join(TemplateDir, "sriov", "sriov-deviceplugin.yaml"))
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "sriov-deviceplugin.yaml")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sriovConfig *SriovT) ApplyTemplate(outputDir string) error {
+	fmt.Println("Applying SRIOV")
+	return nil
+}
+
+func (r *NetworkPluginsReconciler) createPlugin(plugin ApplyPlugin) error {
+	outputDir := CreateDir
+
+	if err := plugin.WriteConfigToTemplate(outputDir); err != nil {
+		return err
+	}
+
+	if err := plugin.ApplyTemplate(outputDir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *NetworkPluginsReconciler) deletePlugin(plugin ApplyPlugin) error {
+	outputDir := DeleteDir
+
+	if err := plugin.WriteConfigToTemplate(outputDir); err != nil {
+		return err
+	}
+
+	if err := plugin.ApplyTemplate(outputDir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *NetworkPluginsReconciler) parseNewPlugins(fileList *[]string) error {
 	var spec *plumberv1.NetworkPluginsSpec = r.currentSpec
 
-	os.MkdirAll(APPLY_DIR, os.ModePerm)
+	if err := os.MkdirAll(CreateDir, os.ModePerm); err != nil {
+		return err
+	}
 
 	if plugins := spec.CniPlugins; plugins != nil {
 		if plugins.Multus != nil {
 			multusConfig := (*MultusT)(plugins.Multus)
-			err := r.parsePlugin(multusConfig, "create")
+			err := r.createPlugin(multusConfig)
 			if err != nil {
 				return err
 			}
@@ -306,7 +358,7 @@ func (r *NetworkPluginsReconciler) parseNewTemplates(fileList *[]string) error {
 
 		if plugins.Sriov != nil {
 			sriovConfig := (*SriovT)(plugins.Sriov)
-			err := r.parsePlugin(sriovConfig, "create")
+			err := r.createPlugin(sriovConfig)
 			if err != nil {
 				return err
 			}
@@ -316,17 +368,35 @@ func (r *NetworkPluginsReconciler) parseNewTemplates(fileList *[]string) error {
 
 		if plugins.Whereabouts != nil {
 			whConfig := (*WhereaboutsT)(plugins.Whereabouts)
-			err := r.parsePlugin(whConfig, "create")
+			err := r.createPlugin(whConfig)
 			if err != nil {
 				return err
 			}
 			*fileList = append(*fileList, "whereabouts.yaml")
 		}
+
+		if plugins.HostPlumber != nil {
+			hostPlumberConfig := (*HostPlumberT)(plugins.HostPlumber)
+			err := r.createPlugin(hostPlumberConfig)
+			if err != nil {
+				return err
+			}
+			*fileList = append(*fileList, "hostplumber.yaml")
+		}
+
+		if plugins.NodeFeatureDiscovery != nil {
+			nfdConfig := (*NodeFeatureDiscoveryT)(plugins.NodeFeatureDiscovery)
+			err := r.createPlugin(nfdConfig)
+			if err != nil {
+				return err
+			}
+			*fileList = append(*fileList, "nfd.yaml")
+		}
 	}
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
+func (r *NetworkPluginsReconciler) parseOldPlugins(fileList *[]string) error {
 	// First find out which plugins are missing from new spec vs old spec
 	if r.prevSpec == nil || r.prevSpec.CniPlugins == nil {
 		// Old spec was empty, nothing to delete
@@ -334,7 +404,7 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 	}
 
 	old := r.prevSpec.CniPlugins
-	os.MkdirAll(DELETE_DIR, os.ModePerm)
+	os.MkdirAll(DeleteDir, os.ModePerm)
 
 	var noCni bool
 	if r.currentSpec.CniPlugins == nil {
@@ -345,7 +415,7 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 
 	if (noCni == true || r.currentSpec.CniPlugins.Multus == nil) && old.Multus != nil {
 		multusConfig := (*MultusT)(old.Multus)
-		err := r.parsePlugin(multusConfig, "delete")
+		err := r.deletePlugin(multusConfig)
 		if err != nil {
 			return err
 		}
@@ -354,7 +424,7 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 
 	if (noCni == true || r.currentSpec.CniPlugins.Whereabouts == nil) && old.Whereabouts != nil {
 		whereaboutsConfig := (*WhereaboutsT)(old.Whereabouts)
-		err := r.parsePlugin(whereaboutsConfig, "delete")
+		err := r.deletePlugin(whereaboutsConfig)
 		if err != nil {
 			return err
 		}
@@ -363,25 +433,44 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 
 	if (noCni == true || r.currentSpec.CniPlugins.Sriov == nil) && old.Sriov != nil {
 		sriovConfig := (*SriovT)(old.Sriov)
-		err := r.parsePlugin(sriovConfig, "delete")
+		err := r.deletePlugin(sriovConfig)
 		if err != nil {
 			return err
 		}
 		*fileList = append(*fileList, "sriov-cni.yaml")
 		*fileList = append(*fileList, "sriov-deviceplugin.yaml")
 	}
+
+	if (noCni == true || r.currentSpec.CniPlugins.HostPlumber == nil) && old.HostPlumber != nil {
+		hostPlumberConfig := (*HostPlumberT)(old.HostPlumber)
+		err := r.deletePlugin(hostPlumberConfig)
+		if err != nil {
+			return err
+		}
+		*fileList = append(*fileList, "hostplumber.yaml")
+	}
+
+	if (noCni == true || r.currentSpec.CniPlugins.NodeFeatureDiscovery == nil) && old.NodeFeatureDiscovery != nil {
+		nfdConfig := (*NodeFeatureDiscoveryT)(old.NodeFeatureDiscovery)
+		err := r.deletePlugin(nfdConfig)
+		if err != nil {
+			return err
+		}
+		*fileList = append(*fileList, "nfd.yaml")
+	}
+
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) applyDeleteTemplates(networkPlugins *plumberv1.NetworkPlugins, fileList []string, mode string) error {
+func (r *NetworkPluginsReconciler) createOrDeletePlugins(networkPlugins *plumberv1.NetworkPlugins, fileList []string, mode string) error {
 	for _, file := range fileList {
 		var fullpath string
 
 		switch mode {
 		case "create":
-			fullpath = APPLY_DIR + file
+			fullpath = filepath.Join(CreateDir, file)
 		case "delete":
-			fullpath = DELETE_DIR + file
+			fullpath = filepath.Join(DeleteDir, file)
 		default:
 			fmt.Printf("Invalid mode to applyDeleteTemplate: %s\n", mode)
 			return errors.NewBadRequest("Invalid option to applyDeleteTemplate")
@@ -440,11 +529,11 @@ func (r *NetworkPluginsReconciler) saveSpecConfig(ctx context.Context, req ctrl.
 
 	cm := &corev1.ConfigMap{}
 	cm.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ConfigMap"}
-	cm.ObjectMeta = metav1.ObjectMeta{Name: NETWORKPLUGINS_CONFIGMAP, Namespace: req.NamespacedName.Namespace}
+	cm.ObjectMeta = metav1.ObjectMeta{Name: NetworkPluginsConfigMap, Namespace: req.NamespacedName.Namespace}
 	cm.Data = map[string]string{"currentSpec": string(jsonSpec)}
 
 	oldcm := &corev1.ConfigMap{}
-	err = r.Get(ctx, types.NamespacedName{Name: NETWORKPLUGINS_CONFIGMAP, Namespace: req.NamespacedName.Namespace}, oldcm)
+	err = r.Get(ctx, types.NamespacedName{Name: NetworkPluginsConfigMap, Namespace: req.NamespacedName.Namespace}, oldcm)
 	if err != nil && errors.IsNotFound(err) {
 		fmt.Printf("Did not find find previous spec, Creating...\n")
 		if err := r.Create(ctx, cm); err != nil {
@@ -469,7 +558,7 @@ func (r *NetworkPluginsReconciler) saveSpecConfig(ctx context.Context, req ctrl.
 
 func (r *NetworkPluginsReconciler) getCurrentConfig(ctx context.Context, req ctrl.Request) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
-	nsm := types.NamespacedName{Name: NETWORKPLUGINS_CONFIGMAP, Namespace: req.NamespacedName.Namespace}
+	nsm := types.NamespacedName{Name: NetworkPluginsConfigMap, Namespace: req.NamespacedName.Namespace}
 
 	if err := r.Get(ctx, nsm, cm); err != nil {
 		if errors.IsNotFound(err) {
@@ -489,6 +578,21 @@ func convertConfigMapToSpec(cm *corev1.ConfigMap) (*plumberv1.NetworkPluginsSpec
 		return nil, err
 	}
 	return spec, nil
+}
+
+func renderTemplateToFile(config map[string]interface{}, t *template.Template, filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	err = t.Execute(f, config)
+	if err != nil {
+		fmt.Printf("template.Execute failed: %s\n", err)
+		f.Close()
+		return err
+	}
+	f.Close()
+	return nil
 }
 
 func (r *NetworkPluginsReconciler) SetupWithManager(mgr ctrl.Manager) error {

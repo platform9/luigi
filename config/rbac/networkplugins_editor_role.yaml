@@ -5,7 +5,7 @@ metadata:
   name: networkplugins-editor-role
 rules:
 - apiGroups:
-  - plumber.k8snetworking.pf9.io
+  - plumber.k8s.pf9.io
   resources:
   - networkplugins
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - plumber.k8snetworking.pf9.io
+  - plumber.k8s.pf9.io
   resources:
   - networkplugins/status
   verbs:

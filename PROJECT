@@ -1,4 +1,4 @@
-domain: k8snetworking.pf9.io
+domain: k8s.pf9.io
 repo: github.com/platform9/luigi
 resources:
 - group: plumber

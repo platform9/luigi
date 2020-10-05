@@ -1,0 +1,13 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: HostConfig
+metadata:
+  name: hostconfig-sample
+spec:
+  # Add fields here
+  sriovConfig:
+    - pciAddr: 0000:03:00.1
+      numVfs: 32
+      vfDriver: vfio-pci
+    - pfName: enp3s0f0
+      numVfs: 32
+      vfDriver: vfio-pci
