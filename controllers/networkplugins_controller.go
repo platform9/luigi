@@ -26,8 +26,7 @@ import (
 	"os"
 	"reflect"
 	"text/template"
-	//"os"
-	//"path/filepath"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
