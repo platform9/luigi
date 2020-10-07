@@ -26,7 +26,6 @@ import (
 	"strconv"
 
 	"github.com/go-logr/logr"
-	"github.com/prometheus/common/log"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,9 +35,9 @@ import (
 )
 
 const (
-	sysClassNet   = "/sys/class/net/"
-	sysPciDrivers = "/sys/bus/pci/drivers/"
-	sysPciDevices = "/sys/bus/pci/devices/"
+	sysClassNet   = "/host/sys/class/net/"
+	sysPciDrivers = "/host/sys/bus/pci/drivers/"
+	sysPciDevices = "/host/sys/bus/pci/devices/"
 )
 
 // HostConfigReconciler reconciles a HostConfig object
@@ -54,8 +53,8 @@ type HostConfigReconciler struct {
 // +kubebuilder:rbac:groups=*,resources=*,verbs=*
 
 func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("hostconfig", req.NamespacedName)
+	ctx := context.Background()
+	log := r.Log.WithValues("hostconfig", req.NamespacedName)
 
 	var hostConfigReq = plumberv1.HostConfig{}
 	if err := r.Get(ctx, req.NamespacedName, &hostConfigReq); err != nil {
@@ -66,26 +65,31 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 
 	r.currentSpec = &hostConfigReq.Spec
 
-	sriovConfigList := hostConfigSpec.SriovConfig
+	sriovConfigList := r.currentSpec.SriovConfig
 
 	for _, sriovConfig := range sriovConfigList {
 		var pfName string
 		var pfList []string
+		var err error
 		if sriovConfig.PfName != nil {
+			if verifyPfExists(pfName) == false {
+				fmt.Printf("NIC %s does not exist on host, skipping...\n", pfName)
+				return ctrl.Result{}, nil
+			}
 			pfName = *sriovConfig.PfName
 			pfList = append(pfList, pfName)
 		} else if sriovConfig.PciAddr != nil {
 			pfName, err = getPfNameForPciAddr(*sriovConfig.PciAddr)
 			if err != nil {
 				fmt.Printf("Failed to find PciAddr %s\n", *sriovConfig.PciAddr)
-				return
+				return ctrl.Result{}, err
 			}
 			pfList = append(pfList, pfName)
 		} else if sriovConfig.VendorId != nil && sriovConfig.DeviceId != nil {
 			pfList, err = getPfListForVendorAndDevice(*sriovConfig.VendorId, *sriovConfig.DeviceId)
 			if err != nil {
 				fmt.Printf("Failed to find any devices with vendor %s device %s\n", *sriovConfig.VendorId, *sriovConfig.DeviceId)
-				return
+				return ctrl.Result{}, err
 			}
 		}
 		fmt.Printf("Got matching PFs: %v\n", pfList)
@@ -98,10 +102,82 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				// If driver field is omitted, set the default kernel driver
 				enableDriverForVfs(pfName, "ixgbevf")
 			}
+
+			if sriovConfig.MTU != nil && *sriovConfig.MTU > 0 {
+				if err := setMtuForPf(pfName, *sriovConfig.MTU); err != nil {
+					fmt.Printf("Failed setting MTU %d on %s\n", *sriovConfig.MTU, pfName)
+					return ctrl.Result{}, err
+				}
+			}
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func verifyPfExists(pfName string) bool {
+	_, err := os.Lstat(filepath.Join(sysClassNet, pfName))
+	if err != nil {
+		return false
+	} else {
+		return true
+	}
+}
+
+func setMtuForPf(pfName string, mtu int) error {
+	mtuStr := []byte(strconv.Itoa(mtu))
+	mtuFile := filepath.Join(sysClassNet, pfName, "mtu")
+	if err := ioutil.WriteFile(mtuFile, mtuStr, 0644); err != nil {
+		fmt.Printf("Failed to set MTU %d for interface %s: %s\n", mtu, pfName, err)
+		return err
+	}
+
+	return setMtuForAllVfs(pfName, mtu)
+}
+
+func setMtuForAllVfs(pfName string, mtu int) error {
+	pfDevice, _ := filepath.EvalSymlinks(filepath.Join(sysClassNet, pfName, "device"))
+	fmt.Printf("Setting MTU for all VFs under PF path: %s\n", pfDevice)
+	err := filepath.Walk(pfDevice, func(path string, info os.FileInfo, err error) error {
+		name := info.Name()
+		if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+			isVF, _ := filepath.Match("virtfn*", name)
+			if isVF == false {
+				return nil
+			}
+			vfPath, _ := filepath.EvalSymlinks(path)
+			if err := setMtuForVf(vfPath, mtu); err != nil {
+				fmt.Printf("Failed setting MTU for VF: %s\n", vfPath)
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Printf("Failed to set MTU on VFs for PF %s\n", pfName)
+		return err
+	}
+	return nil
+}
+
+func setMtuForVf(vfPath string, mtu int) error {
+	mtuStr := []byte(strconv.Itoa(mtu))
+	vfNetPath := filepath.Join(vfPath, "net")
+	vfEthDevice := vfNetPath + "/eth*"
+	vfEth, _ := filepath.Glob(vfEthDevice)
+	// This is a valid error, no eth device for DPDK driver or non-Ethernet devices
+	if len(vfEth) == 0 {
+		fmt.Printf("Skipping VF %s, no kernel Ethernet device\n", filepath.Base(vfPath))
+		return nil
+	}
+	// There will only ever be 1 ethernet device per VF on kernel driver
+	eth := vfEth[0]
+	mtuFile := filepath.Join(eth, "mtu")
+	if err := ioutil.WriteFile(mtuFile, mtuStr, 0644); err != nil {
+		fmt.Printf("Failed to set MTU %d for interface %s: %s\n", mtu, filepath.Base(vfPath), err)
+		return err
+	}
+	return nil
 }
 
 func getTotalVfsForPf(pfName string) (int, error) {
@@ -295,14 +371,13 @@ func enableDriverForVfs(pfName string, driver string) {
 func getPfListForVendorAndDevice(vendor, device string) ([]string, error) {
 	// This function will return any IF that matches vendor and device ID
 	// If optional PCI address is given, it must match
-	netDir := "/sys/class/net"
 	var matchingPfs []string
 	fmt.Printf("foo\n")
-	err := filepath.Walk(netDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(sysClassNet, func(path string, info os.FileInfo, err error) error {
 		ifName := info.Name()
 		// Everything in this directory is a symlink
 		ifPath, _ := filepath.EvalSymlinks(path)
-		if ifPath == netDir {
+		if ifPath == sysClassNet {
 			fmt.Printf("skipping netDir\n")
 			return nil
 		}
@@ -359,13 +434,12 @@ func getPfListForVendorAndDevice(vendor, device string) ([]string, error) {
 }
 
 func getPfNameForPciAddr(pciAddr string) (string, error) {
-	netDir := "/sys/class/net"
 	var matchingPf string
-	err := filepath.Walk(netDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(sysClassNet, func(path string, info os.FileInfo, err error) error {
 		ifName := info.Name()
 		// Everything in this directory is a symlink
 		ifPath, _ := filepath.EvalSymlinks(path)
-		if ifPath == netDir {
+		if ifPath == sysClassNet {
 			return nil
 		}
 		if ifName == "lo" {

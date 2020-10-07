@@ -4,4 +4,7 @@ metadata:
   name: hostconfig-sample
 spec:
   # Add fields here
-  foo: bar
+  sriovConfig:
+    - pfName: enp3s0f1
+      numVfs: 16
+      driver: ixgbevf

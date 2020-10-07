@@ -28,8 +28,18 @@ type HostConfigSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of HostConfig. Edit HostConfig_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	SriovConfig []SriovConfig `json:"sriovConfig,omitempty"`
+}
+
+type SriovConfig struct {
+	PfName   *string `json:"pfName,omitempty"`
+	PciAddr  *string `json:"pciAddr,omitempty"`
+	VendorId *string `json:"vendorId,omitempty"`
+	DeviceId *string `json:"deviceId,omitempty"`
+	NumVfs   *int    `json:"numVfs,omitempty"`
+	MTU      *int    `json:"mtu,omitempty"`
+	VfDriver *string `json:"vfdriver,omitempty"`
+	PfDriver *string `json:"pfDriver,omitempty"`
 }
 
 // HostConfigStatus defines the observed state of HostConfig
