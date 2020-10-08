@@ -51,7 +51,7 @@ spec:
                     type: string
                   vendorId:
                     type: string
-                  vfdriver:
+                  vfDriver:
                     type: string
                 type: object
               type: array

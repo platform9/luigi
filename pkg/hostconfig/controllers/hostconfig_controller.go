@@ -56,6 +56,7 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	ctx := context.Background()
 	log := r.Log.WithValues("hostconfig", req.NamespacedName)
 
+	var specApplied bool = false
 	var hostConfigReq = plumberv1.HostConfig{}
 	if err := r.Get(ctx, req.NamespacedName, &hostConfigReq); err != nil {
 		log.Error(err, "unable to fetch HostConfig")
@@ -71,29 +72,37 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		var pfName string
 		var pfList []string
 		var err error
+		fmt.Printf("hello\n")
 		if sriovConfig.PfName != nil {
-			if verifyPfExists(pfName) == false {
-				fmt.Printf("NIC %s does not exist on host, skipping...\n", pfName)
-				return ctrl.Result{}, nil
-			}
+			fmt.Printf("Configuring via PF: %s\n", *sriovConfig.PfName)
 			pfName = *sriovConfig.PfName
 			pfList = append(pfList, pfName)
 		} else if sriovConfig.PciAddr != nil {
+			fmt.Printf("Now configuring via PCI: %s\n", *sriovConfig.PciAddr)
 			pfName, err = getPfNameForPciAddr(*sriovConfig.PciAddr)
 			if err != nil {
 				fmt.Printf("Failed to find PciAddr %s\n", *sriovConfig.PciAddr)
 				return ctrl.Result{}, err
 			}
+			fmt.Printf("Got pfName %s matching PCI %s\n", pfName, *sriovConfig.PciAddr)
+			fmt.Printf("pfList before = %s\n", pfList)
 			pfList = append(pfList, pfName)
+			fmt.Printf("pfList after = %s\n", pfList)
 		} else if sriovConfig.VendorId != nil && sriovConfig.DeviceId != nil {
+			fmt.Printf("Configuring via device/vendor\n")
 			pfList, err = getPfListForVendorAndDevice(*sriovConfig.VendorId, *sriovConfig.DeviceId)
 			if err != nil {
 				fmt.Printf("Failed to find any devices with vendor %s device %s\n", *sriovConfig.VendorId, *sriovConfig.DeviceId)
 				return ctrl.Result{}, err
 			}
 		}
-		fmt.Printf("Got matching PFs: %v\n", pfList)
+		fmt.Printf("pf9pf9asdasdasd Got matchisdsng PFs: %v\n", pfList)
 		for _, pfName := range pfList {
+			if verifyPfExists(pfName) == false {
+				fmt.Printf("NIC %s does not exist on host, skipping...\n", pfName)
+				specApplied = false
+				continue
+			}
 			createVfsForPfName(pfName, *sriovConfig.NumVfs)
 
 			if sriovConfig.VfDriver != nil {
@@ -110,6 +119,9 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				}
 			}
 		}
+	}
+	if specApplied == true {
+		fmt.Printf("Spec was applied on this host!\n")
 	}
 
 	return ctrl.Result{}, nil

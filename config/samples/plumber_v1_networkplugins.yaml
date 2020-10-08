@@ -11,3 +11,4 @@ spec:
       namespace: "kube-system"
       whereaboutsImage: "xagent003/whereabouts:latest"
     sriov: {}
+

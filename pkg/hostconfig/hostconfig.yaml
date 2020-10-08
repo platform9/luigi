@@ -46,7 +46,7 @@ spec:
                     type: string
                   vendorId:
                     type: string
-                  vfdriver:
+                  vfDriver:
                     type: string
                 type: object
               type: array
@@ -232,13 +232,16 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
       containers:
       - args:
         - --metrics-addr=127.0.0.1:8080
-        - --enable-leader-election
         command:
         - /manager
         image: xagent003/luigi:phase2
+        imagePullPolicy: Always
         name: manager
         securityContext:
           privileged: true

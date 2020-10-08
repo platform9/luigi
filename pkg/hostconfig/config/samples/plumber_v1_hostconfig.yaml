@@ -5,6 +5,9 @@ metadata:
 spec:
   # Add fields here
   sriovConfig:
-    - pfName: enp3s0f1
-      numVfs: 16
-      driver: ixgbevf
+    - pciAddr: 0000:03:00.1
+      numVfs: 32
+      vfDriver: vfio-pci
+    - pfName: enp3s0f0
+      numVfs: 32
+      vfDriver: vfio-pci

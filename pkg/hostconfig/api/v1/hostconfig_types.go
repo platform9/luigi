@@ -38,7 +38,7 @@ type SriovConfig struct {
 	DeviceId *string `json:"deviceId,omitempty"`
 	NumVfs   *int    `json:"numVfs,omitempty"`
 	MTU      *int    `json:"mtu,omitempty"`
-	VfDriver *string `json:"vfdriver,omitempty"`
+	VfDriver *string `json:"vfDriver,omitempty"`
 	PfDriver *string `json:"pfDriver,omitempty"`
 }
 
