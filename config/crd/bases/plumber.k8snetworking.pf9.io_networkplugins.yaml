@@ -36,14 +36,19 @@ spec:
           properties:
             cniPlugins:
               properties:
+                hostplumber:
+                  properties:
+                    hostPlumberImage:
+                      type: string
+                    namespace:
+                      type: string
+                  type: object
                 multus:
                   properties:
                     multusImage:
                       type: string
                     namespace:
                       type: string
-                  type: object
-                nmstate:
                   type: object
                 sriov:
                   properties:

@@ -48,6 +48,7 @@ const (
 	WHEREABOUTS_IMAGE        = "dougbtv/whereabouts:latest"
 	SRIOV_CNI_IMAGE          = "nfvpe/sriov-cni"
 	SRIOV_DP_IMAGE           = "nfvpe/sriov-device-plugin:v3.2"
+	HOSTPLUMBER_IMAGE        = "xagent003/luigi-hostconfig:latest"
 	CONFIG_MAP_NAME          = "pf9-networkplugins-config"
 	TEMPLATE_DIR             = "/etc/plugin_templates/"
 	APPLY_DIR                = TEMPLATE_DIR + "apply/"
@@ -67,6 +68,7 @@ type NetworkPluginsReconciler struct {
 type MultusT plumberv1.Multus
 type WhereaboutsT plumberv1.Whereabouts
 type SriovT plumberv1.Sriov
+type HostPlumberT plumberv1.HostPlumber
 
 type ApplyPlugin interface {
 	ParseTemplate(string) error
@@ -85,6 +87,37 @@ func createFile(config map[string]interface{}, t *template.Template, filename st
 		return err
 	}
 	f.Close()
+	return nil
+}
+
+func (hostPlumberConfig *HostPlumberT) ParseTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+	if hostPlumberConfig.Namespace != "" {
+		config["Namespace"] = hostPlumberConfig.Namespace
+	} else {
+		config["Namespace"] = DEFAULT_NAMESPACE
+	}
+
+	if hostPlumberConfig.HostPlumberImage != "" {
+		config["HostPlumberImage"] = hostPlumberConfig.HostPlumberImage
+	} else {
+		config["HostPlumberImage"] = HOSTPLUMBER_IMAGE
+	}
+
+	t, err := template.ParseFiles(TEMPLATE_DIR + "pf9-hostconfig/hostconfig.yaml")
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := createFile(config, t, outputDir+"hostconfig.yaml"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (hostPlumberConfig *HostPlumberT) ApplyTemplate(outputDir string) error {
+	fmt.Println("Applying PF9 Host Plumber")
 	return nil
 }
 
@@ -321,6 +354,15 @@ func (r *NetworkPluginsReconciler) parseNewTemplates(fileList *[]string) error {
 			}
 			*fileList = append(*fileList, "whereabouts.yaml")
 		}
+
+		if plugins.HostPlumber != nil {
+			hostPlumberConfig := (*HostPlumberT)(plugins.HostPlumber)
+			err := r.parsePlugin(hostPlumberConfig, "create")
+			if err != nil {
+				return err
+			}
+			*fileList = append(*fileList, "hostconfig.yaml")
+		}
 	}
 	return nil
 }
@@ -369,6 +411,16 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 		*fileList = append(*fileList, "sriov-cni.yaml")
 		*fileList = append(*fileList, "sriov-deviceplugin.yaml")
 	}
+
+	if (noCni == true || r.currentSpec.CniPlugins.HostPlumber == nil) && old.HostPlumber != nil {
+		hostPlumberConfig := (*HostPlumberT)(old.HostPlumber)
+		err := r.parsePlugin(hostPlumberConfig, "delete")
+		if err != nil {
+			return err
+		}
+		*fileList = append(*fileList, "hostconfig.yaml")
+	}
+
 	return nil
 }
 
