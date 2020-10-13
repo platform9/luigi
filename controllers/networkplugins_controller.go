@@ -48,7 +48,8 @@ const (
 	WHEREABOUTS_IMAGE        = "dougbtv/whereabouts:latest"
 	SRIOV_CNI_IMAGE          = "nfvpe/sriov-cni"
 	SRIOV_DP_IMAGE           = "nfvpe/sriov-device-plugin:v3.2"
-	HOSTPLUMBER_IMAGE        = "xagent003/luigi-hostconfig:latest"
+	HOSTPLUMBER_IMAGE        = "xagent003/luigi-plumber:latest"
+	NFD_IMAGE                = "k8s.gcr.io/nfd/node-feature-discovery:v0.6.0"
 	CONFIG_MAP_NAME          = "pf9-networkplugins-config"
 	TEMPLATE_DIR             = "/etc/plugin_templates/"
 	APPLY_DIR                = TEMPLATE_DIR + "apply/"
@@ -69,6 +70,7 @@ type MultusT plumberv1.Multus
 type WhereaboutsT plumberv1.Whereabouts
 type SriovT plumberv1.Sriov
 type HostPlumberT plumberv1.HostPlumber
+type NodeFeatureDiscoveryT plumberv1.NodeFeatureDiscovery
 
 type ApplyPlugin interface {
 	ParseTemplate(string) error
@@ -118,6 +120,37 @@ func (hostPlumberConfig *HostPlumberT) ParseTemplate(outputDir string) error {
 
 func (hostPlumberConfig *HostPlumberT) ApplyTemplate(outputDir string) error {
 	fmt.Println("Applying PF9 Host Plumber")
+	return nil
+}
+
+func (nfdConfig *NodeFeatureDiscoveryT) ParseTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+	if nfdConfig.Namespace != "" {
+		config["Namespace"] = nfdConfig.Namespace
+	} else {
+		config["Namespace"] = DEFAULT_NAMESPACE
+	}
+
+	if nfdConfig.NfdImage != "" {
+		config["NfdImage"] = nfdConfig.NfdImage
+	} else {
+		config["NfdImage"] = NFD_IMAGE
+	}
+
+	t, err := template.ParseFiles(TEMPLATE_DIR + "node-feature-discovery/nfd.yaml")
+	if err != nil {
+		fmt.Printf("ERROR PARSEFILE: %v\n", err)
+		return err
+	}
+
+	if err := createFile(config, t, outputDir+"nfd.yaml"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (nfdConfig *NodeFeatureDiscoveryT) ApplyTemplate(outputDir string) error {
+	fmt.Println("Applying Node Feature Discovery")
 	return nil
 }
 
@@ -363,6 +396,15 @@ func (r *NetworkPluginsReconciler) parseNewTemplates(fileList *[]string) error {
 			}
 			*fileList = append(*fileList, "hostconfig.yaml")
 		}
+
+		if plugins.NodeFeatureDiscovery != nil {
+			nfdConfig := (*NodeFeatureDiscoveryT)(plugins.NodeFeatureDiscovery)
+			err := r.parsePlugin(nfdConfig, "create")
+			if err != nil {
+				return err
+			}
+			*fileList = append(*fileList, "nfd.yaml")
+		}
 	}
 	return nil
 }
@@ -419,6 +461,15 @@ func (r *NetworkPluginsReconciler) parseOldTemplates(fileList *[]string) error {
 			return err
 		}
 		*fileList = append(*fileList, "hostconfig.yaml")
+	}
+
+	if (noCni == true || r.currentSpec.CniPlugins.NodeFeatureDiscovery == nil) && old.NodeFeatureDiscovery != nil {
+		nfdConfig := (*NodeFeatureDiscoveryT)(old.NodeFeatureDiscovery)
+		err := r.parsePlugin(nfdConfig, "delete")
+		if err != nil {
+			return err
+		}
+		*fileList = append(*fileList, "nfd.yaml")
 	}
 
 	return nil

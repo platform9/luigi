@@ -1,0 +1,15 @@
+apiVersion: plumber.k8snetworking.pf9.io/v1
+kind: NetworkPlugins
+metadata:
+  name: networkplugins-sample11
+spec:
+  # Add fields here
+  cniPlugins:
+    hostPlumber: {}
+    nodeFeatureDiscovery: {}
+    #multus:
+      #namespace: "kube-system"
+    #whereabouts:
+      #namespace: "kube-system"
+      #whereaboutsImage: "xagent003/whereabouts:latest"
+    #sriov: {}

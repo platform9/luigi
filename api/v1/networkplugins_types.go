@@ -34,10 +34,16 @@ type NetworkPluginsSpec struct {
 }
 
 type CniPlugins struct {
-	Multus      *Multus      `json:"multus,omitempty"`
-	Whereabouts *Whereabouts `json:"whereabouts,omitempty"`
-	Sriov       *Sriov       `json:"sriov,omitempty"`
-	HostPlumber *HostPlumber `json:"hostplumber,omitempty"`
+	Multus               *Multus               `json:"multus,omitempty"`
+	Whereabouts          *Whereabouts          `json:"whereabouts,omitempty"`
+	Sriov                *Sriov                `json:"sriov,omitempty"`
+	HostPlumber          *HostPlumber          `json:"hostPlumber,omitempty"`
+	NodeFeatureDiscovery *NodeFeatureDiscovery `json:"nodeFeatureDiscovery,omitempty"`
+}
+
+type NodeFeatureDiscovery struct {
+	Namespace string `json:"namespace,omitempty"`
+	NfdImage  string `json:"nfdImage,omitempty"`
 }
 
 type HostPlumber struct {

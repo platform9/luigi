@@ -36,7 +36,7 @@ spec:
           properties:
             cniPlugins:
               properties:
-                hostplumber:
+                hostPlumber:
                   properties:
                     hostPlumberImage:
                       type: string
@@ -48,6 +48,13 @@ spec:
                     multusImage:
                       type: string
                     namespace:
+                      type: string
+                  type: object
+                nodeFeatureDiscovery:
+                  properties:
+                    namespace:
+                      type: string
+                    nfdImage:
                       type: string
                   type: object
                 sriov:
