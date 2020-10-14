@@ -7,9 +7,8 @@ spec:
   cniPlugins:
     hostPlumber: {}
     nodeFeatureDiscovery: {}
-    #multus:
-      #namespace: "kube-system"
-    #whereabouts:
-      #namespace: "kube-system"
-      #whereaboutsImage: "xagent003/whereabouts:latest"
-    #sriov: {}
+    multus: {}
+    whereabouts:
+      namespace: "kube-system"
+      whereaboutsImage: "xagent003/whereabouts:latest"
+    sriov: {}

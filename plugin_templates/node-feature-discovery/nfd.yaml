@@ -79,12 +79,6 @@ spec:
                 fieldPath: spec.nodeName
           image: {{ .NfdImage }}
           name: nfd-master
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
           command:
             - "nfd-master"
 ## Enable TLS authentication
@@ -151,12 +145,6 @@ spec:
                 fieldPath: spec.nodeName
           image: {{ .NfdImage }}
           name: nfd-worker
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
           command:
             - "nfd-worker"
           args:
