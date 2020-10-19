@@ -358,7 +358,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         hostNetwork: true
-        image: {{ .HostPlumberImage}}
+        image: {{ .HostPlumberImage }}
         name: manager
         securityContext:
           privileged: true

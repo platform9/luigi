@@ -343,28 +343,28 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      tolerations:
-      - key: node-role.kubernetes.io/master
-        operator: Exists
-        effect: NoSchedule
       containers:
       - args:
         - --metrics-addr=127.0.0.1:8080
         command:
         - /manager
+        env:
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        hostNetwork: true
         image: {{ .HostPlumberImage }}
         name: manager
         securityContext:
           privileged: true
-        hostNetwork: true
-        env:
-          - name: K8S_NODE_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
         volumeMounts:
-        - name: host
-          mountPath: /host
+        - mountPath: /host
+          name: host
       - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
@@ -377,6 +377,6 @@ spec:
           name: https
       terminationGracePeriodSeconds: 10
       volumes:
-      - name: host
-        hostPath:
+      - hostPath:
           path: /
+        name: host
