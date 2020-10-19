@@ -45,6 +45,7 @@ type HostConfigReconciler struct {
 	client.Client
 	Log         logr.Logger
 	Scheme      *runtime.Scheme
+	NodeName    string
 	currentSpec *plumberv1.HostConfigSpec
 }
 

@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +29,7 @@ import (
 
 	plumberv1 "hostconfig/api/v1"
 	"hostconfig/controllers"
+	hoststate "hostconfig/hoststate"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -54,6 +56,12 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
+	nodeName := os.Getenv("K8S_NODE_NAME")
+	if nodeName == "" {
+		fmt.Printf("K8S_NODE_NAME env variable not set")
+		os.Exit(1)
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
@@ -67,13 +75,17 @@ func main() {
 	}
 
 	if err = (&controllers.HostConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("HostConfig"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("HostConfig"),
+		Scheme:   mgr.GetScheme(),
+		NodeName: nodeName,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HostConfig")
 		os.Exit(1)
 	}
+
+	hoststate.DiscoverHostState(nodeName, mgr)
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

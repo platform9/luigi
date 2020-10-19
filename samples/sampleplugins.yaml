@@ -5,7 +5,8 @@ metadata:
 spec:
   # Add fields here
   cniPlugins:
-    hostPlumber: {}
+    #hostPlumber:
+      #namespace: "luigi-system"
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:

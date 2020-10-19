@@ -34,10 +34,72 @@ spec:
         spec:
           description: HostStateSpec defines the desired state of HostState
           properties:
-            foo:
-              description: Foo is an example field of HostState. Edit HostState_types.go
-                to remove/update
-              type: string
+            interfaceStatus:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
+              items:
+                properties:
+                  currentSriovConfig:
+                    properties:
+                      numVfs:
+                        type: integer
+                      totalVfs:
+                        type: integer
+                      vfs:
+                        items:
+                          properties:
+                            id:
+                              type: integer
+                            mac:
+                              type: string
+                            pciAddr:
+                              type: string
+                            qos:
+                              type: integer
+                            spoofchk:
+                              type: boolean
+                            trust:
+                              type: boolean
+                            vfDriver:
+                              type: string
+                            vlan:
+                              type: integer
+                          required:
+                          - id
+                          - mac
+                          - pciAddr
+                          - qos
+                          - spoofchk
+                          - trust
+                          - vfDriver
+                          - vlan
+                          type: object
+                        type: array
+                    type: object
+                  deviceId:
+                    type: string
+                  mac:
+                    type: string
+                  mtu:
+                    type: integer
+                  pciAddr:
+                    type: string
+                  pfDriver:
+                    type: string
+                  pfName:
+                    type: string
+                  sriovEnabled:
+                    type: boolean
+                  vendorId:
+                    type: string
+                required:
+                - sriovEnabled
+                type: object
+              type: array
+            sysctlConfig:
+              items:
+                type: string
+              type: array
           type: object
         status:
           description: HostStateStatus defines the observed state of HostState

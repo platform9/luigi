@@ -27,15 +27,43 @@ import (
 type HostStateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of HostState. Edit HostState_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	InterfaceStatus []*InterfaceStatus `json:"interfaceStatus,omitempty"`
+	Sysctl          []string           `json:"sysctlConfig,omitempty"`
 }
 
 // HostStateStatus defines the observed state of HostState
 type HostStateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+}
+
+type InterfaceStatus struct {
+	PfName       string       `json:"pfName,omitempty"`
+	PciAddr      string       `json:"pciAddr,omitempty"`
+	VendorId     string       `json:"vendorId,omitempty"`
+	DeviceId     string       `json:"deviceId,omitempty"`
+	MacAddr      string       `json:"mac,omitempty"`
+	MTU          int          `json:"mtu,omitempty"`
+	PfDriver     string       `json:"pfDriver,omitempty"`
+	SriovEnabled bool         `json:"sriovEnabled"`
+	SriovStatus  *SriovStatus `json:"currentSriovConfig,omitempty"`
+}
+
+type SriovStatus struct {
+	TotalVfs int       `json:"totalVfs,omitempty"`
+	NumVfs   int       `json:"numVfs,omitempty"`
+	Vfs      []*VfInfo `json:"vfs,omitempty"`
+}
+
+type VfInfo struct {
+	ID       int    `json:"id"`
+	VfDriver string `json:"vfDriver"`
+	PciAddr  string `json:"pciAddr"`
+	Mac      string `json:"mac"`
+	Vlan     int    `json:"vlan"`
+	Qos      int    `json:"qos"`
+	Spoofchk bool   `json:"spoofchk"`
+	Trust    bool   `json:"trust"`
 }
 
 // +kubebuilder:object:root=true
