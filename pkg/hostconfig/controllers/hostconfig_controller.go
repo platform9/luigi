@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	plumberv1 "hostconfig/api/v1"
+	hoststate "hostconfig/hoststate"
 )
 
 const (
@@ -124,6 +125,8 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	if specApplied == true {
 		fmt.Printf("Spec was applied on this host!\n")
 	}
+
+	hoststate.DiscoverHostState(r.NodeName, r.Client)
 
 	return ctrl.Result{}, nil
 }

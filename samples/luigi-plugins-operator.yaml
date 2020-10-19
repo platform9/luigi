@@ -37,7 +37,7 @@ spec:
           properties:
             cniPlugins:
               properties:
-                hostplumber:
+                hostPlumber:
                   properties:
                     hostPlumberImage:
                       type: string
@@ -267,14 +267,8 @@ spec:
         command:
         - /manager
         image: xagent003/luigi-plugins:latest
+        imagePullPolicy: Always
         name: manager
-        resources:
-          limits:
-            cpu: 100m
-            memory: 30Mi
-          requests:
-            cpu: 100m
-            memory: 20Mi
       - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/

@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 /*
@@ -297,7 +296,7 @@ func (r *HostStateReconciler) discoverHwState() error {
 	return nil
 }
 
-func DiscoverHostState(nodeName string, mgr manager.Manager) {
+func DiscoverHostState(nodeName string, k8sclient client.Client) {
 	ctx := context.Background()
 	linkList, _ := netlink.LinkList()
 	for _, link := range linkList {
@@ -305,7 +304,7 @@ func DiscoverHostState(nodeName string, mgr manager.Manager) {
 	}
 
 	hrc := new(HostStateReconciler)
-	hrc.client = mgr.GetClient()
+	hrc.client = k8sclient
 	hrc.currentSpec = new(plumberv1.HostStateSpec)
 
 	hrc.discoverHwState()
@@ -319,7 +318,7 @@ func DiscoverHostState(nodeName string, mgr manager.Manager) {
 	oldHostState := &plumberv1.HostState{}
 	newHostState := &plumberv1.HostState{}
 	newHostState.Name = nodeName
-	newHostState.Namespace = "luigi-system"
+	newHostState.Namespace = os.Getenv("K8S_NAMESPACE")
 	newHostState.Spec = *hrc.currentSpec
 
 	nsn := types.NamespacedName{Name: nodeName, Namespace: "luigi-system"}

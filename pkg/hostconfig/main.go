@@ -84,7 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	hoststate.DiscoverHostState(nodeName, mgr)
+	hoststate.DiscoverHostState(nodeName, mgr.GetClient())
 
 	// +kubebuilder:scaffold:builder
 
