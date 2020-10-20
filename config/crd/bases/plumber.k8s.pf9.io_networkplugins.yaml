@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: networkplugins.plumber.k8snetworking.pf9.io
+  name: networkplugins.plumber.k8s.pf9.io
 spec:
-  group: plumber.k8snetworking.pf9.io
+  group: plumber.k8s.pf9.io
   names:
     kind: NetworkPlugins
     listKind: NetworkPluginsList

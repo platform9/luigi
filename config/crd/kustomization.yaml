@@ -2,7 +2,7 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/plumber.k8snetworking.pf9.io_networkplugins.yaml
+- bases/plumber.k8s.pf9.io_networkplugins.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

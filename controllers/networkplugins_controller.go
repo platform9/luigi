@@ -125,11 +125,6 @@ func (hostPlumberConfig *HostPlumberT) ApplyTemplate(outputDir string) error {
 
 func (nfdConfig *NodeFeatureDiscoveryT) ParseTemplate(outputDir string) error {
 	config := make(map[string]interface{})
-	if nfdConfig.Namespace != "" {
-		config["Namespace"] = nfdConfig.Namespace
-	} else {
-		config["Namespace"] = DEFAULT_NAMESPACE
-	}
 
 	if nfdConfig.NfdImage != "" {
 		config["NfdImage"] = nfdConfig.NfdImage
@@ -291,8 +286,8 @@ func (r *NetworkPluginsReconciler) parsePlugin(plugin ApplyPlugin, mode string) 
 	return nil
 }
 
-// +kubebuilder:rbac:groups=plumber.k8snetworking.pf9.io,resources=networkplugins,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=plumber.k8snetworking.pf9.io,resources=networkplugins/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=networkplugins,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=networkplugins/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=*,resources=*,verbs=*
 
 func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
