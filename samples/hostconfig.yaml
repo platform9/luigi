@@ -6,9 +6,9 @@ spec:
   # Add fields here
   sriovConfig:
     - pfName: enp3s0f1
-      numVfs: 4
+      numVfs: 8
       vfDriver: vfio-pci
       mtu: 9000
     - pfName: enp3s0f0
-      numVfs: 4
+      numVfs: 8
       vfDriver: ixgbevf

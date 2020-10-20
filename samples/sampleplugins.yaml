@@ -5,11 +5,11 @@ metadata:
 spec:
   # Add fields here
   cniPlugins:
-    #hostPlumber:
-      #namespace: "luigi-system"
-    #nodeFeatureDiscovery: {}
-    #multus: {}
-    #whereabouts:
-      #namespace: "kube-system"
-      #whereaboutsImage: "xagent003/whereabouts:latest"
+    hostPlumber:
+      namespace: "luigi-system"
+    nodeFeatureDiscovery: {}
+    multus: {}
+    whereabouts:
+      namespace: "kube-system"
+      whereaboutsImage: "xagent003/whereabouts:latest"
     #sriov: {}
