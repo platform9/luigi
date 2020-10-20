@@ -45,7 +45,7 @@ import (
 const (
 	DEFAULT_NAMESPACE        = "kube-system"
 	MULTUS_IMAGE             = "nfvpe/multus:v3.6"
-	WHEREABOUTS_IMAGE        = "dougbtv/whereabouts:latest"
+	WHEREABOUTS_IMAGE        = "xagent003/whereabouts:latest"
 	SRIOV_CNI_IMAGE          = "nfvpe/sriov-cni"
 	SRIOV_DP_IMAGE           = "nfvpe/sriov-device-plugin:v3.2"
 	HOSTPLUMBER_IMAGE        = "xagent003/luigi-plumber:latest"
