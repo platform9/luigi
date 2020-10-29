@@ -41,34 +41,30 @@ const (
 	sysPciDevices = "/host/sys/bus/pci/devices/"
 )
 
-// HostConfigReconciler reconciles a HostConfig object
-type HostConfigReconciler struct {
+// HostNetworkConfigReconciler reconciles a HostNetworkConfig object
+type HostNetworkConfigReconciler struct {
 	client.Client
-	Log         logr.Logger
-	Scheme      *runtime.Scheme
-	NodeName    string
-	currentSpec *plumberv1.HostConfigSpec
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	NodeName string
 }
 
 // +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=hostconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=hostconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=*,resources=*,verbs=*
 
-func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *HostNetworkConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("hostconfig", req.NamespacedName)
 
 	var specApplied bool = false
-	var hostConfigReq = plumberv1.HostConfig{}
+	var hostConfigReq = plumberv1.HostNetworkConfig{}
 	if err := r.Get(ctx, req.NamespacedName, &hostConfigReq); err != nil {
-		log.Error(err, "unable to fetch HostConfig")
-		fmt.Println("Unable to fetch new HostConfig CRD!!!")
+		log.Error(err, "unable to fetch HostNetworkConfig")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	r.currentSpec = &hostConfigReq.Spec
-
-	sriovConfigList := r.currentSpec.SriovConfig
+	sriovConfigList := hostConfigReq.Spec.SriovConfig
 
 	for _, sriovConfig := range sriovConfigList {
 		var pfName string
@@ -99,7 +95,7 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		}
 		fmt.Printf("Got matching PFs: %v\n", pfList)
 		for _, pfName := range pfList {
-			if verifyPfExists(pfName) == false {
+			if !verifyPfExists(pfName) {
 				fmt.Printf("NIC %s does not exist on host, skipping...\n", pfName)
 				specApplied = false
 				continue
@@ -132,11 +128,7 @@ func (r *HostConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 
 func verifyPfExists(pfName string) bool {
 	_, err := os.Lstat(filepath.Join(sysClassNet, pfName))
-	if err != nil {
-		return false
-	} else {
-		return true
-	}
+	return err == nil
 }
 
 func setMtuForPf(pfName string, mtu int) error {
@@ -479,8 +471,8 @@ func getPfNameForPciAddr(pciAddr string) (string, error) {
 	return matchingPf, err
 }
 
-func (r *HostConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *HostNetworkConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&plumberv1.HostConfig{}).
+		For(&plumberv1.HostNetworkConfig{}).
 		Complete(r)
 }

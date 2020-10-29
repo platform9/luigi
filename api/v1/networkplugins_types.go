@@ -28,17 +28,21 @@ type NetworkPluginsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	CniPlugins *CniPlugins `json:"cniPlugins,omitempty"`
-
-	//HostNetworking *HostNetworking `json:hostNetworking,omitempty"`
+	Plugins *Plugins `json:"plugins,omitempty"`
 }
 
-type CniPlugins struct {
+type Plugins struct {
 	Multus               *Multus               `json:"multus,omitempty"`
 	Whereabouts          *Whereabouts          `json:"whereabouts,omitempty"`
 	Sriov                *Sriov                `json:"sriov,omitempty"`
 	HostPlumber          *HostPlumber          `json:"hostPlumber,omitempty"`
 	NodeFeatureDiscovery *NodeFeatureDiscovery `json:"nodeFeatureDiscovery,omitempty"`
+	OVS                  *Ovs                  `json:"ovs,omitempty"`
+}
+
+type Ovs struct {
+	Namespace string `json:"namespace,omitempty"`
+	OvsImage  string `json:"ovsImage,omitempty"`
 }
 
 type NodeFeatureDiscovery struct {

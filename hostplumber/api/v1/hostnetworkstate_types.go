@@ -23,16 +23,16 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// HostStateSpec defines the desired state of HostState
-type HostStateSpec struct {
+// HostNetworkStateSpec defines the desired state of HostNetworkState
+type HostNetworkStateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	InterfaceStatus []*InterfaceStatus `json:"interfaceStatus,omitempty"`
 	Sysctl          []string           `json:"sysctlConfig,omitempty"`
 }
 
-// HostStateStatus defines the observed state of HostState
-type HostStateStatus struct {
+// HostNetworkStateStatus defines the observed state of HostNetworkState
+type HostNetworkStateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -68,24 +68,24 @@ type VfInfo struct {
 
 // +kubebuilder:object:root=true
 
-// HostState is the Schema for the hoststates API
-type HostState struct {
+// HostNetworkState is the Schema for the hostnetworkstates API
+type HostNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HostStateSpec   `json:"spec,omitempty"`
-	Status HostStateStatus `json:"status,omitempty"`
+	Spec   HostNetworkStateSpec   `json:"spec,omitempty"`
+	Status HostNetworkStateStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// HostStateList contains a list of HostState
-type HostStateList struct {
+// HostNetworkStateList contains a list of HostNetworkState
+type HostNetworkStateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HostState `json:"items"`
+	Items           []HostNetworkState `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HostState{}, &HostStateList{})
+	SchemeBuilder.Register(&HostNetworkState{}, &HostNetworkStateList{})
 }

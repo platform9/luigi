@@ -10,6 +10,5 @@ spec:
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
-      namespace: "kube-system"
       whereaboutsImage: "platform9/whereabouts:latest"
-    sriov: {}
+    #sriov: {}

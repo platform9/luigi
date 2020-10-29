@@ -22,7 +22,7 @@ const (
 
 type HostStateReconciler struct {
 	client      client.Client
-	currentSpec *plumberv1.HostStateSpec
+	currentSpec *plumberv1.HostNetworkStateSpec
 }
 
 func getTotalVfs(devicePath string) int {
@@ -264,7 +264,7 @@ func DiscoverHostState(nodeName string, k8sclient client.Client) {
 
 	hrc := new(HostStateReconciler)
 	hrc.client = k8sclient
-	hrc.currentSpec = new(plumberv1.HostStateSpec)
+	hrc.currentSpec = new(plumberv1.HostNetworkStateSpec)
 
 	hrc.discoverHwState()
 
@@ -274,8 +274,8 @@ func DiscoverHostState(nodeName string, k8sclient client.Client) {
 	}
 	fmt.Printf("\n%s\n\n", string(d))
 
-	oldHostState := &plumberv1.HostState{}
-	newHostState := &plumberv1.HostState{}
+	oldHostState := &plumberv1.HostNetworkState{}
+	newHostState := &plumberv1.HostNetworkState{}
 	newHostState.Name = nodeName
 	newHostState.Namespace = os.Getenv("K8S_NAMESPACE")
 	newHostState.Spec = *hrc.currentSpec

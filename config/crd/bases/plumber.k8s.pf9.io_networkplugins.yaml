@@ -34,7 +34,7 @@ spec:
         spec:
           description: NetworkPluginsSpec defines the desired state of NetworkPlugins
           properties:
-            cniPlugins:
+            plugins:
               properties:
                 hostPlumber:
                   properties:
@@ -55,6 +55,13 @@ spec:
                     namespace:
                       type: string
                     nfdImage:
+                      type: string
+                  type: object
+                ovs:
+                  properties:
+                    namespace:
+                      type: string
+                    ovsImage:
                       type: string
                   type: object
                 sriov:

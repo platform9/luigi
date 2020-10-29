@@ -23,8 +23,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// HostConfigSpec defines the desired state of HostConfig
-type HostConfigSpec struct {
+// HostNetworkConfigSpec defines the desired state of HostNetworkConfig
+type HostNetworkConfigSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -42,32 +42,32 @@ type SriovConfig struct {
 	PfDriver *string `json:"pfDriver,omitempty"`
 }
 
-// HostConfigStatus defines the observed state of HostConfig
-type HostConfigStatus struct {
+// HostNetworkConfigStatus defines the observed state of HostNetworkConfig
+type HostNetworkConfigStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
 
-// HostConfig is the Schema for the hostconfigs API
-type HostConfig struct {
+// HostNetworkConfig is the Schema for the HostNetworkConfigs API
+type HostNetworkConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HostConfigSpec   `json:"spec,omitempty"`
-	Status HostConfigStatus `json:"status,omitempty"`
+	Spec   HostNetworkConfigSpec   `json:"spec,omitempty"`
+	Status HostNetworkConfigStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// HostConfigList contains a list of HostConfig
-type HostConfigList struct {
+// HostNetworkConfigList contains a list of HostNetworkConfig
+type HostNetworkConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HostConfig `json:"items"`
+	Items           []HostNetworkConfig `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HostConfig{}, &HostConfigList{})
+	SchemeBuilder.Register(&HostNetworkConfig{}, &HostNetworkConfigList{})
 }
