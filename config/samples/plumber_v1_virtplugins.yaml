@@ -1,0 +1,7 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: VirtPlugins
+metadata:
+  name: virtplugins-sample
+spec:
+  # Add fields here
+  foo: bar

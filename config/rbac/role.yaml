@@ -32,3 +32,23 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - virtplugins
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - virtplugins/status
+  verbs:
+  - get
+  - patch
+  - update
