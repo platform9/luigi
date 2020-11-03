@@ -41,26 +41,26 @@ const (
 	sysPciDevices = "/host/sys/bus/pci/devices/"
 )
 
-// HostNetworkConfigReconciler reconciles a HostNetworkConfig object
-type HostNetworkConfigReconciler struct {
+// HostNetworkTemplateReconciler reconciles a HostNetworkTemplate object
+type HostNetworkTemplateReconciler struct {
 	client.Client
 	Log      logr.Logger
 	Scheme   *runtime.Scheme
 	NodeName string
 }
 
-// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=hostconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=hostconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=hostnetworktemplates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=hostnetworktemplates/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=*,resources=*,verbs=*
 
-func (r *HostNetworkConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("hostconfig", req.NamespacedName)
 
 	var specApplied bool = false
-	var hostConfigReq = plumberv1.HostNetworkConfig{}
+	var hostConfigReq = plumberv1.HostNetworkTemplate{}
 	if err := r.Get(ctx, req.NamespacedName, &hostConfigReq); err != nil {
-		log.Error(err, "unable to fetch HostNetworkConfig")
+		log.Error(err, "unable to fetch HostNetworkTemplate")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -471,8 +471,8 @@ func getPfNameForPciAddr(pciAddr string) (string, error) {
 	return matchingPf, err
 }
 
-func (r *HostNetworkConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *HostNetworkTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&plumberv1.HostNetworkConfig{}).
+		For(&plumberv1.HostNetworkTemplate{}).
 		Complete(r)
 }

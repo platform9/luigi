@@ -20,9 +20,9 @@ const (
 	sysPciDevices = "/host/sys/bus/pci/devices/"
 )
 
-type HostStateReconciler struct {
+type HostNetworkInfo struct {
 	client      client.Client
-	currentSpec *plumberv1.HostNetworkStateSpec
+	currentSpec *plumberv1.HostNetworkSpec
 }
 
 func getTotalVfs(devicePath string) int {
@@ -142,7 +142,7 @@ func populateVfInfo(info *plumberv1.SriovStatus, devicePath, pfName string) erro
 	return nil
 }
 
-func (r *HostStateReconciler) addNetPciDevice(devicePath, ifName string) error {
+func (r *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 	var ifStatus *plumberv1.InterfaceStatus = new(plumberv1.InterfaceStatus)
 
 	ifStatus.PfName = ifName
@@ -216,7 +216,7 @@ func (r *HostStateReconciler) addNetPciDevice(devicePath, ifName string) error {
 	return nil
 }
 
-func (r *HostStateReconciler) discoverHwState() error {
+func (r *HostNetworkInfo) discoverHwState() error {
 	err := filepath.Walk(sysClassNet, func(path string, info os.FileInfo, err error) error {
 		ifName := info.Name()
 		ifPath, _ := filepath.EvalSymlinks(path)
@@ -262,9 +262,9 @@ func DiscoverHostState(nodeName string, k8sclient client.Client) {
 		fmt.Printf("link = %+v\n", link)
 	}
 
-	hrc := new(HostStateReconciler)
+	hrc := new(HostNetworkInfo)
 	hrc.client = k8sclient
-	hrc.currentSpec = new(plumberv1.HostNetworkStateSpec)
+	hrc.currentSpec = new(plumberv1.HostNetworkSpec)
 
 	hrc.discoverHwState()
 
@@ -274,8 +274,8 @@ func DiscoverHostState(nodeName string, k8sclient client.Client) {
 	}
 	fmt.Printf("\n%s\n\n", string(d))
 
-	oldHostState := &plumberv1.HostNetworkState{}
-	newHostState := &plumberv1.HostNetworkState{}
+	oldHostState := &plumberv1.HostNetwork{}
+	newHostState := &plumberv1.HostNetwork{}
 	newHostState.Name = nodeName
 	newHostState.Namespace = os.Getenv("K8S_NAMESPACE")
 	newHostState.Spec = *hrc.currentSpec

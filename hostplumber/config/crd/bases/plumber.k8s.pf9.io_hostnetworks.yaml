@@ -6,18 +6,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: hoststates.plumber.k8s.pf9.io
+  name: hostnetworks.plumber.k8s.pf9.io
 spec:
   group: plumber.k8s.pf9.io
   names:
-    kind: HostState
-    listKind: HostStateList
-    plural: hoststates
-    singular: hoststate
+    kind: HostNetwork
+    listKind: HostNetworkList
+    plural: hostnetworks
+    singular: hostnetwork
   scope: Namespaced
   validation:
     openAPIV3Schema:
-      description: HostNetworkState is the Schema for the hostnetworkstates API
+      description: HostNetwork is the Schema for the HostNetworks API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -32,7 +32,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: HostNetworkStateSpec defines the desired state of HostNetworkState
+          description: HostNetworkSpec defines the desired state of HostNetwork
           properties:
             interfaceStatus:
               description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -102,7 +102,7 @@ spec:
               type: array
           type: object
         status:
-          description: HostNetworkStateStatus defines the observed state of HostNetworkState
+          description: HostNetworkStatus defines the observed state of HostNetwork
           type: object
       type: object
   version: v1

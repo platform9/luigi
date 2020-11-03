@@ -1,14 +1,14 @@
 apiVersion: plumber.k8s.pf9.io/v1
-kind: HostConfig
+kind: HostNetworkTemplate
 metadata:
   name: hostconfig-kernel-enp3
 spec:
   # Add fields here
   sriovConfig:
     - pfName: enp3s0f1
-      numVfs: 8
+      numVfs: 4
       vfDriver: vfio-pci
-      mtu: 1500
+      mtu: 9000
     - pfName: enp3s0f0
-      numVfs: 8
+      numVfs: 4
       vfDriver: ixgbevf

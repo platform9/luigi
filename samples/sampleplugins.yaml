@@ -4,10 +4,10 @@ metadata:
   name: networkplugins-sample11
 spec:
   # Add fields here
-  cniPlugins:
+  plugins:
     hostPlumber:
-      namespace: "luigi-system"
-    nodeFeatureDiscovery: {}
+      hostPlumberImage: "xagent003/luigi-plumber:latest"
+    #nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
       whereaboutsImage: "platform9/whereabouts:latest"

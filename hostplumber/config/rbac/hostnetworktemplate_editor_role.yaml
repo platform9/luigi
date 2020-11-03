@@ -2,12 +2,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: hostconfig-editor-role
+  name: hostnetworktemplate-editor-role
 rules:
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
-  - hostconfigs
+  - hostnetworktemplates
   verbs:
   - create
   - delete
@@ -19,6 +19,6 @@ rules:
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
-  - hostconfigs/status
+  - hostnetworktemplates/status
   verbs:
   - get

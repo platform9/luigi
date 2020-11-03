@@ -1,20 +1,24 @@
-# permissions for end users to view hostconfigs.
+# permissions for end users to edit hoststates.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: hostconfig-viewer-role
+  name: hostnetwork-editor-role
 rules:
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
-  - hostconfigs
+  - hostnetworks
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
-  - hostconfigs/status
+  - hostnetworks/status
   verbs:
   - get

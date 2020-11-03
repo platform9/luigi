@@ -23,8 +23,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// HostNetworkConfigSpec defines the desired state of HostNetworkConfig
-type HostNetworkConfigSpec struct {
+// HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
+type HostNetworkTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -42,32 +42,32 @@ type SriovConfig struct {
 	PfDriver *string `json:"pfDriver,omitempty"`
 }
 
-// HostNetworkConfigStatus defines the observed state of HostNetworkConfig
-type HostNetworkConfigStatus struct {
+// HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate
+type HostNetworkTemplateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
 
-// HostNetworkConfig is the Schema for the HostNetworkConfigs API
-type HostNetworkConfig struct {
+// HostNetworkTemplate is the Schema for the HostNetworkTemplates API
+type HostNetworkTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HostNetworkConfigSpec   `json:"spec,omitempty"`
-	Status HostNetworkConfigStatus `json:"status,omitempty"`
+	Spec   HostNetworkTemplateSpec   `json:"spec,omitempty"`
+	Status HostNetworkTemplateStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// HostNetworkConfigList contains a list of HostNetworkConfig
-type HostNetworkConfigList struct {
+// HostNetworkTemplateList contains a list of HostNetworkTemplate
+type HostNetworkTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HostNetworkConfig `json:"items"`
+	Items           []HostNetworkTemplate `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HostNetworkConfig{}, &HostNetworkConfigList{})
+	SchemeBuilder.Register(&HostNetworkTemplate{}, &HostNetworkTemplateList{})
 }

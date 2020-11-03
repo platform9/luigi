@@ -4,18 +4,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: hostconfigs.plumber.k8s.pf9.io
+  name: hostnetworks.plumber.k8s.pf9.io
 spec:
   group: plumber.k8s.pf9.io
   names:
-    kind: HostConfig
-    listKind: HostConfigList
-    plural: hostconfigs
-    singular: hostconfig
+    kind: HostNetwork
+    listKind: HostNetworkList
+    plural: hostnetworks
+    singular: hostnetwork
   scope: Namespaced
   validation:
     openAPIV3Schema:
-      description: HostConfig is the Schema for the hostconfigs API
+      description: HostNetwork is the Schema for the HostNetworks API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
@@ -26,75 +26,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: HostConfigSpec defines the desired state of HostConfig
-          properties:
-            sriovConfig:
-              items:
-                properties:
-                  deviceId:
-                    type: string
-                  mtu:
-                    type: integer
-                  numVfs:
-                    type: integer
-                  pciAddr:
-                    type: string
-                  pfDriver:
-                    type: string
-                  pfName:
-                    type: string
-                  vendorId:
-                    type: string
-                  vfDriver:
-                    type: string
-                type: object
-              type: array
-          type: object
-        status:
-          description: HostConfigStatus defines the observed state of HostConfig
-          type: object
-      type: object
-  version: v1
-  versions:
-  - name: v1
-    served: true
-    storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
----
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
-  creationTimestamp: null
-  name: hoststates.plumber.k8s.pf9.io
-spec:
-  group: plumber.k8s.pf9.io
-  names:
-    kind: HostState
-    listKind: HostStateList
-    plural: hoststates
-    singular: hoststate
-  scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      description: HostState is the Schema for the hoststates API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: HostStateSpec defines the desired state of HostState
+          description: HostNetworkSpec defines the desired state of HostNetwork
           properties:
             interfaceStatus:
               description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run "make" to regenerate code after modifying this file'
@@ -163,7 +95,75 @@ spec:
               type: array
           type: object
         status:
-          description: HostStateStatus defines the observed state of HostState
+          description: HostNetworkStatus defines the observed state of HostNetwork
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: hostnetworktemplates.plumber.k8s.pf9.io
+spec:
+  group: plumber.k8s.pf9.io
+  names:
+    kind: HostNetworkTemplate
+    listKind: HostNetworkTemplateList
+    plural: hostnetworktemplates
+    singular: hostnetworktemplate
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: HostNetworkTemplate is the Schema for the HostNetworkTemplates API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
+          properties:
+            sriovConfig:
+              items:
+                properties:
+                  deviceId:
+                    type: string
+                  mtu:
+                    type: integer
+                  numVfs:
+                    type: integer
+                  pciAddr:
+                    type: string
+                  pfDriver:
+                    type: string
+                  pfName:
+                    type: string
+                  vendorId:
+                    type: string
+                  vfDriver:
+                    type: string
+                type: object
+              type: array
+          type: object
+        status:
+          description: HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate
           type: object
       type: object
   version: v1
@@ -226,7 +226,7 @@ rules:
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
-  - hostconfigs
+  - hostnetworktemplates
   verbs:
   - create
   - delete
@@ -238,7 +238,7 @@ rules:
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
-  - hostconfigs/status
+  - hostnetworktemplates/status
   verbs:
   - get
   - patch
@@ -343,10 +343,6 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      tolerations:
-        - key: node-role.kubernetes.io/master
-          operator: "Exists"
-          effect: NoSchedule
       containers:
       - args:
         - --metrics-addr=127.0.0.1:18080
@@ -379,8 +375,12 @@ spec:
         ports:
         - containerPort: 8443
           name: https
-      terminationGracePeriodSeconds: 10
       hostNetwork: true
+      terminationGracePeriodSeconds: 10
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
       volumes:
       - hostPath:
           path: /

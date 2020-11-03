@@ -6,18 +6,19 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: hostconfigs.plumber.k8s.pf9.io
+  name: hostnetworktemplates.plumber.k8s.pf9.io
 spec:
   group: plumber.k8s.pf9.io
   names:
-    kind: HostConfig
-    listKind: HostConfigList
-    plural: hostconfigs
-    singular: hostconfig
+    kind: HostNetworkTemplate
+    listKind: HostNetworkTemplateList
+    plural: hostnetworktemplates
+    singular: hostnetworktemplate
   scope: Namespaced
   validation:
     openAPIV3Schema:
-      description: HostConfig is the Schema for the hostconfigs API
+      description: HostNetworkTemplate is the Schema for the HostNetworkTemplates
+        API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -32,7 +33,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: HostConfigSpec defines the desired state of HostConfig
+          description: HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
           properties:
             sriovConfig:
               items:
@@ -57,7 +58,7 @@ spec:
               type: array
           type: object
         status:
-          description: HostConfigStatus defines the observed state of HostConfig
+          description: HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate
           type: object
       type: object
   version: v1

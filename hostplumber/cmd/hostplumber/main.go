@@ -74,13 +74,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.HostNetworkConfigReconciler{
+	if err = (&controllers.HostNetworkTemplateReconciler{
 		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("HostNetworkConfig"),
+		Log:      ctrl.Log.WithName("controllers").WithName("HostNetworkTemplate"),
 		Scheme:   mgr.GetScheme(),
 		NodeName: nodeName,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HostNetworkConfig")
+		setupLog.Error(err, "unable to create controller", "controller", "HostNetworkTemplate")
 		os.Exit(1)
 	}
 

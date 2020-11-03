@@ -23,16 +23,16 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// HostNetworkStateSpec defines the desired state of HostNetworkState
-type HostNetworkStateSpec struct {
+// HostNetworkSpec defines the desired state of HostNetwork
+type HostNetworkSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	InterfaceStatus []*InterfaceStatus `json:"interfaceStatus,omitempty"`
 	Sysctl          []string           `json:"sysctlConfig,omitempty"`
 }
 
-// HostNetworkStateStatus defines the observed state of HostNetworkState
-type HostNetworkStateStatus struct {
+// HostNetworkStatus defines the observed state of HostNetwork
+type HostNetworkStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -68,24 +68,24 @@ type VfInfo struct {
 
 // +kubebuilder:object:root=true
 
-// HostNetworkState is the Schema for the hostnetworkstates API
-type HostNetworkState struct {
+// HostNetwork is the Schema for the HostNetworks API
+type HostNetwork struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HostNetworkStateSpec   `json:"spec,omitempty"`
-	Status HostNetworkStateStatus `json:"status,omitempty"`
+	Spec   HostNetworkSpec   `json:"spec,omitempty"`
+	Status HostNetworkStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// HostNetworkStateList contains a list of HostNetworkState
-type HostNetworkStateList struct {
+// HostNetworkList contains a list of HostNetwork
+type HostNetworkList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HostNetworkState `json:"items"`
+	Items           []HostNetwork `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HostNetworkState{}, &HostNetworkStateList{})
+	SchemeBuilder.Register(&HostNetwork{}, &HostNetworkList{})
 }

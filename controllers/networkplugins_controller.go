@@ -115,7 +115,7 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	var fileList []string
-	err = r.parseNewPlugins(reqContainer, fileList)
+	err = r.parseNewPlugins(reqContainer, &fileList)
 	if err != nil {
 		log.Error(err, "Error applying new plugin templates")
 		return ctrl.Result{}, err
@@ -127,7 +127,7 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	var fileListMissing []string
-	err = r.parseMissingPlugins(reqContainer, fileListMissing)
+	err = r.parseMissingPlugins(reqContainer, &fileListMissing)
 	if err != nil {
 		log.Error(err, "Error applying templates!")
 		return ctrl.Result{}, err
@@ -174,7 +174,7 @@ func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir string) e
 }
 
 func (hostPlumberConfig *HostPlumberT) ApplyTemplate(outputDir string) error {
-	fmt.Printf("Applying PF9 Host Plumber")
+	fmt.Printf("Applying PF9 Host Plumber\n")
 	return nil
 }
 
@@ -199,7 +199,7 @@ func (nfdConfig *NodeFeatureDiscoveryT) WriteConfigToTemplate(outputDir string) 
 }
 
 func (nfdConfig *NodeFeatureDiscoveryT) ApplyTemplate(outputDir string) error {
-	fmt.Printf("Applying Node Feature Discovery")
+	fmt.Printf("Applying Node Feature Discovery\n")
 	return nil
 }
 
@@ -229,7 +229,7 @@ func (multusConfig *MultusT) WriteConfigToTemplate(outputDir string) error {
 }
 
 func (multusConfig *MultusT) ApplyTemplate(outputDir string) error {
-	fmt.Printf("Applying Multus")
+	fmt.Printf("Applying Multus\n")
 	return nil
 }
 
@@ -259,7 +259,7 @@ func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir string) e
 }
 
 func (whereaboutsConfig *WhereaboutsT) ApplyTemplate(outputDir string) error {
-	fmt.Printf("Applying Whereabouts")
+	fmt.Printf("Applying Whereabouts\n")
 	return nil
 }
 
@@ -315,6 +315,7 @@ func (r *NetworkPluginsReconciler) createPlugin(plugin ApplyPlugin) error {
 	outputDir := CreateDir
 
 	if err := plugin.WriteConfigToTemplate(outputDir); err != nil {
+		fmt.Printf("WriteConfigToTemplate returned error: %s\n", err)
 		return err
 	}
 
@@ -339,19 +340,22 @@ func (r *NetworkPluginsReconciler) deletePlugin(plugin ApplyPlugin) error {
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, fileList []string) error {
+func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, fileList *[]string) error {
 	if err := os.MkdirAll(CreateDir, os.ModePerm); err != nil {
 		return err
 	}
+
+	r.Log.Info("new plugins: ", "plugins", req.currentSpec.Plugins)
 
 	if plugins := req.currentSpec.Plugins; plugins != nil {
 		if plugins.Multus != nil {
 			multusConfig := (*MultusT)(plugins.Multus)
 			err := r.createPlugin(multusConfig)
 			if err != nil {
+				fmt.Printf("error: %s\n", err)
 				return err
 			}
-			fileList = append(fileList, "multus.yaml")
+			*fileList = append(*fileList, "multus.yaml")
 		}
 
 		if plugins.Sriov != nil {
@@ -360,8 +364,8 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 			if err != nil {
 				return err
 			}
-			fileList = append(fileList, "sriov-cni.yaml")
-			fileList = append(fileList, "sriov-deviceplugin.yaml")
+			*fileList = append(*fileList, "sriov-cni.yaml")
+			*fileList = append(*fileList, "sriov-deviceplugin.yaml")
 		}
 
 		if plugins.Whereabouts != nil {
@@ -370,7 +374,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 			if err != nil {
 				return err
 			}
-			fileList = append(fileList, "whereabouts.yaml")
+			*fileList = append(*fileList, "whereabouts.yaml")
 		}
 
 		if plugins.HostPlumber != nil {
@@ -379,7 +383,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 			if err != nil {
 				return err
 			}
-			fileList = append(fileList, "hostplumber.yaml")
+			*fileList = append(*fileList, "hostplumber.yaml")
 		}
 
 		if plugins.NodeFeatureDiscovery != nil {
@@ -388,13 +392,13 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 			if err != nil {
 				return err
 			}
-			fileList = append(fileList, "nfd.yaml")
+			*fileList = append(*fileList, "nfd.yaml")
 		}
 	}
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContainer, fileList []string) error {
+func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContainer, fileList *[]string) error {
 	// First find out which plugins are missing from new spec vs old spec
 	if req.prevSpec == nil || req.prevSpec.Plugins == nil {
 		// Old spec was empty, nothing to delete
@@ -412,7 +416,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 		if err != nil {
 			return err
 		}
-		fileList = append(fileList, "multus.yaml")
+		*fileList = append(*fileList, "multus.yaml")
 	}
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.Whereabouts == nil) && old.Whereabouts != nil {
@@ -421,7 +425,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 		if err != nil {
 			return err
 		}
-		fileList = append(fileList, "whereabouts.yaml")
+		*fileList = append(*fileList, "whereabouts.yaml")
 	}
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.Sriov == nil) && old.Sriov != nil {
@@ -430,8 +434,8 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 		if err != nil {
 			return err
 		}
-		fileList = append(fileList, "sriov-cni.yaml")
-		fileList = append(fileList, "sriov-deviceplugin.yaml")
+		*fileList = append(*fileList, "sriov-cni.yaml")
+		*fileList = append(*fileList, "sriov-deviceplugin.yaml")
 	}
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.HostPlumber == nil) && old.HostPlumber != nil {
@@ -440,7 +444,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 		if err != nil {
 			return err
 		}
-		fileList = append(fileList, "hostplumber.yaml")
+		*fileList = append(*fileList, "hostplumber.yaml")
 	}
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.NodeFeatureDiscovery == nil) && old.NodeFeatureDiscovery != nil {
@@ -449,7 +453,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 		if err != nil {
 			return err
 		}
-		fileList = append(fileList, "nfd.yaml")
+		*fileList = append(*fileList, "nfd.yaml")
 	}
 
 	return nil

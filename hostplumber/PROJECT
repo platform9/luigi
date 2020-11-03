@@ -2,9 +2,9 @@ domain: k8s.pf9.io
 repo: hostplumber
 resources:
 - group: plumber
-  kind: HostNetworkConfig
+  kind: HostNetworkTemplate
   version: v1
 - group: plumber
-  kind: HostNetworkState
+  kind: HostNetwork
   version: v1
 version: "2"
