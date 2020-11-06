@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ovs-cni-amd64
-  namespace: ${NAMESPACE}
+  namespace: {{ .Namespace }}
   labels:
     tier: node
     app: ovs-cni
@@ -30,17 +30,19 @@ spec:
       initContainers:
       - name: ovs-cni-plugin
         image: ${OVS_CNI_PLUGIN_IMAGE_REPO}/${OVS_CNI_PLUGIN_IMAGE_NAME}:${OVS_CNI_PLUGIN_IMAGE_VERSION}
-        command: ['cp', '/ovs', '/host${CNI_MOUNT_PATH}/ovs']
-        imagePullPolicy: ${OVS_CNI_PLUGIN_IMAGE_PULL_POLICY}
+        image: {{ .OvsCniImage }}
+        command: ['cp', '/ovs', '/host/opt/cni/bin/ovs']
+        imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
         volumeMounts:
         - name: cnibin
-          mountPath: /host${CNI_MOUNT_PATH}
+          mountPath: /host/opt/cni/bin
       containers:
       - name: ovs-cni-marker
         image: ${OVS_CNI_MARKER_IMAGE_REPO}/${OVS_CNI_MARKER_IMAGE_NAME}:${OVS_CNI_MARKER_IMAGE_VERSION}
-        imagePullPolicy: ${OVS_CNI_MARKER_IMAGE_PULL_POLICY}
+        image: {{ .OvsMarkerImage }}
+        imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
         args:
@@ -59,7 +61,7 @@ spec:
       volumes:
         - name: cnibin
           hostPath:
-            path: ${CNI_MOUNT_PATH}
+            path: /opt/cni/bin
         - name: ovs-var-run
           hostPath:
             path: /var/run/openvswitch
@@ -90,10 +92,10 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: ovs-cni-marker
-  namespace: ${NAMESPACE}
+  namespace: {{ .Namespace }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ovs-cni-marker
-  namespace: ${NAMESPACE}
+  namespace: {{ .Namespace }}

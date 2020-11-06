@@ -41,8 +41,9 @@ type Plugins struct {
 }
 
 type Ovs struct {
-	Namespace string `json:"namespace,omitempty"`
-	OvsImage  string `json:"ovsImage,omitempty"`
+	Namespace      string `json:"namespace,omitempty"`
+	OvsCniImage    string `json:"ovsCniImage,omitempty"`
+	OvsMarkerImage string `json:"ovsMarkerImage,omitempty"`
 }
 
 type NodeFeatureDiscovery struct {

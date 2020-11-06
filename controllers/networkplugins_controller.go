@@ -49,6 +49,8 @@ const (
 	WhereaboutsImage        = "platform9/whereabouts:latest"
 	SriovCniImage           = "nfvpe/sriov-cni"
 	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.2"
+	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:latest"
+	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:latest"
 	HostplumberImage        = "platform9/luigi-plumber:latest"
 	NfdImage                = "k8s.gcr.io/nfd/node-feature-discovery:v0.6.0"
 	TemplateDir             = "/etc/plugin_templates/"
@@ -74,6 +76,7 @@ type PluginsUpdateContainer struct {
 type MultusT plumberv1.Multus
 type WhereaboutsT plumberv1.Whereabouts
 type SriovT plumberv1.Sriov
+type OvsT plumberv1.Ovs
 type HostPlumberT plumberv1.HostPlumber
 type NodeFeatureDiscoveryT plumberv1.NodeFeatureDiscovery
 
@@ -311,6 +314,45 @@ func (sriovConfig *SriovT) ApplyTemplate(outputDir string) error {
 	return nil
 }
 
+func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
+	config := make(map[string]interface{})
+
+	if ovsConfig.Namespace != "" {
+		config["Namespace"] = ovsConfig.Namespace
+	} else {
+		config["Namespace"] = DefaultNamespace
+	}
+
+	if ovsConfig.OvsCniImage != "" {
+		config["OvsCniImage"] = ovsConfig.OvsCniImage
+	} else {
+		config["OvsCniImage"] = OvsCniImage
+	}
+
+	if ovsConfig.OvsMarkerImage != "" {
+		config["OvsMarkerImage"] = ovsConfig.OvsMarkerImage
+	} else {
+		config["OvsMarkerImage"] = OvsMarkerImage
+	}
+
+	// Apply the OVS CNI
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-cni.yaml"))
+	if err != nil {
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, outputDir+"ovs-cni.yaml"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ovsConfig *OvsT) ApplyTemplate(outputDir string) error {
+	fmt.Printf("Applying Ovs\n")
+	return nil
+}
+
 func (r *NetworkPluginsReconciler) createPlugin(plugin ApplyPlugin) error {
 	outputDir := CreateDir
 
@@ -377,6 +419,15 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 			*fileList = append(*fileList, "whereabouts.yaml")
 		}
 
+		if plugins.OVS != nil {
+			ovsConfig := (*OvsT)(plugins.OVS)
+			err := r.createPlugin(ovsConfig)
+			if err != nil {
+				return err
+			}
+			*fileList = append(*fileList, "ovs-cni.yaml")
+		}
+
 		if plugins.HostPlumber != nil {
 			hostPlumberConfig := (*HostPlumberT)(plugins.HostPlumber)
 			err := r.createPlugin(hostPlumberConfig)
@@ -436,6 +487,15 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 		}
 		*fileList = append(*fileList, "sriov-cni.yaml")
 		*fileList = append(*fileList, "sriov-deviceplugin.yaml")
+	}
+
+	if (noOldPlugins == true || req.currentSpec.Plugins.OVS == nil) && old.OVS != nil {
+		ovsConfig := (*OvsT)(old.OVS)
+		err := r.deletePlugin(ovsConfig)
+		if err != nil {
+			return err
+		}
+		*fileList = append(*fileList, "ovs-cni.yaml")
 	}
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.HostPlumber == nil) && old.HostPlumber != nil {
