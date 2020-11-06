@@ -7,7 +7,7 @@ spec:
   plugins:
     hostPlumber:
       hostPlumberImage: "xagent003/luigi-plumber:latest"
-    #nodeFeatureDiscovery: {}
+    nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
       whereaboutsImage: "platform9/whereabouts:latest"

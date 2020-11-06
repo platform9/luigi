@@ -28,7 +28,8 @@ type HostNetworkTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	SriovConfig []SriovConfig `json:"sriovConfig,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	SriovConfig  []SriovConfig     `json:"sriovConfig,omitempty"`
 }
 
 type SriovConfig struct {

@@ -140,6 +140,10 @@ spec:
         spec:
           description: HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
           properties:
+            nodeSelector:
+              additionalProperties:
+                type: string
+              type: object
             sriovConfig:
               items:
                 properties:

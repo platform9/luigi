@@ -4,6 +4,9 @@ metadata:
   name: hostconfig-kernel-enp3
 spec:
   # Add fields here
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: "true"
+    testlabelA: "123"
   sriovConfig:
     - pfName: enp3s0f1
       numVfs: 4
