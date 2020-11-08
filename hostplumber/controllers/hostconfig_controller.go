@@ -49,9 +49,10 @@ var log logr.Logger
 // HostNetworkTemplateReconciler reconciles a HostNetworkTemplate object
 type HostNetworkTemplateReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	NodeName string
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
+	NodeName  string
+	Namespace string
 }
 
 // +kubebuilder:rbac:groups=plumber.k8s.pf9.io,resources=hostnetworktemplates,verbs=get;list;watch;create;update;patch;delete
@@ -93,7 +94,7 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		log.Info("SriovConfig is empty")
 	}
 
-	hoststate.DiscoverHostState(r.NodeName, r.Client)
+	hoststate.DiscoverHostState(r.NodeName, r.Namespace, r.Client)
 
 	return ctrl.Result{}, nil
 }

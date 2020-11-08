@@ -255,20 +255,20 @@ func (r *HostNetworkInfo) discoverHwState() error {
 	return nil
 }
 
-func DiscoverHostState(nodeName string, k8sclient client.Client) {
+func DiscoverHostState(nodeName, namespace string, k8sclient client.Client) {
 	ctx := context.Background()
 	linkList, _ := netlink.LinkList()
 	for _, link := range linkList {
 		fmt.Printf("link = %+v\n", link)
 	}
 
-	hrc := new(HostNetworkInfo)
-	hrc.client = k8sclient
-	hrc.currentSpec = new(plumberv1.HostNetworkSpec)
+	hni := new(HostNetworkInfo)
+	hni.client = k8sclient
+	hni.currentSpec = new(plumberv1.HostNetworkSpec)
 
-	hrc.discoverHwState()
+	hni.discoverHwState()
 
-	d, err := yaml.Marshal(&hrc.currentSpec)
+	d, err := yaml.Marshal(&hni.currentSpec)
 	if err != nil {
 		fmt.Printf("Failed to marshal!!!: %s\n", err)
 	}
@@ -278,29 +278,29 @@ func DiscoverHostState(nodeName string, k8sclient client.Client) {
 	newHostState := &plumberv1.HostNetwork{}
 	newHostState.Name = nodeName
 	newHostState.Namespace = os.Getenv("K8S_NAMESPACE")
-	newHostState.Spec = *hrc.currentSpec
+	newHostState.Spec = *hni.currentSpec
 
-	nsn := types.NamespacedName{Name: nodeName, Namespace: "luigi-system"}
-	err = hrc.client.Get(ctx, nsn, oldHostState)
+	nsn := types.NamespacedName{Name: nodeName, Namespace: newHostState.Namespace}
+	err = hni.client.Get(ctx, nsn, oldHostState)
 	if err != nil && errors.IsNotFound(err) {
 		fmt.Printf("HostStateSpec not found... creating\n")
-		if err := hrc.client.Create(ctx, newHostState); err != nil {
+		if err := hni.client.Create(ctx, newHostState); err != nil {
 			fmt.Printf("Failed to created new HostState for Node %s\n", nodeName)
 			return
 		}
 	} else if err != nil {
 		fmt.Printf("Error fetching HostState CRD and not a NotFound err\n")
-		if err := hrc.client.Create(ctx, newHostState); err != nil {
+		if err := hni.client.Create(ctx, newHostState); err != nil {
 			fmt.Printf("Failed to created new HostState for Node %s\n", nodeName)
 			return
 		}
 		return
 	} else {
-		if err := hrc.client.Delete(ctx, oldHostState); err != nil {
+		if err := hni.client.Delete(ctx, oldHostState); err != nil {
 			fmt.Printf("Error deleting old HostState\n")
 			return
 		}
-		if err := hrc.client.Create(ctx, newHostState); err != nil {
+		if err := hni.client.Create(ctx, newHostState); err != nil {
 			fmt.Printf("Failed to created new HostState for Node %s\n", nodeName)
 			return
 		}

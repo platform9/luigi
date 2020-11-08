@@ -61,6 +61,11 @@ func main() {
 		fmt.Printf("K8S_NODE_NAME env variable not set")
 		os.Exit(1)
 	}
+	namespace := os.Getenv("K8S_NODE_NAME")
+	if namespace == "" {
+		fmt.Printf("K8S_NAMESPACE env variable not set")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -75,16 +80,17 @@ func main() {
 	}
 
 	if err = (&controllers.HostNetworkTemplateReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("HostNetworkTemplate"),
-		Scheme:   mgr.GetScheme(),
-		NodeName: nodeName,
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("controllers").WithName("HostNetworkTemplate"),
+		Scheme:    mgr.GetScheme(),
+		NodeName:  nodeName,
+		Namespace: namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HostNetworkTemplate")
 		os.Exit(1)
 	}
 
-	hoststate.DiscoverHostState(nodeName, mgr.GetClient())
+	hoststate.DiscoverHostState(nodeName, namespace, mgr.GetClient())
 
 	// +kubebuilder:scaffold:builder
 
