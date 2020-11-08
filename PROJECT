@@ -4,7 +4,4 @@ resources:
 - group: plumber
   kind: NetworkPlugins
   version: v1
-- group: plumber
-  kind: VirtPlugins
-  version: v1
 version: "2"

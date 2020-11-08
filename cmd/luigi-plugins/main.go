@@ -74,14 +74,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkPlugins")
 		os.Exit(1)
 	}
-	if err = (&controllers.VirtPluginsReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("VirtPlugins"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "VirtPlugins")
-		os.Exit(1)
-	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
