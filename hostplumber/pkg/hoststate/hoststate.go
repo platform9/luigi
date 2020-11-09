@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	plumberv1 "hostplumber/api/v1"
+	"hostplumber/pkg/consts"
+	linkutils "hostplumber/pkg/utils/link"
+	sriovutils "hostplumber/pkg/utils/sriov"
 	"os"
 	"path/filepath"
 
+	"github.com/go-logr/logr"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -14,105 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	sysClassNet   = "/host/sys/class/net/"
-	sysPciDrivers = "/host/sys/bus/pci/drivers/"
-	sysPciDevices = "/host/sys/bus/pci/devices/"
-)
+var log logr.Logger
 
 type HostNetworkInfo struct {
-	client      client.Client
-	currentSpec *plumberv1.HostNetworkSpec
-}
-
-func getTotalVfs(devicePath string) int {
-	totalVfsFile := filepath.Join(devicePath, "sriov_totalvfs")
-	fd, err := os.Open(totalVfsFile)
-	defer fd.Close()
-	if err != nil {
-		return -1
-	}
-
-	var totalVfs int
-	_, err = fmt.Fscanf(fd, "%d\n", &totalVfs)
-	if err != nil {
-		return -1
-	}
-	return totalVfs
-}
-
-func getNumVfs(devicePath string) int {
-	numVfsFile := filepath.Join(devicePath, "sriov_numvfs")
-	fd, err := os.Open(numVfsFile)
-	defer fd.Close()
-	if err != nil {
-		return -1
-	}
-
-	var numVfs int
-	_, err = fmt.Fscanf(fd, "%d\n", &numVfs)
-	if err != nil {
-		return -1
-	}
-	return numVfs
-}
-
-func getVfPciAddrById(pfDevicePath string, vfId int) string {
-	virtFn := fmt.Sprintf("virtfn%d", vfId)
-	vfDeviceLink := filepath.Join(pfDevicePath, virtFn)
-	vfDevicePath, _ := filepath.EvalSymlinks(vfDeviceLink)
-	pciAddr := filepath.Base(vfDevicePath)
-	return pciAddr
-}
-
-func getVfDriverByPci(vfPciAddr string) string {
-	driverLink := filepath.Join(sysPciDevices, vfPciAddr, "driver")
-	driverPath, _ := filepath.EvalSymlinks(driverLink)
-	driverName := filepath.Base(driverPath)
-	return driverName
-}
-
-func getPfDeviceForVf(devicePath string) (string, bool) {
-	physfnFile := filepath.Join(devicePath, "physfn")
-	if _, err := os.Lstat(physfnFile); err != nil {
-		return "", false
-	}
-	pfDevicePath, _ := filepath.EvalSymlinks(physfnFile)
-	return pfDevicePath, true
-}
-
-func getIfMtu(devicePath, ifName string) (int, error) {
-	pfNetPath := filepath.Join(devicePath, "net", ifName)
-	var mtu int
-	fd, err := os.Open(filepath.Join(pfNetPath, "mtu"))
-	defer fd.Close()
-	if err != nil {
-		fmt.Printf("Failed to open mtu for %s\n", pfNetPath)
-		return 0, err
-	}
-	_, err = fmt.Fscanf(fd, "%d\n", &mtu)
-	if err != nil {
-		fmt.Printf("Failed to read MTU\n")
-		return 0, err
-	}
-	return mtu, nil
-}
-
-func getIfMac(devicePath, ifName string) (string, error) {
-	pfNetPath := filepath.Join(devicePath, "net", ifName)
-	var macAddr string
-	fd, err := os.Open(filepath.Join(pfNetPath, "address"))
-	defer fd.Close()
-	if err != nil {
-		fmt.Printf("Failed to open address for %s\n", pfNetPath)
-		return "", err
-	}
-	_, err = fmt.Fscanf(fd, "%s\n", &macAddr)
-	if err != nil {
-		fmt.Printf("Failed to read MAC Address\n")
-		return "", err
-	}
-	return macAddr, nil
+	client        client.Client
+	currentStatus *plumberv1.HostNetworkStatus
 }
 
 func populateVfInfo(info *plumberv1.SriovStatus, devicePath, pfName string) error {
@@ -132,8 +42,8 @@ func populateVfInfo(info *plumberv1.SriovStatus, devicePath, pfName string) erro
 		vf.Spoofchk = vfLink.Spoofchk
 		// netlink not returning trust mode, filed bug: https://github.com/vishvananda/netlink/issues/580
 		vf.Trust = false
-		vf.PciAddr = getVfPciAddrById(devicePath, vf.ID)
-		vf.VfDriver = getVfDriverByPci(vf.PciAddr)
+		vf.PciAddr = sriovutils.GetVfPciAddrById(devicePath, vf.ID)
+		vf.VfDriver = sriovutils.GetVfDriverByPci(vf.PciAddr)
 		vfList = append(vfList, vf)
 	}
 
@@ -182,26 +92,26 @@ func (r *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 	driverName := filepath.Base(driverPath)
 	ifStatus.PfDriver = driverName
 
-	mac, err := getIfMac(devicePath, ifName)
+	mac, err := linkutils.GetIfMac(devicePath, ifName)
 	if err != nil {
 		return err
 	}
 	ifStatus.MacAddr = mac
 
-	mtu, err := getIfMtu(devicePath, ifName)
+	mtu, err := linkutils.GetIfMtu(devicePath, ifName)
 	if err != nil {
 		return err
 	}
 	ifStatus.MTU = mtu
 
 	var totalVfs int
-	totalVfs = getTotalVfs(devicePath)
+	totalVfs = sriovutils.GetTotalVfs(devicePath)
 	if totalVfs > 0 {
 		fmt.Printf("SRIOV enabled: totalVfs = %d\n", totalVfs)
 		ifStatus.SriovEnabled = true
 		ifStatus.SriovStatus = new(plumberv1.SriovStatus)
 		ifStatus.SriovStatus.TotalVfs = totalVfs
-		ifStatus.SriovStatus.NumVfs = getNumVfs(devicePath)
+		ifStatus.SriovStatus.NumVfs = sriovutils.GetNumVfs(devicePath)
 		if err := populateVfInfo(ifStatus.SriovStatus, devicePath, ifName); err != nil {
 			fmt.Printf("Failed to retrieve VF details: %s\n", err)
 			// Ignore error, don't populate VF info
@@ -211,16 +121,16 @@ func (r *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 		ifStatus.SriovEnabled = false
 	}
 
-	r.currentSpec.InterfaceStatus = append(r.currentSpec.InterfaceStatus, ifStatus)
+	r.currentStatus.InterfaceStatus = append(r.currentStatus.InterfaceStatus, ifStatus)
 
 	return nil
 }
 
-func (r *HostNetworkInfo) discoverHwState() error {
-	err := filepath.Walk(sysClassNet, func(path string, info os.FileInfo, err error) error {
+func (r *HostNetworkInfo) discoverInterfaceStatus() error {
+	err := filepath.Walk(consts.SysClassNet, func(path string, info os.FileInfo, err error) error {
 		ifName := info.Name()
 		ifPath, _ := filepath.EvalSymlinks(path)
-		if ifPath == sysClassNet {
+		if ifPath == consts.SysClassNet {
 			fmt.Printf("skipping netDir\n")
 			return nil
 		}
@@ -235,7 +145,7 @@ func (r *HostNetworkInfo) discoverHwState() error {
 			return nil
 		}
 
-		if _, isVf := getPfDeviceForVf(devicePath); isVf == true {
+		if _, isVf := sriovutils.GetPfDeviceForVf(devicePath); isVf == true {
 			// VF info populated later, skip
 			fmt.Printf("%s is a VF ethernet device, skipping...\n", ifName)
 			return nil
@@ -264,11 +174,11 @@ func DiscoverHostState(nodeName, namespace string, k8sclient client.Client) {
 
 	hni := new(HostNetworkInfo)
 	hni.client = k8sclient
-	hni.currentSpec = new(plumberv1.HostNetworkSpec)
+	hni.currentStatus = new(plumberv1.HostNetworkStatus)
 
-	hni.discoverHwState()
+	hni.discoverInterfaceStatus()
 
-	d, err := yaml.Marshal(&hni.currentSpec)
+	d, err := yaml.Marshal(&hni.currentStatus)
 	if err != nil {
 		fmt.Printf("Failed to marshal!!!: %s\n", err)
 	}
@@ -277,8 +187,8 @@ func DiscoverHostState(nodeName, namespace string, k8sclient client.Client) {
 	oldHostState := &plumberv1.HostNetwork{}
 	newHostState := &plumberv1.HostNetwork{}
 	newHostState.Name = nodeName
-	newHostState.Namespace = os.Getenv("K8S_NAMESPACE")
-	newHostState.Spec = *hni.currentSpec
+	newHostState.Namespace = namespace
+	newHostState.Status = *hni.currentStatus
 
 	nsn := types.NamespacedName{Name: nodeName, Namespace: newHostState.Namespace}
 	err = hni.client.Get(ctx, nsn, oldHostState)

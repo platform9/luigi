@@ -27,14 +27,14 @@ import (
 type HostNetworkSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	InterfaceStatus []*InterfaceStatus `json:"interfaceStatus,omitempty"`
-	Sysctl          []string           `json:"sysctlConfig,omitempty"`
 }
 
 // HostNetworkStatus defines the observed state of HostNetwork
 type HostNetworkStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	InterfaceStatus []*InterfaceStatus `json:"interfaceStatus,omitempty"`
+	Sysctl          []string           `json:"sysctlConfig,omitempty"`
 }
 
 type InterfaceStatus struct {
