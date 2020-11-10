@@ -83,7 +83,8 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		log.Info("SriovConfig is empty")
 	}
 
-	hoststate.DiscoverHostState(r.NodeName, r.Namespace, r.Client)
+	hni := hoststate.New(r.NodeName, r.Namespace, r.Client)
+	hni.DiscoverHostState()
 
 	return ctrl.Result{}, nil
 }

@@ -61,7 +61,7 @@ func main() {
 		fmt.Printf("K8S_NODE_NAME env variable not set")
 		os.Exit(1)
 	}
-	namespace := os.Getenv("K8S_NODE_NAME")
+	namespace := os.Getenv("K8S_NAMESPACE")
 	if namespace == "" {
 		fmt.Printf("K8S_NAMESPACE env variable not set")
 		os.Exit(1)
@@ -90,7 +90,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	hoststate.DiscoverHostState(nodeName, namespace, mgr.GetClient())
+	hni := hoststate.New(nodeName, namespace, mgr.GetClient())
+	hni.DiscoverHostState()
 
 	// +kubebuilder:scaffold:builder
 

@@ -8,6 +8,7 @@ require (
 	github.com/onsi/gomega v1.8.1
 	github.com/prometheus/common v0.4.1
 	github.com/vishvananda/netlink v1.1.0
+	go.uber.org/zap v1.10.0
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
