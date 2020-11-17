@@ -28,8 +28,16 @@ type HostNetworkTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-	SriovConfig  []SriovConfig     `json:"sriovConfig,omitempty"`
+	NodeSelector    map[string]string `json:"nodeSelector,omitempty"`
+	InterfaceConfig []InterfaceConfig `json:"interfaceConfig,omitempty"`
+	SriovConfig     []SriovConfig     `json:"sriovConfig,omitempty"`
+}
+
+type InterfaceConfig struct {
+	Name *string   `json:"name"`
+	MTU  *int      `json:"mtu,omitempty"`
+	IPv4 *IPv4Info `json:"ipv4,omitempty"`
+	IPv6 *IPv6Info `json:"ipv6,omitempty"`
 }
 
 type SriovConfig struct {

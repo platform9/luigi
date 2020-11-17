@@ -29,6 +29,7 @@ import (
 
 	plumberv1 "hostplumber/api/v1"
 	hoststate "hostplumber/pkg/hoststate"
+	iputils "hostplumber/pkg/utils/ip"
 	linkutils "hostplumber/pkg/utils/link"
 	sriovutils "hostplumber/pkg/utils/sriov"
 )
@@ -73,6 +74,19 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		log.Info("Labels match, applying HostNetworkTemplate", "nodeSelector", selector)
 	}
 
+	// Everything that is traditonally done under "ifconfig <ifname>" handled here
+	// Alternatively newer "ip addr" and "ip link" - see https://www.redhat.com/sysadmin/ifconfig-vs-ip
+	// MTUs, IPs, routes, link up/down, etc...
+	ifConfigList := hostConfigReq.Spec.InterfaceConfig
+	if len(ifConfigList) > 0 {
+		if err := applyInterfaceConfig(ifConfigList); err != nil {
+			log.Error(err, "Failed to apply interfaceConfig")
+			return ctrl.Result{}, err
+		}
+	} else {
+		log.Info("interfaceConfig is empty")
+	}
+
 	sriovConfigList := hostConfigReq.Spec.SriovConfig
 	if len(sriovConfigList) > 0 {
 		if err := applySriovConfig(sriovConfigList); err != nil {
@@ -87,6 +101,52 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	hni.DiscoverHostState()
 
 	return ctrl.Result{}, nil
+}
+
+func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig) error {
+	for _, ifConfig := range ifConfigList {
+		var ifName string
+
+		// TODO: nil check needed? This does NOT have an omitempty json tag in _types.go
+		ifName = *ifConfig.Name
+		if ifConfig.MTU != nil {
+			if err := linkutils.SetMtuForPf(ifName, *ifConfig.MTU); err != nil {
+				log.Error(err, "Failed to set MTU for ifName", "ifName", ifName, "MTU", *ifConfig.MTU)
+				return err
+			}
+		}
+
+		if ifConfig.IPv4 != nil {
+			v4Config := ifConfig.IPv4
+			if len(v4Config.Address) == 0 {
+				log.Info("No IPv4 addresses specified... skipping...")
+			} else {
+				for _, addr := range v4Config.Address {
+					log.Info("Attempting to configure IP", "ifName", ifName, "IPv4", addr)
+					if err := iputils.SetIpv4Cidr(ifName, addr); err != nil {
+						log.Error(err, "Failed to IP for ifName", "ifName", ifName, "IPv4", addr)
+						return err
+					}
+				}
+			}
+		}
+
+		if ifConfig.IPv6 != nil {
+			v6Config := ifConfig.IPv6
+			if len(v6Config.Address) == 0 {
+				log.Info("No IPv6 addresses specified... skipping...")
+			} else {
+				for _, addr := range v6Config.Address {
+					log.Info("Attempting to configure IP", "ifName", ifName, "IPv6", addr)
+					if err := iputils.SetIpv6Cidr(ifName, addr); err != nil {
+						log.Error(err, "Failed to set IP for ifName", "ifName", ifName, "IPv6", addr)
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func applySriovConfig(sriovConfigList []plumberv1.SriovConfig) error {

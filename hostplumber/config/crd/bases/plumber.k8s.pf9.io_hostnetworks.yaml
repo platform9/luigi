@@ -45,6 +45,20 @@ spec:
                 properties:
                   deviceId:
                     type: string
+                  ipv4:
+                    properties:
+                      address:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  ipv6:
+                    properties:
+                      address:
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   mac:
                     type: string
                   mtu:

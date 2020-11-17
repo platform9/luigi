@@ -5,6 +5,7 @@ import (
 	"fmt"
 	plumberv1 "hostplumber/api/v1"
 	"hostplumber/pkg/consts"
+	iputils "hostplumber/pkg/utils/ip"
 	linkutils "hostplumber/pkg/utils/link"
 	sriovutils "hostplumber/pkg/utils/sriov"
 	"os"
@@ -133,6 +134,22 @@ func (hni *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 		return err
 	}
 	ifStatus.MTU = mtu
+
+	ipv4Addrs, err := iputils.GetIpv4Cidr(ifName)
+	if err != nil || len(*ipv4Addrs) == 0 {
+		hni.log.Infow("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv4Addrs", *ipv4Addrs)
+	} else {
+		ifStatus.IPv4 = new(plumberv1.IPv4Info)
+		ifStatus.IPv4.Address = *ipv4Addrs
+	}
+
+	ipv6Addrs, err := iputils.GetIpv6Cidr(ifName)
+	if err != nil || len(*ipv6Addrs) == 0 {
+		hni.log.Infow("Error getting IPv6 for interface", "err", err, "ifName", ifName, "ipv6Addrs", *ipv6Addrs)
+	} else {
+		ifStatus.IPv6 = new(plumberv1.IPv6Info)
+		ifStatus.IPv6.Address = *ipv6Addrs
+	}
 
 	var totalVfs int
 	totalVfs = sriovutils.GetTotalVfs(devicePath)
