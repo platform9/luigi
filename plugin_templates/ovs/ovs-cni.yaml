@@ -29,8 +29,7 @@ spec:
         effect: NoSchedule
       initContainers:
       - name: ovs-cni-plugin
-        image: ${OVS_CNI_PLUGIN_IMAGE_REPO}/${OVS_CNI_PLUGIN_IMAGE_NAME}:${OVS_CNI_PLUGIN_IMAGE_VERSION}
-        image: {{ .OvsCniImage }}
+        image: {{ .CNIImage }}
         command: ['cp', '/ovs', '/host/opt/cni/bin/ovs']
         imagePullPolicy: IfNotPresent
         securityContext:
@@ -40,8 +39,7 @@ spec:
           mountPath: /host/opt/cni/bin
       containers:
       - name: ovs-cni-marker
-        image: ${OVS_CNI_MARKER_IMAGE_REPO}/${OVS_CNI_MARKER_IMAGE_NAME}:${OVS_CNI_MARKER_IMAGE_VERSION}
-        image: {{ .OvsMarkerImage }}
+        image: {{ .MarkerImage }}
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
