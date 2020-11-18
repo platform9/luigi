@@ -24,6 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"text/template"
@@ -49,8 +50,8 @@ const (
 	WhereaboutsImage        = "platform9/whereabouts:latest"
 	SriovCniImage           = "nfvpe/sriov-cni"
 	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.2"
-	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:latest"
-	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:latest"
+	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
+	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
 	HostplumberImage        = "platform9/luigi-plumber:v0.1.0"
 	NfdImage                = "k8s.gcr.io/nfd/node-feature-discovery:v0.6.0"
 	TemplateDir             = "/etc/plugin_templates/"
@@ -323,16 +324,16 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
 		config["Namespace"] = DefaultNamespace
 	}
 
-	if ovsConfig.OvsCniImage != "" {
-		config["OvsCniImage"] = ovsConfig.OvsCniImage
+	if ovsConfig.CNIImage != "" {
+		config["CNIImage"] = ovsConfig.CNIImage
 	} else {
-		config["OvsCniImage"] = OvsCniImage
+		config["CNIImage"] = OvsCniImage
 	}
 
-	if ovsConfig.OvsMarkerImage != "" {
-		config["OvsMarkerImage"] = ovsConfig.OvsMarkerImage
+	if ovsConfig.MarkerImage != "" {
+		config["MarkerImage"] = ovsConfig.MarkerImage
 	} else {
-		config["OvsMarkerImage"] = OvsMarkerImage
+		config["MarkerImage"] = OvsMarkerImage
 	}
 
 	// Apply the OVS CNI
@@ -341,7 +342,7 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
 		return err
 	}
 
-	if err := renderTemplateToFile(config, t, outputDir+"ovs-cni.yaml"); err != nil {
+	if err := renderTemplateToFile(config, t, path.Join(outputDir, "ovs-cni.yaml")); err != nil {
 		return err
 	}
 

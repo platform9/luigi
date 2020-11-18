@@ -59,11 +59,11 @@ spec:
                   type: object
                 ovs:
                   properties:
+                    cniImage:
+                      type: string
+                    markerImage:
+                      type: string
                     namespace:
-                      type: string
-                    ovsCniImage:
-                      type: string
-                    ovsMarkerImage:
                       type: string
                   type: object
                 sriov:
