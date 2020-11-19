@@ -60,9 +60,11 @@ spec:
                   type: object
                 ovs:
                   properties:
-                    namespace:
+                    cniImage:
                       type: string
-                    ovsImage:
+                    markerImage:
+                      type: string
+                    namespace:
                       type: string
                   type: object
                 sriov:
@@ -269,14 +271,6 @@ spec:
     spec:
       containers:
       - args:
-        - --metrics-addr=127.0.0.1:8080
-        - --enable-leader-election
-        command:
-        - /manager
-        image: xagent003/luigi-plugins:latest
-        imagePullPolicy: Always
-        name: manager
-      - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
@@ -286,4 +280,12 @@ spec:
         ports:
         - containerPort: 8443
           name: https
+      - args:
+        - --metrics-addr=127.0.0.1:8080
+        - --enable-leader-election
+        command:
+        - /manager
+        image: xagent003/luigi-plugins:latest
+        imagePullPolicy: Always
+        name: manager
       terminationGracePeriodSeconds: 10
