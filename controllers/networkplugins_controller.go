@@ -24,7 +24,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"text/template"
@@ -342,7 +341,7 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
 		return err
 	}
 
-	if err := renderTemplateToFile(config, t, path.Join(outputDir, "ovs-cni.yaml")); err != nil {
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "ovs-cni.yaml")); err != nil {
 		return err
 	}
 
