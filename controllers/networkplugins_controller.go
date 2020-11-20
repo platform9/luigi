@@ -48,7 +48,7 @@ const (
 	DefaultNamespace        = "default"
 	MultusImage             = "nfvpe/multus:v3.6"
 	WhereaboutsImage        = "platform9/whereabouts:latest"
-	SriovCniImage           = "nfvpe/sriov-cni"
+	SriovCniImage           = "nfvpe/sriov-cni:v2.5"
 	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.2"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
