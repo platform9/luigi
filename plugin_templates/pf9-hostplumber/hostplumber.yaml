@@ -27,9 +27,12 @@ spec:
           type: object
         spec:
           description: HostNetworkSpec defines the desired state of HostNetwork
+          type: object
+        status:
+          description: HostNetworkStatus defines the observed state of HostNetwork
           properties:
             interfaceStatus:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run "make" to regenerate code after modifying this file'
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
               items:
                 properties:
                   deviceId:
@@ -93,9 +96,6 @@ spec:
               items:
                 type: string
               type: array
-          type: object
-        status:
-          description: HostNetworkStatus defines the observed state of HostNetwork
           type: object
       type: object
   version: v1
