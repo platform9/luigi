@@ -59,7 +59,7 @@ func (hni *HostNetworkInfo) DiscoverHostState() {
 	nsn := types.NamespacedName{Name: hni.nodeName, Namespace: hni.namespace}
 	err := hni.client.Get(ctx, nsn, oldHostState)
 	if err != nil && errors.IsNotFound(err) {
-		hni.log.Infof("HostStateSpec not found... creating\n")
+		hni.log.Error("HostStateSpec not found... creating ", zap.Error(err))
 		if err := hni.client.Create(ctx, newHostState); err != nil {
 			hni.log.Infof("Failed to created new HostState for Node %s", hni.nodeName)
 			return
@@ -73,7 +73,7 @@ func (hni *HostNetworkInfo) DiscoverHostState() {
 		return
 	} else {
 		if err := hni.client.Delete(ctx, oldHostState); err != nil {
-			hni.log.Infof("Error deleting old HostState")
+			hni.log.Error("Error deleting old HostState ", zap.Error(err))
 			return
 		}
 		if err := hni.client.Create(ctx, newHostState); err != nil {
@@ -144,7 +144,10 @@ func (hni *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 	}
 
 	ipv6Addrs, err := iputils.GetIpv6Cidr(ifName)
+	hni.log.Infow("Got ipv6 info for interface", "ifName", ifName)
 	if err != nil || len(*ipv6Addrs) == 0 {
+		hni.log.Infow("Error getting ipv6")
+		hni.log.Infow("error is", "err", err)
 		hni.log.Infow("Error getting IPv6 for interface", "err", err, "ifName", ifName, "ipv6Addrs", *ipv6Addrs)
 	} else {
 		ifStatus.IPv6 = new(plumberv1.IPv6Info)

@@ -74,6 +74,16 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		log.Info("Labels match, applying HostNetworkTemplate", "nodeSelector", selector)
 	}
 
+	sriovConfigList := hostConfigReq.Spec.SriovConfig
+	if len(sriovConfigList) > 0 {
+		if err := applySriovConfig(sriovConfigList); err != nil {
+			log.Error(err, "Failed to apply SriovConfig")
+			return ctrl.Result{}, err
+		}
+	} else {
+		log.Info("SriovConfig is empty")
+	}
+
 	// Everything that is traditonally done under "ifconfig <ifname>" handled here
 	// Alternatively newer "ip addr" and "ip link" - see https://www.redhat.com/sysadmin/ifconfig-vs-ip
 	// MTUs, IPs, routes, link up/down, etc...
@@ -85,16 +95,6 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		}
 	} else {
 		log.Info("interfaceConfig is empty")
-	}
-
-	sriovConfigList := hostConfigReq.Spec.SriovConfig
-	if len(sriovConfigList) > 0 {
-		if err := applySriovConfig(sriovConfigList); err != nil {
-			log.Error(err, "Failed to apply SriovConfig")
-			return ctrl.Result{}, err
-		}
-	} else {
-		log.Info("SriovConfig is empty")
 	}
 
 	hni := hoststate.New(r.NodeName, r.Namespace, r.Client)
@@ -121,10 +121,25 @@ func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig) error {
 			if len(v4Config.Address) == 0 {
 				log.Info("No IPv4 addresses specified... skipping...")
 			} else {
+				// If an address(s) is specified, first unconfigure any old ones
+				// ipv4.address should reflect desired IP state
+				ipv4Addrs, err := iputils.GetIpv4Cidr(ifName)
+				if err != nil || len(*ipv4Addrs) == 0 {
+					log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv4Addrs", *ipv4Addrs)
+				} else {
+					for _, addr := range *ipv4Addrs {
+						log.Info("Removing old IP", "ifName", ifName, "IPv4", addr)
+						if err := iputils.DelIpv4Cidr(ifName, addr); err != nil {
+							log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv4", addr)
+							return err
+						}
+					}
+				}
+
 				for _, addr := range v4Config.Address {
 					log.Info("Attempting to configure IP", "ifName", ifName, "IPv4", addr)
 					if err := iputils.SetIpv4Cidr(ifName, addr); err != nil {
-						log.Error(err, "Failed to IP for ifName", "ifName", ifName, "IPv4", addr)
+						log.Error(err, "Failed to Add IP", "ifName", ifName, "IPv4", addr)
 						return err
 					}
 				}
@@ -136,6 +151,21 @@ func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig) error {
 			if len(v6Config.Address) == 0 {
 				log.Info("No IPv6 addresses specified... skipping...")
 			} else {
+				// If an address(s) is specified, first unconfigure any old ones
+				// ipv4.address should reflect desired IP state
+				ipv6Addrs, err := iputils.GetIpv6Cidr(ifName)
+				if err != nil || len(*ipv6Addrs) == 0 {
+					log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv6Addrs", *ipv6Addrs)
+				} else {
+					for _, addr := range *ipv6Addrs {
+						log.Info("Removing old IP", "ifName", ifName, "IPv6", addr)
+						if err := iputils.DelIpv6Cidr(ifName, addr); err != nil {
+							log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv6", addr)
+							return err
+						}
+					}
+				}
+
 				for _, addr := range v6Config.Address {
 					log.Info("Attempting to configure IP", "ifName", ifName, "IPv6", addr)
 					if err := iputils.SetIpv6Cidr(ifName, addr); err != nil {
