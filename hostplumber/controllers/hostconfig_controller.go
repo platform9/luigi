@@ -109,7 +109,9 @@ func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig) error {
 
 		// TODO: nil check needed? This does NOT have an omitempty json tag in _types.go
 		ifName = *ifConfig.Name
-		if ifConfig.MTU != nil {
+
+		if ifConfig.MTU != nil && *ifConfig.MTU >= 576 {
+			log.Info("interfaceConfig MTU", "MTU", *ifConfig.MTU)
 			if err := linkutils.SetMtuForPf(ifName, *ifConfig.MTU); err != nil {
 				log.Error(err, "Failed to set MTU for ifName", "ifName", ifName, "MTU", *ifConfig.MTU)
 				return err
@@ -222,7 +224,8 @@ func applySriovConfig(sriovConfigList []plumberv1.SriovConfig) error {
 				sriovutils.EnableDriverForVfs(pfName, "ixgbevf")
 			}
 
-			if sriovConfig.MTU != nil && *sriovConfig.MTU > 0 {
+			if sriovConfig.MTU != nil && *sriovConfig.MTU >= 576 {
+				log.Info("sriovConfig MTU", "MTU", *sriovConfig.MTU)
 				if err := linkutils.SetMtuForPf(pfName, *sriovConfig.MTU); err != nil {
 					log.Info("Failed to set MTU for PF and its VFs", "pfName", pfName, "MTU", *sriovConfig.MTU)
 					return err

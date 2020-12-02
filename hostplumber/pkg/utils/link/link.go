@@ -45,7 +45,7 @@ func SetMtuForPf(pfName string, mtu int) error {
 	if err := ioutil.WriteFile(mtuFile, mtuStr, 0644); err != nil {
 		return err
 	}
-
+	fmt.Printf("set MTU %d for interface %s\n", mtu, pfName)
 	return SetMtuForAllVfs(pfName, mtu)
 }
 
@@ -83,6 +83,7 @@ func SetMtuForVf(vfPath string, mtu int) error {
 	// There will only ever be 1 ethernet device per VF on kernel driver
 	eth := vfEth[0]
 	mtuFile := filepath.Join(eth, "mtu")
+	fmt.Printf("Setting MTU %s on file %s\n", mtuStr, mtuFile)
 	if err := ioutil.WriteFile(mtuFile, mtuStr, 0644); err != nil {
 		return err
 	}
