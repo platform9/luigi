@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -90,8 +91,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	hni := hoststate.New(nodeName, namespace, mgr.GetClient())
-	hni.DiscoverHostState()
+	ticker := time.NewTicker(10 * time.Second)
+	done := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case t := <-ticker.C:
+				setupLog.Info("Re-discovering HostNetwork...", "time", t)
+				hni := hoststate.New(nodeName, namespace, mgr.GetClient())
+				hni.DiscoverHostState()
+			}
+		}
+	}()
 
 	// +kubebuilder:scaffold:builder
 
