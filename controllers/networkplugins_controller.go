@@ -335,8 +335,18 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
 		config["MarkerImage"] = OvsMarkerImage
 	}
 
+	// Apply the OVS DB
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-db.yaml"))
+	if err != nil {
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "ovs-db.yaml")); err != nil {
+		return err
+	}
+
 	// Apply the OVS CNI
-	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-cni.yaml"))
+	t, err = template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-cni.yaml"))
 	if err != nil {
 		return err
 	}
@@ -425,6 +435,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 			if err != nil {
 				return err
 			}
+			*fileList = append(*fileList, "ovs-db.yaml")
 			*fileList = append(*fileList, "ovs-cni.yaml")
 		}
 
@@ -495,6 +506,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 		if err != nil {
 			return err
 		}
+		*fileList = append(*fileList, "ovs-db.yaml")
 		*fileList = append(*fileList, "ovs-cni.yaml")
 	}
 
