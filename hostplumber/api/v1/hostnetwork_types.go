@@ -65,6 +65,9 @@ type SriovStatus struct {
 	Vfs      []*VfInfo `json:"vfs,omitempty"`
 }
 
+type OvsStatus struct {
+}
+
 type VfInfo struct {
 	ID       int    `json:"id"`
 	VfDriver string `json:"vfDriver"`

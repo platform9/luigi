@@ -31,6 +31,7 @@ type HostNetworkTemplateSpec struct {
 	NodeSelector    map[string]string `json:"nodeSelector,omitempty"`
 	InterfaceConfig []InterfaceConfig `json:"interfaceConfig,omitempty"`
 	SriovConfig     []SriovConfig     `json:"sriovConfig,omitempty"`
+	OvsConfig       []OvsConfig       `json:"ovsConfig,omityempty"`
 }
 
 type InterfaceConfig struct {
@@ -49,6 +50,11 @@ type SriovConfig struct {
 	MTU      *int    `json:"mtu,omitempty"`
 	VfDriver *string `json:"vfDriver,omitempty"`
 	PfDriver *string `json:"pfDriver,omitempty"`
+}
+
+type OvsConfig struct {
+	BridgeName *string  `json:"bridgeName,omitempty"`
+	Ports      []string `json:"port,omitempty"`
 }
 
 // HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate

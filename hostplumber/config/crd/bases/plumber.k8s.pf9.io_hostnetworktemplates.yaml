@@ -64,6 +64,17 @@ spec:
               additionalProperties:
                 type: string
               type: object
+            ovsConfig:
+              items:
+                properties:
+                  bridgeName:
+                    type: string
+                  port:
+                    items:
+                      type: string
+                    type: array
+                type: object
+              type: array
             sriovConfig:
               items:
                 properties:
@@ -85,6 +96,8 @@ spec:
                     type: string
                 type: object
               type: array
+          required:
+          - ovsConfig
           type: object
         status:
           description: HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate

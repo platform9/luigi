@@ -109,7 +109,7 @@ func CreateBridge(ovs *libovsdb.OvsdbClient, bridgeName string) error {
 			return fmt.Errorf("Trasaction failed due to an error: %s", o.Error)
 		}
 	}
-	fmt.Println("Bridge %s created succesfully %s", bridgeName, reply[0].UUID.GoUUID)
+	fmt.Printf("Bridge %s created succesfully %s", bridgeName, reply[0].UUID.GoUUID)
 	return nil
 }
 
@@ -117,7 +117,7 @@ func CreateBridge(ovs *libovsdb.OvsdbClient, bridgeName string) error {
 func DeleteBridge(ovs *libovsdb.OvsdbClient, bridgeName string) error {
 	bridgeUUID := CheckBridgeExists(ovs, bridgeName)
 	if bridgeUUID == "" {
-		return fmt.Errorf("Bridge %s does not exist %s", bridgeName)
+		return fmt.Errorf("Bridge %s does not exist", bridgeName)
 	}
 	condition := libovsdb.NewCondition("name", "==", bridgeName)
 	// simple delete operation
@@ -169,8 +169,8 @@ func DeleteBridge(ovs *libovsdb.OvsdbClient, bridgeName string) error {
 func CreatePort(ovs *libovsdb.OvsdbClient, bridgeName, intfName, intfType string, vlanTag uint) error {
 	portUUIDStr := intfName
 	intfUUIDStr := fmt.Sprintf("Intf%s", intfName)
-	portUUID := []libovsdb.UUID{{portUUIDStr}}
-	intfUUID := []libovsdb.UUID{{intfUUIDStr}}
+	portUUID := []libovsdb.UUID{{GoUUID: portUUIDStr}}
+	intfUUID := []libovsdb.UUID{{GoUUID: intfUUIDStr}}
 	opStr := "insert"
 	var err error = nil
 
@@ -248,11 +248,11 @@ func CreatePort(ovs *libovsdb.OvsdbClient, bridgeName, intfName, intfType string
 // DeletePort delets ovs port
 func DeletePort(ovs *libovsdb.OvsdbClient, bridgeName, intfName string) error {
 	portUUIDStr := intfName
-	portUUID := []libovsdb.UUID{{portUUIDStr}}
+	portUUID := []libovsdb.UUID{{GoUUID: portUUIDStr}}
 	for k, v := range cache["Port"] {
 		name := v.Fields["name"].(string)
 		if name == intfName {
-			portUUID = []libovsdb.UUID{{k}}
+			portUUID = []libovsdb.UUID{{GoUUID: k}}
 			break
 		}
 	}
