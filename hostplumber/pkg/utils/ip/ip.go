@@ -1,8 +1,6 @@
 package ip
 
 import (
-	"fmt"
-
 	"github.com/vishvananda/netlink"
 )
 
@@ -13,14 +11,10 @@ func GetIpv4Cidr(ifName string) (*[]string, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		fmt.Printf("Parsing IPs for ifName = %s\n", ifName)
-		fmt.Printf("ipAddrs = %+v\n", ipAddrs)
 		for _, addr := range ipAddrs {
 			var ipAddr string
 
 			ipAddr = addr.IPNet.String()
-			fmt.Printf("got ipv4 addr = %s\n", ipAddr)
-
 			*ipList = append(*ipList, ipAddr)
 		}
 	}
@@ -64,8 +58,6 @@ func GetIpv6Cidr(ifName string) (*[]string, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		fmt.Printf("Parsing IPs for ifName = %s\n", ifName)
-		fmt.Printf("ipAddrs = %+v\n", ipAddrs)
 		for _, addr := range ipAddrs {
 			var ipAddr string
 			ipAddr = addr.IPNet.String()

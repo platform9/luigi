@@ -10,4 +10,4 @@ spec:
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts: {}
-    #sriov: {}
+    sriov: {}

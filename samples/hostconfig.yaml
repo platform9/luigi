@@ -6,11 +6,11 @@ spec:
   # Add fields here
   nodeSelector:
     feature.node.kubernetes.io/network-sriov.capable: "true"
-    testlabelA: "123"
+    #testlabelA: "123"
   interfaceConfig:
     - name: enp3s0f1
       # MTU can be set either here OR in sriovConfig. Affects PF + any VFs under it
-      mtu: 9000
+      mtu: 1500
       ipv4:
         # Addresses reflect final desired state - anything not present will be deleted
         address: 
@@ -22,7 +22,7 @@ spec:
   sriovConfig:
     - pfName: enp3s0f1
       numVfs: 4
-      vfDriver: ixgbevf
+      vfDriver: vfio-pci
       #mtu: 9000
     - pfName: enp3s0f0
       numVfs: 2
