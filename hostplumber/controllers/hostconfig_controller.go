@@ -97,6 +97,16 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		log.Info("interfaceConfig is empty")
 	}
 
+	ovsConfigList := hostConfigReq.Spec.OvsConfig
+	if len(ovsConfigList) > 0 {
+		if err := applyOvsConfig(ovsConfigList); err != nil {
+			log.Error(err, "Failed to apply ovsConfig")
+			return ctrl.Result{}, err
+		}
+	} else {
+		log.Info("ovsConfig is empty")
+	}
+
 	hni := hoststate.New(r.NodeName, r.Namespace, r.Client)
 	hni.DiscoverHostState()
 
@@ -231,6 +241,16 @@ func applySriovConfig(sriovConfigList []plumberv1.SriovConfig) error {
 					return err
 				}
 			}
+		}
+	}
+	return nil
+}
+
+func applyOvsConfig(ovsConfigList []plumberv1.OvsConfig) error {
+	for _, ovsConfig := range ovsConfigList {
+		log.Info("Creating bridge", *ovsConfig.BridgeName)
+		for _, port := range ovsConfig.Ports {
+			log.Info("Creating port ", port, " under bridge ", *ovsConfig.BridgeName)
 		}
 	}
 	return nil
