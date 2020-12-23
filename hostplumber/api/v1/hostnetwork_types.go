@@ -34,6 +34,7 @@ type HostNetworkStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	InterfaceStatus []*InterfaceStatus `json:"interfaceStatus,omitempty"`
+	Routes          *Routes            `json:"routes,omitempty"`
 	Sysctl          []string           `json:"sysctlConfig,omitempty"`
 }
 
@@ -74,6 +75,18 @@ type VfInfo struct {
 	Qos      int    `json:"qos"`
 	Spoofchk bool   `json:"spoofchk"`
 	Trust    bool   `json:"trust"`
+}
+
+type Routes struct {
+	V4Routes []*Route `json:"ipv4,omitempty"`
+	V6Routes []*Route `json:"ipv6,omitempty"`
+}
+
+type Route struct {
+	Dst string `json:"dst,omitempty"`
+	Gw  string `json:"gw,omitempty"`
+	Dev string `json:"dev,omitempty"`
+	Src string `json:"src,omitempty"`
 }
 
 // +kubebuilder:object:root=true

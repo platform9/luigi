@@ -9,5 +9,6 @@ spec:
       hostPlumberImage: "platform9/luigi-plumber:v0.2"
     nodeFeatureDiscovery: {}
     multus: {}
-    whereabouts: {}
-    sriov: {}
+    whereabouts:
+      whereaboutsImage: "dougbtv/whereabouts:latest"
+    #sriov: {}

@@ -114,6 +114,35 @@ spec:
                 - sriovEnabled
                 type: object
               type: array
+            routes:
+              properties:
+                ipv4:
+                  items:
+                    properties:
+                      dev:
+                        type: string
+                      dst:
+                        type: string
+                      gw:
+                        type: string
+                      src:
+                        type: string
+                    type: object
+                  type: array
+                ipv6:
+                  items:
+                    properties:
+                      dev:
+                        type: string
+                      dst:
+                        type: string
+                      gw:
+                        type: string
+                      src:
+                        type: string
+                    type: object
+                  type: array
+              type: object
             sysctlConfig:
               items:
                 type: string

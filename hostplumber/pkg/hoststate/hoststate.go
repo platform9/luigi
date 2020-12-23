@@ -42,6 +42,11 @@ func New(nodeName, namespace string, k8sclient client.Client) *HostNetworkInfo {
 func (hni *HostNetworkInfo) DiscoverHostState() {
 	ctx := context.Background()
 
+	if err := hni.discoverRoutingTable(); err != nil {
+		hni.log.Error("Failed to discover routing table ", zap.Error(err))
+		// TODO: Don't return? Discover as much info as we can
+		//return
+	}
 	hni.discoverInterfaceStatus()
 
 	// TODO: Discover L3 (IP, routing tables) related info here
@@ -81,6 +86,58 @@ func (hni *HostNetworkInfo) DiscoverHostState() {
 			return
 		}
 	}
+}
+
+func (hni *HostNetworkInfo) discoverRoutingTable() error {
+	var currRoutes *plumberv1.Routes = new(plumberv1.Routes)
+	var currV4Routes []*plumberv1.Route
+	var currV6Routes []*plumberv1.Route
+	linkList, err := netlink.LinkList()
+	if err != nil {
+		return err
+	}
+	for _, link := range linkList {
+		linkAttrs := link.Attrs()
+		linkName := linkAttrs.Name
+
+		v4routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
+		if err != nil {
+			hni.log.Warnw("No IPv4 routes for link", "interface", linkName, "err", err)
+		}
+
+		for _, v4route := range v4routes {
+			var route *plumberv1.Route = new(plumberv1.Route)
+			route.Dst = v4route.Dst.String()
+			route.Gw = string(v4route.Gw)
+			route.Dev = linkName
+			route.Src = string(v4route.Src)
+			currV4Routes = append(currV4Routes, route)
+		}
+
+		v6routes, err := netlink.RouteList(link, netlink.FAMILY_V6)
+		if err != nil {
+			hni.log.Warnw("No IPv6 routes for link", "interface", linkName, "err", err)
+		}
+
+		for _, v6route := range v6routes {
+			var route *plumberv1.Route = new(plumberv1.Route)
+			route.Dst = v6route.Dst.String()
+			route.Gw = string(v6route.Gw)
+			route.Dev = linkName
+			route.Src = string(v6route.Src)
+			currV6Routes = append(currV6Routes, route)
+		}
+	}
+
+	if len(currV4Routes) > 0 {
+		currRoutes.V4Routes = currV4Routes
+	}
+	if len(currV6Routes) > 0 {
+		currRoutes.V6Routes = currV6Routes
+	}
+
+	hni.currentStatus.Routes = currRoutes
+	return nil
 }
 
 func (hni *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
