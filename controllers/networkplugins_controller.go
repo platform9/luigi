@@ -51,7 +51,7 @@ const (
 	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.2"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
-	HostplumberImage        = "platform9/luigi-plumber:v0.1.0"
+	HostplumberImage        = "platform9/luigi-plumber:v0.2.1"
 	NfdImage                = "k8s.gcr.io/nfd/node-feature-discovery:v0.6.0"
 	TemplateDir             = "/etc/plugin_templates/"
 	CreateDir               = TemplateDir + "create/"
