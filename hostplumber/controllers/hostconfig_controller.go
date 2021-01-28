@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	"os/exec"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -95,6 +97,15 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		}
 	} else {
 		log.Info("interfaceConfig is empty")
+
+	ovsConfigList := hostConfigReq.Spec.OvsConfig
+	if len(ovsConfigList) > 0 {
+		if err := applyOvsConfig(ovsConfigList); err != nil {
+			log.Error(err, "Failed to apply OVS config")
+			return ctrl.Result{}, err
+		} else {
+			log.Info("Successfully applied OVS config")
+		}
 	}
 
 	hni := hoststate.New(r.NodeName, r.Namespace, r.Client)
@@ -176,6 +187,72 @@ func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig) error {
 					}
 				}
 			}
+		}
+	}
+	return nil
+}
+
+func contains(s []byte, str string) bool {
+	for _, v := range s {
+		log.Info("contains ", "item", string(v))
+		if string(v) == str {
+			return true
+		}
+	}
+	return false
+}
+
+func applyOvsConfig(ovsConfigList []*plumberv1.OvsConfig) error {
+	for _, ovsConfig := range ovsConfigList {
+		nodeInterface := (*ovsConfig).NodeInterface
+		bridgeName := (*ovsConfig).BridgeName
+		log.Info("Physical interface name: ", "physnet", nodeInterface)
+		log.Info("Bridge interface name: ", "ovsbr", bridgeName)
+		cmd := exec.Command("ovs-vsctl", "br-exists", bridgeName)
+		output, err := cmd.CombinedOutput()
+		add_port_to_br := false
+		if err != nil {
+			// if err.Error() == "exit status 2"
+			exitError, ok := err.(*exec.ExitError)
+			log.Info("bridge missing", "ok", ok, "out", output, "err", err)
+			if ok {
+				log.Info("code ", "exit", exitError.ExitCode())
+				exec.Command("ovs-vsctl", "add-br", bridgeName).Run()
+				add_port_to_br = true
+			}
+		} else {
+			log.Info("bridge exists")
+			cmd := exec.Command("ovs-vsctl", "list-ports", bridgeName)
+			output, err := cmd.Output()
+			if err != nil {
+				return err
+			}
+			exists := contains(output, nodeInterface)
+			if exists {
+				log.Info("Bridge already has a port for this node interface")
+			} else {
+				add_port_to_br = true
+			}
+		}
+		// Check if port already belongs to another bridge, remove it first if so
+		if add_port_to_br {
+			cmd := exec.Command("ovs-vsctl", "port-to-br", nodeInterface)
+			output, err := cmd.Output()
+			if err == nil {
+				br := strings.TrimSuffix(string(output), "\n")
+				log.Info("Interface already attached to another bridge", "ovsbr", br)
+				cmd := exec.Command("ovs-vsctl", "del-port", br, nodeInterface)
+				if err := cmd.Run(); err != nil {
+					log.Error(err, "Failed to remove interface from current bridge")
+					return err
+				}
+			}
+			cmd = exec.Command("ovs-vsctl", "add-port", bridgeName, nodeInterface)
+			if err := cmd.Run(); err != nil {
+				log.Error(err, "Failed to add interface to specified bridge")
+				return err
+			}
+			log.Info("Added node interface to ovs bridge", "ovsbr", bridgeName)
 		}
 	}
 	return nil

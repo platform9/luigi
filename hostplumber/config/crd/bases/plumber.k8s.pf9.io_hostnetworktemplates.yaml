@@ -64,6 +64,15 @@ spec:
               additionalProperties:
                 type: string
               type: object
+            ovsConfig:
+              items:
+                properties:
+                  bridgeName:
+                    type: string
+                  nodeInterface:
+                    type: string
+                type: object
+              type: array
             sriovConfig:
               items:
                 properties:

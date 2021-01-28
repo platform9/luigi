@@ -18,8 +18,10 @@ COPY pkg/ pkg/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager cmd/hostplumber/main.go
 
-FROM alpine:3.7
-RUN apk add bash
+FROM alpine:3.12
+RUN apk add --no-cache bash
+RUN apk add --no-cache openvswitch
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 

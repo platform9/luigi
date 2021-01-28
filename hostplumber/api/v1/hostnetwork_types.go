@@ -33,9 +33,15 @@ type HostNetworkSpec struct {
 type HostNetworkStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	OvsStatus       []*OvsStatus       `json:"ovsStatus,omitempty"`
 	InterfaceStatus []*InterfaceStatus `json:"interfaceStatus,omitempty"`
 	Routes          *Routes            `json:"routes,omitempty"`
 	Sysctl          []string           `json:"sysctlConfig,omitempty"`
+}
+
+type OvsStatus struct {
+	NodeInterface string `json:"nodeInterface,omitempty"`
+	BridgeName    string `json:"bridgeName,omitempty"`
 }
 
 type InterfaceStatus struct {
