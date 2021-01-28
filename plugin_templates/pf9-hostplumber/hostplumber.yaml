@@ -408,6 +408,8 @@ spec:
         volumeMounts:
         - mountPath: /host
           name: host
+        - mountPath: /host/var/run/openvswitch
+          name: ovs-var-run
       - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:18080/
@@ -428,3 +430,6 @@ spec:
       - hostPath:
           path: /
         name: host
+      - hostPath:
+          path: /var/run/openvswitch
+        name: ovs-var-run

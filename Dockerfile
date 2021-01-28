@@ -26,8 +26,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 #COPY --from=builder /workspace/manager .
 #USER nonroot:nonroot
 
-FROM alpine:3.7
-RUN apk add bash
+FROM alpine:3.12
+RUN apk add --no-cache bash
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY --from=builder /etc/plugin_templates /etc/plugin_templates
