@@ -6,9 +6,9 @@ spec:
   # Add fields here
   plugins:
     hostPlumber:
-      hostPlumberImage: "platform9/luigi-plumber:v0.1.0"
+      hostPlumberImage: "platform9/hostplumber:v0.2.1"
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
-      whereaboutsImage: "platform9/whereabouts:latest"
+      whereaboutsImage: "platform9/whereabouts:v0.3"
     #sriov: {}
