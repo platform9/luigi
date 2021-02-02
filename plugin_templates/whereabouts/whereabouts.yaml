@@ -68,6 +68,7 @@ spec:
       containers:
       - name: whereabouts
         image: {{ .WhereaboutsImage }}
+        imagePullPolicy: IfNotPresent
         env:
         - name: WHEREABOUTS_NAMESPACE
           valueFrom:

@@ -275,8 +275,8 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: platform9/luigi-plugins:v0.1.0
-        imagePullPolicy: Always
+        image: platform9/luigi-plugins:v0.2.2
+        imagePullPolicy: IfNotPresent
         name: manager
       - args:
         - --secure-listen-address=0.0.0.0:8443

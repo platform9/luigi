@@ -1,0 +1,12 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: HostNetworkTemplate
+metadata:
+  name: hostconfig-kernel-eno2
+spec:
+  # Add fields here
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: "true"
+  sriovConfig:
+    - pfName: eno2
+      numVfs: 6
+      vfDriver: i40evf

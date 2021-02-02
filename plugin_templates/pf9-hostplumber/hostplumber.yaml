@@ -401,7 +401,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         image: {{ .HostPlumberImage }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         name: manager
         securityContext:
           privileged: true
