@@ -76,6 +76,7 @@ func VerifyPfExists(pfName string) bool {
 func GetTotalVfsForPf(pfName string) (int, error) {
 	totalVfsFile := filepath.Join(consts.SysClassNet, pfName, "device", "sriov_totalvfs")
 	fd, err := os.Open(totalVfsFile)
+	defer fd.Close()
 	if err != nil {
 		return 0, err
 	}
@@ -91,6 +92,7 @@ func GetTotalVfsForPf(pfName string) (int, error) {
 func GetCurrentNumVfsForPf(pfName string) (int, error) {
 	numVfsFile := filepath.Join(consts.SysClassNet, pfName, "device", "sriov_numvfs")
 	fd, err := os.Open(numVfsFile)
+	defer fd.Close()
 	if err != nil {
 		return 0, err
 	}
@@ -240,19 +242,23 @@ func GetPfListForVendorAndDevice(vendor, device string) ([]string, error) {
 		}
 		fd, err := os.Open(deviceIdFile)
 		if err != nil {
+			fd.Close()
 			return err
 		}
 		var deviceId string
 		_, err = fmt.Fscanf(fd, "0x%s\n", &deviceId)
 		if err != nil {
+			fd.Close()
 			return err
 		}
+		fd.Close()
 
 		vendorIdFile := filepath.Join(devicePath, "vendor")
 		if _, err := os.Stat(vendorIdFile); err != nil {
 			return nil
 		}
 		fd, err = os.Open(vendorIdFile)
+		defer fd.Close()
 		if err != nil {
 			return err
 		}

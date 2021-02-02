@@ -35,6 +35,31 @@ spec:
         spec:
           description: HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
           properties:
+            interfaceConfig:
+              items:
+                properties:
+                  ipv4:
+                    properties:
+                      address:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  ipv6:
+                    properties:
+                      address:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  mtu:
+                    type: integer
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
             nodeSelector:
               additionalProperties:
                 type: string

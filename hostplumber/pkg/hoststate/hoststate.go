@@ -5,6 +5,7 @@ import (
 	"fmt"
 	plumberv1 "hostplumber/api/v1"
 	"hostplumber/pkg/consts"
+	iputils "hostplumber/pkg/utils/ip"
 	linkutils "hostplumber/pkg/utils/link"
 	sriovutils "hostplumber/pkg/utils/sriov"
 	"os"
@@ -58,13 +59,13 @@ func (hni *HostNetworkInfo) DiscoverHostState() {
 	nsn := types.NamespacedName{Name: hni.nodeName, Namespace: hni.namespace}
 	err := hni.client.Get(ctx, nsn, oldHostState)
 	if err != nil && errors.IsNotFound(err) {
-		hni.log.Infof("HostStateSpec not found... creating\n")
+		hni.log.Error("HostStateSpec not found... creating ", zap.Error(err))
 		if err := hni.client.Create(ctx, newHostState); err != nil {
 			hni.log.Infof("Failed to created new HostState for Node %s", hni.nodeName)
 			return
 		}
 	} else if err != nil {
-		hni.log.Error("Failed to fetching HostNetwork ", zap.Error(err))
+		hni.log.Error("Failed to fetch HostNetwork ", zap.Error(err))
 		if err := hni.client.Create(ctx, newHostState); err != nil {
 			hni.log.Error("Failed to create new HostNetwork ", zap.Error(err))
 			return
@@ -72,7 +73,7 @@ func (hni *HostNetworkInfo) DiscoverHostState() {
 		return
 	} else {
 		if err := hni.client.Delete(ctx, oldHostState); err != nil {
-			hni.log.Infof("Error deleting old HostState")
+			hni.log.Error("Error deleting old HostState ", zap.Error(err))
 			return
 		}
 		if err := hni.client.Create(ctx, newHostState); err != nil {
@@ -92,13 +93,13 @@ func (hni *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 	fd, err := os.Open(filepath.Join(devicePath, "vendor"))
 	defer fd.Close()
 	if err != nil {
-		hni.log.Infof("No device file\n")
+		hni.log.Infof("No vendor file for devicePath: %s\n", devicePath)
 		return err
 	}
 	var vendorId string
 	_, err = fmt.Fscanf(fd, "0x%s\n", &vendorId)
 	if err != nil {
-		hni.log.Infof("Error getting vendor ID for ifName = %s", ifName)
+		hni.log.Infow("Error parsing vendor ID", "ifName", ifName, "err", err)
 		return err
 	}
 	ifStatus.VendorId = vendorId
@@ -106,13 +107,13 @@ func (hni *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 	fd, err = os.Open(filepath.Join(devicePath, "device"))
 	defer fd.Close()
 	if err != nil {
-		hni.log.Infof("No device file\n")
+		hni.log.Infof("No device file for devicePath: %s\n", devicePath)
 		return err
 	}
 	var deviceId string
 	_, err = fmt.Fscanf(fd, "0x%s\n", &deviceId)
 	if err != nil {
-		hni.log.Infof("Error getting device ID for ifName = %s", ifName)
+		hni.log.Infow("Error parsing device ID", "ifName", ifName, "err", err)
 		return err
 	}
 	ifStatus.DeviceId = deviceId
@@ -134,10 +135,25 @@ func (hni *HostNetworkInfo) addNetPciDevice(devicePath, ifName string) error {
 	}
 	ifStatus.MTU = mtu
 
+	ipv4Addrs, err := iputils.GetIpv4Cidr(ifName)
+	if err != nil || len(*ipv4Addrs) == 0 {
+		hni.log.Infow("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv4Addrs", *ipv4Addrs)
+	} else {
+		ifStatus.IPv4 = new(plumberv1.IPv4Info)
+		ifStatus.IPv4.Address = *ipv4Addrs
+	}
+
+	ipv6Addrs, err := iputils.GetIpv6Cidr(ifName)
+	if err != nil || len(*ipv6Addrs) == 0 {
+		hni.log.Infow("Error getting IPv6 for interface", "err", err, "ifName", ifName, "ipv6Addrs", *ipv6Addrs)
+	} else {
+		ifStatus.IPv6 = new(plumberv1.IPv6Info)
+		ifStatus.IPv6.Address = *ipv6Addrs
+	}
+
 	var totalVfs int
 	totalVfs = sriovutils.GetTotalVfs(devicePath)
 	if totalVfs > 0 {
-		hni.log.Infof("SRIOV enabled: totalVfs = %d", totalVfs)
 		ifStatus.SriovEnabled = true
 		ifStatus.SriovStatus = new(plumberv1.SriovStatus)
 		ifStatus.SriovStatus.TotalVfs = totalVfs
@@ -169,25 +185,24 @@ func (hni *HostNetworkInfo) discoverInterfaceStatus() error {
 		devicePathLink := filepath.Join(ifPath, "device")
 		devicePath, err := filepath.EvalSymlinks(devicePathLink)
 		if err != nil {
-			hni.log.Infof("ifName %s ifPath %s is NOT a device", ifName, ifPath)
+			hni.log.Infow("Skipping IF with no device link", "ifName", ifName, "ifPath", ifPath, "err", err)
 			return nil
 		}
 
 		if _, isVf := sriovutils.GetPfDeviceForVf(devicePath); isVf == true {
 			// VF info populated later, skip
-			hni.log.Infof("%s is a VF ethernet device, skipping...", ifName)
 			return nil
 		}
 
-		hni.log.Infof("ifName %s ifPath %s IS a physical device", ifName, ifPath)
+		hni.log.Infow("Adding physical interface", "ifName", ifName, "ifPath", ifPath)
 		if err := hni.addNetPciDevice(devicePath, ifName); err != nil {
-			hni.log.Infof("Error processing: %s", ifName)
+			hni.log.Infow("Error processing interface", "ifName", ifName, "err", err)
 			return nil
 		}
 		return nil
 	})
 	if err != nil {
-		hni.log.Infof("failed to traverse sys/class/net")
+		hni.log.Infow("failed to traverse sys/class/net", "err", err)
 		return err
 	}
 	return nil
@@ -196,7 +211,7 @@ func (hni *HostNetworkInfo) discoverInterfaceStatus() error {
 func (hni *HostNetworkInfo) populateVfInfo(info *plumberv1.SriovStatus, devicePath, pfName string) error {
 	linkInfo, err := netlink.LinkByName(pfName)
 	if err != nil {
-		hni.log.Infof("Failed to get VfInfo for PF %s from netlink library", pfName)
+		hni.log.Infow("netlink failed to get PF link", "pfName", pfName, "err", err)
 		return err
 	}
 

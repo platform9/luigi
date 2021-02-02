@@ -39,6 +39,8 @@ type HostNetworkStatus struct {
 
 type InterfaceStatus struct {
 	PfName       string       `json:"pfName,omitempty"`
+	IPv4         *IPv4Info    `json:"ipv4,omitempty"`
+	IPv6         *IPv6Info    `json:"ipv6,omitempty"`
 	PciAddr      string       `json:"pciAddr,omitempty"`
 	VendorId     string       `json:"vendorId,omitempty"`
 	DeviceId     string       `json:"deviceId,omitempty"`
@@ -47,6 +49,14 @@ type InterfaceStatus struct {
 	PfDriver     string       `json:"pfDriver,omitempty"`
 	SriovEnabled bool         `json:"sriovEnabled"`
 	SriovStatus  *SriovStatus `json:"sriovStatus,omitempty"`
+}
+
+type IPv4Info struct {
+	Address []string `json:"address,omitempty"`
+}
+
+type IPv6Info struct {
+	Address []string `json:"address,omitempty"`
 }
 
 type SriovStatus struct {

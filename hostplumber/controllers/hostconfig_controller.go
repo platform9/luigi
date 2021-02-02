@@ -29,6 +29,7 @@ import (
 
 	plumberv1 "hostplumber/api/v1"
 	hoststate "hostplumber/pkg/hoststate"
+	iputils "hostplumber/pkg/utils/ip"
 	linkutils "hostplumber/pkg/utils/link"
 	sriovutils "hostplumber/pkg/utils/sriov"
 )
@@ -83,10 +84,101 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		log.Info("SriovConfig is empty")
 	}
 
+	// Everything that is traditonally done under "ifconfig <ifname>" handled here
+	// Alternatively newer "ip addr" and "ip link" - see https://www.redhat.com/sysadmin/ifconfig-vs-ip
+	// MTUs, IPs, routes, link up/down, etc...
+	ifConfigList := hostConfigReq.Spec.InterfaceConfig
+	if len(ifConfigList) > 0 {
+		if err := applyInterfaceConfig(ifConfigList); err != nil {
+			log.Error(err, "Failed to apply interfaceConfig")
+			return ctrl.Result{}, err
+		}
+	} else {
+		log.Info("interfaceConfig is empty")
+	}
+
 	hni := hoststate.New(r.NodeName, r.Namespace, r.Client)
 	hni.DiscoverHostState()
 
 	return ctrl.Result{}, nil
+}
+
+func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig) error {
+	for _, ifConfig := range ifConfigList {
+		var ifName string
+
+		// TODO: nil check needed? This does NOT have an omitempty json tag in _types.go
+		ifName = *ifConfig.Name
+
+		if ifConfig.MTU != nil && *ifConfig.MTU >= 576 {
+			log.Info("interfaceConfig MTU", "MTU", *ifConfig.MTU)
+			if err := linkutils.SetMtuForPf(ifName, *ifConfig.MTU); err != nil {
+				log.Error(err, "Failed to set MTU for ifName", "ifName", ifName, "MTU", *ifConfig.MTU)
+				return err
+			}
+		}
+
+		if ifConfig.IPv4 != nil {
+			v4Config := ifConfig.IPv4
+			if len(v4Config.Address) == 0 {
+				log.Info("No IPv4 addresses specified... skipping...")
+			} else {
+				// If an address(s) is specified, first unconfigure any old ones
+				// ipv4.address should reflect desired IP state
+				ipv4Addrs, err := iputils.GetIpv4Cidr(ifName)
+				if err != nil || len(*ipv4Addrs) == 0 {
+					log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv4Addrs", *ipv4Addrs)
+				} else {
+					for _, addr := range *ipv4Addrs {
+						log.Info("Removing old IP", "ifName", ifName, "IPv4", addr)
+						if err := iputils.DelIpv4Cidr(ifName, addr); err != nil {
+							log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv4", addr)
+							return err
+						}
+					}
+				}
+
+				for _, addr := range v4Config.Address {
+					log.Info("Attempting to configure IP", "ifName", ifName, "IPv4", addr)
+					if err := iputils.SetIpv4Cidr(ifName, addr); err != nil {
+						log.Error(err, "Failed to Add IP", "ifName", ifName, "IPv4", addr)
+						return err
+					}
+				}
+			}
+		}
+
+		if ifConfig.IPv6 != nil {
+			v6Config := ifConfig.IPv6
+			if len(v6Config.Address) == 0 {
+				log.Info("No IPv6 addresses specified... skipping...")
+			} else {
+				// If an address(s) is specified, first unconfigure any old ones
+				// ipv4.address should reflect desired IP state
+				ipv6Addrs, err := iputils.GetIpv6Cidr(ifName)
+				if err != nil || len(*ipv6Addrs) == 0 {
+					log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv6Addrs", *ipv6Addrs)
+				} else {
+					for _, addr := range *ipv6Addrs {
+						log.Info("Removing old IP", "ifName", ifName, "IPv6", addr)
+						if err := iputils.DelIpv6Cidr(ifName, addr); err != nil {
+							log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv6", addr)
+							return err
+						}
+					}
+				}
+
+				for _, addr := range v6Config.Address {
+					log.Info("Attempting to configure IP", "ifName", ifName, "IPv6", addr)
+					if err := iputils.SetIpv6Cidr(ifName, addr); err != nil {
+						log.Error(err, "Failed to set IP for ifName", "ifName", ifName, "IPv6", addr)
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func applySriovConfig(sriovConfigList []plumberv1.SriovConfig) error {
@@ -132,7 +224,8 @@ func applySriovConfig(sriovConfigList []plumberv1.SriovConfig) error {
 				sriovutils.EnableDriverForVfs(pfName, "ixgbevf")
 			}
 
-			if sriovConfig.MTU != nil && *sriovConfig.MTU > 0 {
+			if sriovConfig.MTU != nil && *sriovConfig.MTU >= 576 {
+				log.Info("sriovConfig MTU", "MTU", *sriovConfig.MTU)
 				if err := linkutils.SetMtuForPf(pfName, *sriovConfig.MTU); err != nil {
 					log.Info("Failed to set MTU for PF and its VFs", "pfName", pfName, "MTU", *sriovConfig.MTU)
 					return err

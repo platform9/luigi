@@ -45,7 +45,6 @@ func SetMtuForPf(pfName string, mtu int) error {
 	if err := ioutil.WriteFile(mtuFile, mtuStr, 0644); err != nil {
 		return err
 	}
-
 	return SetMtuForAllVfs(pfName, mtu)
 }
 
