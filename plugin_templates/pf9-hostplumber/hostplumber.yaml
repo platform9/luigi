@@ -408,7 +408,7 @@ spec:
         volumeMounts:
         - mountPath: /host
           name: host
-        - mountPath: /host/var/run/openvswitch
+        - mountPath: /var/run/openvswitch
           name: ovs-var-run
       - args:
         - --secure-listen-address=0.0.0.0:8443

@@ -61,9 +61,13 @@ spec:
                   properties:
                     cniImage:
                       type: string
+                    imagePullPolicy:
+                      type: string
                     markerImage:
                       type: string
                     namespace:
+                      type: string
+                    ovsImage:
                       type: string
                   type: object
                 sriov:

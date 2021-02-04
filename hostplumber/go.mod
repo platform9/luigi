@@ -7,6 +7,7 @@ require (
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/prometheus/common v0.4.1
+	github.com/socketplane/libovsdb v0.0.0-20200331132831-1afe2b5e90ac
 	github.com/vishvananda/netlink v1.1.0
 	go.uber.org/zap v1.10.0
 	gopkg.in/yaml.v2 v2.2.4
