@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ovs-daemons
+  namespace: default
+spec:
+    selector:
+        matchLabels:
+            name: ovs-daemons
+    template:
+        metadata:
+          labels:
+            tier: node
+            name: ovs-daemons
+        spec:
+          nodeSelector:
+             beta.kubernetes.io/arch: amd64
+             kubernetes.io/hostname: 10.128.156.121
+             kubernetes.io/os: linux
+          hostNetwork: true
+          hostPID: true
+          hostIPC: true
+
+          containers:
+            - name: ovsdb-server
+              command: ["/usr/share/openvswitch/scripts/ovs-ctl", "--no-ovs-vswitchd", "start"]
+              command: ["/usr/share/openvswitch/scripts/ovs-appctl", "status"]
+              command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
+              image: openvswitch/ovs:2.12.0_debian
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                capabilities:
+                  add: ["NET_ADMIN", "SYS_MODULE", "SYS_NICE"]
+                privileged: true
+              volumeMounts:
+                - name: etc-ovs
+                  mountPath: /etc/openvswitch
+                - name: var-run-ovs
+                  mountPath: /var/run/openvswitch
+                - name: var-lib-ovs
+                  mountPath: /var/lib/openvswitch
+                - name: var-log-ovs
+                  mountPath: /var/log/openvswitch
+
+            - name: ovs-vswitchd
+              command: ["/usr/share/openvswitch/scripts/ovs-ctl", "--no-ovsdb-server", "start"]
+              command: ["/usr/share/openvswitch/scripts/ovs-appctl", "status"]
+              command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
+              image: openvswitch/ovs:2.12.0_debian
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                capabilities:
+                  add: ["NET_ADMIN", "SYS_MODULE", "SYS_NICE"]
+                privileged: true
+              volumeMounts:
+                - name: lib-modules
+                  mountPath: /lib/modules
+                - name: etc-ovs
+                  mountPath: /etc/openvswitch
+                - name: var-run-ovs
+                  mountPath: /var/run/openvswitch
+                - name: var-lib-ovs
+                  mountPath: /var/lib/openvswitch
+                - name: var-log-ovs
+                  mountPath: /var/log/openvswitch
+
+          volumes:
+            - name: lib-modules
+              hostPath:
+                  path: /lib/modules
+            - name: etc-ovs
+              hostPath:
+                  path: /etc/openvswitch
+            - name: var-run-ovs
+              hostPath:
+                  path: var-run-ovs
+            - name: var-lib-ovs
+              hostPath:
+                  path: /var/lib/openvswitch
+            - name: var-log-ovs
+              hostPath:
+                  path: /var/log/openvswitch
+
