@@ -49,6 +49,7 @@ const (
 	WhereaboutsImage        = "platform9/whereabouts:v0.3"
 	SriovCniImage           = "nfvpe/sriov-cni:v2.6"
 	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.3.1"
+	OvsImage                = "platform9/openvswitch:v2.12.0"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
 	HostplumberImage        = "platform9/hostplumber:v0.2.1"
@@ -323,6 +324,18 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
 		config["Namespace"] = DefaultNamespace
 	}
 
+	if ovsConfig.ImagePullPolicy == "Always" {
+		config["ImagePullPolicy"] = "Always"
+	} else {
+		config["ImagePullPolicy"] = "IfNotPresent"
+	}
+
+	if ovsConfig.OVSImage != "" {
+		config["OVSImage"] = ovsConfig.OVSImage
+	} else {
+		config["OVSImage"] = OvsImage
+	}
+
 	if ovsConfig.CNIImage != "" {
 		config["CNIImage"] = ovsConfig.CNIImage
 	} else {
@@ -335,8 +348,18 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
 		config["MarkerImage"] = OvsMarkerImage
 	}
 
+	// Apply the OVS DaemonSet
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-daemons.yaml"))
+	if err != nil {
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "ovs-daemons.yaml")); err != nil {
+		return err
+	}
+
 	// Apply the OVS CNI
-	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-cni.yaml"))
+	t, err = template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-cni.yaml"))
 	if err != nil {
 		return err
 	}
@@ -425,6 +448,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 			if err != nil {
 				return err
 			}
+			*fileList = append(*fileList, "ovs-daemons.yaml")
 			*fileList = append(*fileList, "ovs-cni.yaml")
 		}
 

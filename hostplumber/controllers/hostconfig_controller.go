@@ -97,6 +97,7 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		}
 	} else {
 		log.Info("interfaceConfig is empty")
+	}
 
 	ovsConfigList := hostConfigReq.Spec.OvsConfig
 	if len(ovsConfigList) > 0 {
@@ -214,14 +215,12 @@ func applyOvsConfig(ovsConfigList []*plumberv1.OvsConfig) error {
 		if err != nil {
 			// if err.Error() == "exit status 2"
 			exitError, ok := err.(*exec.ExitError)
-			log.Info("bridge missing", "ok", ok, "out", output, "err", err)
+			log.Info("Bridge missing", "ok", ok, "out", output, "err", exitError)
 			if ok {
-				log.Info("code ", "exit", exitError.ExitCode())
 				exec.Command("ovs-vsctl", "add-br", bridgeName).Run()
 				add_port_to_br = true
 			}
 		} else {
-			log.Info("bridge exists")
 			cmd := exec.Command("ovs-vsctl", "list-ports", bridgeName)
 			output, err := cmd.Output()
 			if err != nil {
@@ -247,12 +246,40 @@ func applyOvsConfig(ovsConfigList []*plumberv1.OvsConfig) error {
 					return err
 				}
 			}
+			// Move interface IPs (if any) to the corresponding OVS bridge
+			ipv4Addrs, err := iputils.GetIpv4Cidr(nodeInterface)
+			move_ips := false
+			if err != nil {
+				log.Error(err, "Error getting IPv4 address for interface", "ifName", nodeInterface)
+			} else if len(*ipv4Addrs) == 0 {
+				log.Info("No IPv4 address for interface", "ifName", nodeInterface)
+			} else {
+				log.Info("IPv4 address(es) for interface", "ifName", nodeInterface, "ip", *ipv4Addrs)
+				for _, addr := range *ipv4Addrs {
+					log.Info("Removing interface IP", "ifName", nodeInterface, "ip", addr)
+					if err := iputils.DelIpv4Cidr(nodeInterface, addr); err != nil {
+						log.Error(err, "Failed to flush IP", "ifName", nodeInterface, "ip", addr)
+						return err
+					}
+				}
+				move_ips = true
+			}
+
 			cmd = exec.Command("ovs-vsctl", "add-port", bridgeName, nodeInterface)
 			if err := cmd.Run(); err != nil {
 				log.Error(err, "Failed to add interface to specified bridge")
 				return err
 			}
 			log.Info("Added node interface to ovs bridge", "ovsbr", bridgeName)
+			if move_ips {
+				for _, addr := range *ipv4Addrs {
+					log.Info("Attempting to assign IP to bridge", "ovsbr", bridgeName, "ip", addr)
+					if err := iputils.SetIpv4Cidr(bridgeName, addr); err != nil {
+						log.Info("Failed to assign IP to bridge", "ovsbr", bridgeName, "ip", addr)
+						return err
+					}
+				}
+			}
 		}
 	}
 	return nil

@@ -41,9 +41,11 @@ type Plugins struct {
 }
 
 type Ovs struct {
-	Namespace   string `json:"namespace,omitempty"`
-	CNIImage    string `json:"cniImage,omitempty"`
-	MarkerImage string `json:"markerImage,omitempty"`
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	OVSImage        string `json:"ovsImage,omitempty"`
+	CNIImage        string `json:"cniImage,omitempty"`
+	MarkerImage     string `json:"markerImage,omitempty"`
 }
 
 type NodeFeatureDiscovery struct {

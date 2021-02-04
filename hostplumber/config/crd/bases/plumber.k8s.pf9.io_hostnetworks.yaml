@@ -111,6 +111,18 @@ spec:
                 - sriovEnabled
                 type: object
               type: array
+            ovsStatus:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              items:
+                properties:
+                  bridgeName:
+                    type: string
+                  nodeInterface:
+                    type: string
+                type: object
+              type: array
             routes:
               properties:
                 ipv4:
@@ -140,18 +152,6 @@ spec:
                     type: object
                   type: array
               type: object
-            ovsStatus:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "make" to regenerate code after modifying
-                this file'
-              items:
-                properties:
-                  bridgeName:
-                    type: string
-                  nodeInterface:
-                    type: string
-                type: object
-              type: array
             sysctlConfig:
               items:
                 type: string

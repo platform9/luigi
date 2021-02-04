@@ -107,10 +107,17 @@ func (hni *HostNetworkInfo) discoverRoutingTable() error {
 
 		for _, v4route := range v4routes {
 			var route *plumberv1.Route = new(plumberv1.Route)
-			route.Dst = v4route.Dst.String()
-			route.Gw = string(v4route.Gw)
+			hni.log.Warnw("dst", "Dst", v4route)
+			if v4route.Dst != nil {
+				route.Dst = (*v4route.Dst).String()
+			}
+			if v4route.Gw != nil {
+				route.Gw = string(v4route.Gw)
+			}
+			if v4route.Src != nil {
+				route.Src = string(v4route.Src)
+			}
 			route.Dev = linkName
-			route.Src = string(v4route.Src)
 			currV4Routes = append(currV4Routes, route)
 		}
 
@@ -121,10 +128,16 @@ func (hni *HostNetworkInfo) discoverRoutingTable() error {
 
 		for _, v6route := range v6routes {
 			var route *plumberv1.Route = new(plumberv1.Route)
-			route.Dst = v6route.Dst.String()
-			route.Gw = string(v6route.Gw)
+			if v6route.Dst != nil {
+				route.Dst = (*v6route.Dst).String()
+			}
+			if v6route.Gw != nil {
+				route.Gw = string(v6route.Gw)
+			}
+			if v6route.Src != nil {
+				route.Src = string(v6route.Src)
+			}
 			route.Dev = linkName
-			route.Src = string(v6route.Src)
 			currV6Routes = append(currV6Routes, route)
 		}
 	}
