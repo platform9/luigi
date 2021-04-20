@@ -62,9 +62,13 @@ spec:
                   properties:
                     cniImage:
                       type: string
+                    imagePullPolicy:
+                      type: string
                     markerImage:
                       type: string
                     namespace:
+                      type: string
+                    ovsImage:
                       type: string
                   type: object
                 sriov:
@@ -275,7 +279,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: platform9/luigi-plugins:v0.2.2
+        image: platform9/luigi-plugins:v0.3
         imagePullPolicy: IfNotPresent
         name: manager
       - args:

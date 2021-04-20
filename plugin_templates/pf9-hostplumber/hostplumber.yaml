@@ -32,7 +32,6 @@ spec:
           description: HostNetworkStatus defines the observed state of HostNetwork
           properties:
             interfaceStatus:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
               items:
                 properties:
                   deviceId:
@@ -106,6 +105,45 @@ spec:
                 - sriovEnabled
                 type: object
               type: array
+            ovsStatus:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
+              items:
+                properties:
+                  bridgeName:
+                    type: string
+                  nodeInterface:
+                    type: string
+                type: object
+              type: array
+            routes:
+              properties:
+                ipv4:
+                  items:
+                    properties:
+                      dev:
+                        type: string
+                      dst:
+                        type: string
+                      gw:
+                        type: string
+                      src:
+                        type: string
+                    type: object
+                  type: array
+                ipv6:
+                  items:
+                    properties:
+                      dev:
+                        type: string
+                      dst:
+                        type: string
+                      gw:
+                        type: string
+                      src:
+                        type: string
+                    type: object
+                  type: array
+              type: object
             sysctlConfig:
               items:
                 type: string
@@ -183,6 +221,15 @@ spec:
               additionalProperties:
                 type: string
               type: object
+            ovsConfig:
+              items:
+                properties:
+                  bridgeName:
+                    type: string
+                  nodeInterface:
+                    type: string
+                type: object
+              type: array
             sriovConfig:
               items:
                 properties:

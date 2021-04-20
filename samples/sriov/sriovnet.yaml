@@ -11,6 +11,7 @@ spec:
   "name": "sriov-kernelnet1",
   "spoofchk": "off",
   "type": "sriov",
+  "vlan": 1169,
   "ipam": {
     "type": "whereabouts",
     "range": "10.128.144.0/23",

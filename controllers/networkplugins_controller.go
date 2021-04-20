@@ -52,7 +52,7 @@ const (
 	OvsImage                = "platform9/openvswitch:v2.12.0"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
-	HostplumberImage        = "platform9/hostplumber:v0.2.1"
+	HostplumberImage        = "platform9/hostplumber:v0.3"
 	NfdImage                = "k8s.gcr.io/nfd/node-feature-discovery:v0.6.0"
 	TemplateDir             = "/etc/plugin_templates/"
 	CreateDir               = TemplateDir + "create/"

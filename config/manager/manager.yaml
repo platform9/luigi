@@ -28,6 +28,6 @@ spec:
         args:
         - --enable-leader-election
         image: controller:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         name: manager
       terminationGracePeriodSeconds: 10

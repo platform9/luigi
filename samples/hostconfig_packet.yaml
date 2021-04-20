@@ -8,5 +8,6 @@ spec:
     feature.node.kubernetes.io/network-sriov.capable: "true"
   sriovConfig:
     - pfName: eno2
-      numVfs: 6
+      numVfs: 4
       vfDriver: i40evf
+      mtu: 9000

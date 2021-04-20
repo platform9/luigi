@@ -22,7 +22,7 @@ spec:
       - command:
         - /manager
         image: controller:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         name: manager
         securityContext:
           privileged: true

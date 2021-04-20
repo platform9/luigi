@@ -5,10 +5,10 @@ metadata:
 spec:
   # Add fields here
   plugins:
-    hostPlumber:
-      hostPlumberImage: "platform9/hostplumber:v0.2.1"
+    hostPlumber: {}
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
       whereaboutsImage: "platform9/whereabouts:v0.3"
     #sriov: {}
+    #ovs: {}
