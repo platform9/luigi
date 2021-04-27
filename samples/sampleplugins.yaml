@@ -5,10 +5,11 @@ metadata:
 spec:
   # Add fields here
   plugins:
-    hostPlumber: {}
+    hostPlumber:
+      hostPlumberImage: "platform9/hostplumber:v0.8"
     nodeFeatureDiscovery: {}
     multus: {}
-    whereabouts:
-      whereaboutsImage: "platform9/whereabouts:v0.3"
+    whereabouts: {}
+    # SRIOV actually consists of two plugins - the CNI, and the device-plugin
     #sriov: {}
     #ovs: {}

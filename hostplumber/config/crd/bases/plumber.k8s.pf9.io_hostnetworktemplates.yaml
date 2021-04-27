@@ -56,6 +56,17 @@ spec:
                     type: integer
                   name:
                     type: string
+                  vlan:
+                    items:
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                      required:
+                      - id
+                      type: object
+                    type: array
                 required:
                 - name
                 type: object

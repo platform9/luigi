@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -61,6 +62,8 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	log.Info("Reconciling: ", "HostNetworkTemplate", hostConfigReq)
+
 	myNode := &corev1.Node{}
 	nsm := types.NamespacedName{Name: r.NodeName}
 	if err := r.Get(ctx, nsm, myNode); err != nil {
@@ -91,7 +94,8 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	// MTUs, IPs, routes, link up/down, etc...
 	ifConfigList := hostConfigReq.Spec.InterfaceConfig
 	if len(ifConfigList) > 0 {
-		if err := applyInterfaceConfig(ifConfigList); err != nil {
+		log.Info("ifConfigList not empty")
+		if err := applyInterfaceConfig(ifConfigList, hostConfigReq.Name); err != nil {
 			log.Error(err, "Failed to apply interfaceConfig")
 			return ctrl.Result{}, err
 		}
@@ -115,77 +119,125 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	return ctrl.Result{}, nil
 }
 
-func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig) error {
+func applyInterfaceConfig(ifConfigList []plumberv1.InterfaceConfig, templateName string) error {
 	for _, ifConfig := range ifConfigList {
-		var ifName string
 
-		// TODO: nil check needed? This does NOT have an omitempty json tag in _types.go
-		ifName = *ifConfig.Name
+		if err := createVlanInterfaces(ifConfig, templateName); err != nil {
+			return err
+		}
 
-		if ifConfig.MTU != nil && *ifConfig.MTU >= 576 {
-			log.Info("interfaceConfig MTU", "MTU", *ifConfig.MTU)
-			if err := linkutils.SetMtuForPf(ifName, *ifConfig.MTU); err != nil {
-				log.Error(err, "Failed to set MTU for ifName", "ifName", ifName, "MTU", *ifConfig.MTU)
+		if err := configureMtu(ifConfig); err != nil {
+			return err
+		}
+
+		if err := configureIPs(ifConfig); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func createVlanInterfaces(ifConfig plumberv1.InterfaceConfig, templateName string) error {
+	var newVlanIfs []string
+
+	ifName := *ifConfig.Name
+	vlanConfig := ifConfig.Vlan
+	if len(vlanConfig) > 0 {
+		var vlanIfName string
+		for _, vlanIf := range vlanConfig {
+			vid := *vlanIf.VlanId
+			if vlanIf.Name != nil {
+				vlanIfName = *vlanIf.Name
+			} else {
+				vlanIfName = fmt.Sprintf("%s.%d", ifName, vid)
+			}
+			if err := linkutils.CreateVlanIf(vlanIfName, ifName, vid); err != nil {
+				log.Error(err, "Failed to create vlan interface", "vlan", vlanIfName, "ifName", ifName)
 				return err
 			}
+			newVlanIfs = append(newVlanIfs, vlanIfName)
 		}
+	}
+	fmt.Printf("templateName = %s ifName=%s, newVlanIfs = %s\n", templateName, ifName, newVlanIfs)
+	err := linkutils.ReplaceManagedVlans(templateName, ifName, newVlanIfs)
+	if err != nil {
+		log.Error(err, "Failed to update managed vlans config", "ifName", ifName)
+		return err
+	}
+	return nil
+}
 
-		if ifConfig.IPv4 != nil {
-			v4Config := ifConfig.IPv4
-			if len(v4Config.Address) == 0 {
-				log.Info("No IPv4 addresses specified... skipping...")
+func configureMtu(ifConfig plumberv1.InterfaceConfig) error {
+	ifName := *ifConfig.Name
+
+	if ifConfig.MTU != nil && *ifConfig.MTU >= 576 {
+		log.Info("interfaceConfig MTU", "MTU", *ifConfig.MTU)
+		if err := linkutils.SetMtuForPf(ifName, *ifConfig.MTU); err != nil {
+			log.Error(err, "Failed to set MTU for ifName", "ifName", ifName, "MTU", *ifConfig.MTU)
+			return err
+		}
+	}
+	return nil
+}
+
+func configureIPs(ifConfig plumberv1.InterfaceConfig) error {
+	ifName := *ifConfig.Name
+
+	if ifConfig.IPv4 != nil {
+		v4Config := ifConfig.IPv4
+		if len(v4Config.Address) == 0 {
+			log.Info("No IPv4 addresses specified... skipping...")
+		} else {
+			// If an address(s) is specified, first unconfigure any old ones
+			// ipv4.address should reflect desired IP state
+			ipv4Addrs, err := iputils.GetIpv4Cidr(ifName)
+			if err != nil || len(*ipv4Addrs) == 0 {
+				log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv4Addrs", *ipv4Addrs)
 			} else {
-				// If an address(s) is specified, first unconfigure any old ones
-				// ipv4.address should reflect desired IP state
-				ipv4Addrs, err := iputils.GetIpv4Cidr(ifName)
-				if err != nil || len(*ipv4Addrs) == 0 {
-					log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv4Addrs", *ipv4Addrs)
-				} else {
-					for _, addr := range *ipv4Addrs {
-						log.Info("Removing old IP", "ifName", ifName, "IPv4", addr)
-						if err := iputils.DelIpv4Cidr(ifName, addr); err != nil {
-							log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv4", addr)
-							return err
-						}
-					}
-				}
-
-				for _, addr := range v4Config.Address {
-					log.Info("Attempting to configure IP", "ifName", ifName, "IPv4", addr)
-					if err := iputils.SetIpv4Cidr(ifName, addr); err != nil {
-						log.Error(err, "Failed to Add IP", "ifName", ifName, "IPv4", addr)
+				for _, addr := range *ipv4Addrs {
+					log.Info("Removing old IP", "ifName", ifName, "IPv4", addr)
+					if err := iputils.DelIpv4Cidr(ifName, addr); err != nil {
+						log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv4", addr)
 						return err
 					}
 				}
 			}
-		}
 
-		if ifConfig.IPv6 != nil {
-			v6Config := ifConfig.IPv6
-			if len(v6Config.Address) == 0 {
-				log.Info("No IPv6 addresses specified... skipping...")
-			} else {
-				// If an address(s) is specified, first unconfigure any old ones
-				// ipv4.address should reflect desired IP state
-				ipv6Addrs, err := iputils.GetIpv6Cidr(ifName)
-				if err != nil || len(*ipv6Addrs) == 0 {
-					log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv6Addrs", *ipv6Addrs)
-				} else {
-					for _, addr := range *ipv6Addrs {
-						log.Info("Removing old IP", "ifName", ifName, "IPv6", addr)
-						if err := iputils.DelIpv6Cidr(ifName, addr); err != nil {
-							log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv6", addr)
-							return err
-						}
-					}
+			for _, addr := range v4Config.Address {
+				log.Info("Attempting to configure IP", "ifName", ifName, "IPv4", addr)
+				if err := iputils.SetIpv4Cidr(ifName, addr); err != nil {
+					log.Error(err, "Failed to Add IP", "ifName", ifName, "IPv4", addr)
+					return err
 				}
+			}
+		}
+	}
 
-				for _, addr := range v6Config.Address {
-					log.Info("Attempting to configure IP", "ifName", ifName, "IPv6", addr)
-					if err := iputils.SetIpv6Cidr(ifName, addr); err != nil {
-						log.Error(err, "Failed to set IP for ifName", "ifName", ifName, "IPv6", addr)
+	if ifConfig.IPv6 != nil {
+		v6Config := ifConfig.IPv6
+		if len(v6Config.Address) == 0 {
+			log.Info("No IPv6 addresses specified... skipping...")
+		} else {
+			// If an address(s) is specified, first unconfigure any old ones
+			// ipv4.address should reflect desired IP state
+			ipv6Addrs, err := iputils.GetIpv6Cidr(ifName)
+			if err != nil || len(*ipv6Addrs) == 0 {
+				log.Info("Error getting IPv4 for interface", "err", err, "ifName", ifName, "ipv6Addrs", *ipv6Addrs)
+			} else {
+				for _, addr := range *ipv6Addrs {
+					log.Info("Removing old IP", "ifName", ifName, "IPv6", addr)
+					if err := iputils.DelIpv6Cidr(ifName, addr); err != nil {
+						log.Error(err, "Failed to Del IP", "ifName", ifName, "IPv6", addr)
 						return err
 					}
+				}
+			}
+
+			for _, addr := range v6Config.Address {
+				log.Info("Attempting to configure IP", "ifName", ifName, "IPv6", addr)
+				if err := iputils.SetIpv6Cidr(ifName, addr); err != nil {
+					log.Error(err, "Failed to set IP for ifName", "ifName", ifName, "IPv6", addr)
+					return err
 				}
 			}
 		}

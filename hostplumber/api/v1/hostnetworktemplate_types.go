@@ -35,10 +35,16 @@ type HostNetworkTemplateSpec struct {
 }
 
 type InterfaceConfig struct {
-	Name *string   `json:"name"`
-	MTU  *int      `json:"mtu,omitempty"`
-	IPv4 *IPv4Info `json:"ipv4,omitempty"`
-	IPv6 *IPv6Info `json:"ipv6,omitempty"`
+	Name *string      `json:"name"`
+	MTU  *int         `json:"mtu,omitempty"`
+	IPv4 *IPv4Info    `json:"ipv4,omitempty"`
+	IPv6 *IPv6Info    `json:"ipv6,omitempty"`
+	Vlan []VlanConfig `json:"vlan,omitempty"`
+}
+
+type VlanConfig struct {
+	VlanId *int    `json:"id"`
+	Name   *string `json:"name,omitempty"`
 }
 
 type SriovConfig struct {
