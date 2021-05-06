@@ -46,7 +46,7 @@ import (
 const (
 	DefaultNamespace        = "default"
 	MultusImage             = "ghcr.io/k8snetworkplumbingwg/multus-cni:v3.7.1"
-	WhereaboutsImage        = "platform9/whereabouts:v0.3"
+	WhereaboutsImage        = "platform9/whereabouts:v0.4"
 	SriovCniImage           = "nfvpe/sriov-cni:v2.6"
 	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.3.1"
 	OvsImage                = "platform9/openvswitch:v2.12.0"

@@ -16,4 +16,6 @@ spec:
       vlan:
         - id: 1000
         - id: 1001
-
+  ovsConfig:
+  - bridgeName: ovs-br01
+    nodeInterface: eno2.1000

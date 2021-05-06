@@ -279,7 +279,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: platform9/luigi-plugins:latest
+        image: platform9/luigi-plugins:v0.4
         imagePullPolicy: IfNotPresent
         name: manager
       - args:
