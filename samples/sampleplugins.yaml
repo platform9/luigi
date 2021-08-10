@@ -4,12 +4,13 @@ metadata:
   name: networkplugins-sample11
 spec:
   # Add fields here
+  #registryPrefix: "localhost:5100"
   plugins:
     hostPlumber:
-      hostPlumberImage: "platform9/hostplumber:v0.8"
+      imagePullPolicy: "Always"
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts: {}
     # SRIOV actually consists of two plugins - the CNI, and the device-plugin
-    #sriov: {}
-    ovs: {}
+    sriov: {}
+    #ovs: {}

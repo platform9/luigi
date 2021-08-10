@@ -170,6 +170,7 @@ spec:
       containers:
       - name: kube-multus
         image: {{ .MultusImage }}
+        imagePullPolicy: {{ .ImagePullPolicy }}
         command: ["/entrypoint.sh"]
         args:
         - "--multus-conf-file=auto"

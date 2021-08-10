@@ -144,6 +144,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
           image: {{ .NfdImage }}
+          imagePullPolicy: {{ .ImagePullPolicy }}
           name: nfd-worker
           command:
             - "nfd-worker"

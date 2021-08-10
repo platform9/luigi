@@ -28,7 +28,8 @@ type NetworkPluginsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Plugins *Plugins `json:"plugins,omitempty"`
+	Plugins  *Plugins `json:"plugins,omitempty"`
+	Registry string   `json:"privateRegistryBase,omitempty"`
 }
 
 type Plugins struct {
@@ -49,30 +50,35 @@ type Ovs struct {
 }
 
 type NodeFeatureDiscovery struct {
-	Namespace string `json:"namespace,omitempty"`
-	NfdImage  string `json:"nfdImage,omitempty"`
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	NfdImage        string `json:"nfdImage,omitempty"`
 }
 
 type HostPlumber struct {
 	Namespace        string `json:"namespace,omitempty"`
+	ImagePullPolicy  string `json:"imagePullPolicy,omitempty"`
 	HostPlumberImage string `json:"hostPlumberImage,omitempty"`
 }
 
 type Whereabouts struct {
 	Namespace        string `json:"namespace,omitempty"`
+	ImagePullPolicy  string `json:"imagePullPolicy,omitempty"`
 	WhereaboutsImage string `json:"whereaboutsImage,omitempty"`
 }
 
 type Multus struct {
-	Namespace   string `json:"namespace,omitempty"`
-	MultusImage string `json:"multusImage,omitempty"`
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	MultusImage     string `json:"multusImage,omitempty"`
 }
 
 type Sriov struct {
-	Namespace      string `json:"namespace,omitempty"`
-	SriovCniImage  string `json:"sriovCniImage,omitempty"`
-	SriovDpImage   string `json:"sriovDpImage,omitempty"`
-	SriovConfigMap string `json:"sriovConfigMap,omitempty"`
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	SriovCniImage   string `json:"sriovCniImage,omitempty"`
+	SriovDpImage    string `json:"sriovDpImage,omitempty"`
+	SriovConfigMap  string `json:"sriovConfigMap,omitempty"`
 }
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins
