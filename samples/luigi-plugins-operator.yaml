@@ -41,11 +41,15 @@ spec:
                   properties:
                     hostPlumberImage:
                       type: string
+                    imagePullPolicy:
+                      type: string
                     namespace:
                       type: string
                   type: object
                 multus:
                   properties:
+                    imagePullPolicy:
+                      type: string
                     multusImage:
                       type: string
                     namespace:
@@ -53,6 +57,8 @@ spec:
                   type: object
                 nodeFeatureDiscovery:
                   properties:
+                    imagePullPolicy:
+                      type: string
                     namespace:
                       type: string
                     nfdImage:
@@ -69,6 +75,8 @@ spec:
                   type: object
                 sriov:
                   properties:
+                    imagePullPolicy:
+                      type: string
                     namespace:
                       type: string
                     sriovCniImage:
@@ -80,12 +88,16 @@ spec:
                   type: object
                 whereabouts:
                   properties:
+                    imagePullPolicy:
+                      type: string
                     namespace:
                       type: string
                     whereaboutsImage:
                       type: string
                   type: object
               type: object
+            privateRegistryBase:
+              type: string
           type: object
         status:
           description: NetworkPluginsStatus defines the observed state of NetworkPlugins
@@ -275,7 +287,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: platform9/luigi-plugins:v0.2.2
+        image: docker.io/platform9/luigi-plugins:v0.2.3
         imagePullPolicy: IfNotPresent
         name: manager
       - args:

@@ -362,7 +362,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         image: {{ .HostPlumberImage }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .ImagePullPolicy }}
         name: manager
         securityContext:
           privileged: true
@@ -374,7 +374,7 @@ spec:
         - --upstream=http://127.0.0.1:18080/
         - --logtostderr=true
         - --v=10
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+        image: {{ .KubeRbacProxyImage }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443

@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"text/template"
 
 	"github.com/go-logr/logr"
@@ -45,13 +46,14 @@ import (
 
 const (
 	DefaultNamespace        = "default"
-	MultusImage             = "nfvpe/multus:v3.6"
-	WhereaboutsImage        = "platform9/whereabouts:v0.3"
-	SriovCniImage           = "nfvpe/sriov-cni:v2.6"
-	SriovDpImage            = "nfvpe/sriov-device-plugin:v3.3.1"
+	MultusImage             = "docker.io/nfvpe/multus:v3.6"
+	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.3"
+	SriovCniImage           = "docker.io/nfvpe/sriov-cni:v2.6"
+	SriovDpImage            = "docker.io/nfvpe/sriov-device-plugin:v3.3.1"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
-	HostplumberImage        = "platform9/hostplumber:v0.2.1"
+	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.2.1"
+	KubeRbacProxyImage      = "gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0"
 	NfdImage                = "k8s.gcr.io/nfd/node-feature-discovery:v0.6.0"
 	TemplateDir             = "/etc/plugin_templates/"
 	CreateDir               = TemplateDir + "create/"
@@ -66,7 +68,7 @@ type NetworkPluginsReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-type PluginsUpdateContainer struct {
+type PluginsUpdateInfo struct {
 	Log            logr.Logger
 	NamespacedName types.NamespacedName
 	currentSpec    *plumberv1.NetworkPluginsSpec
@@ -81,7 +83,7 @@ type HostPlumberT plumberv1.HostPlumber
 type NodeFeatureDiscoveryT plumberv1.NodeFeatureDiscovery
 
 type ApplyPlugin interface {
-	WriteConfigToTemplate(string) error
+	WriteConfigToTemplate(string, string) error
 	ApplyTemplate(string) error
 }
 
@@ -99,18 +101,18 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var reqContainer *PluginsUpdateContainer = new(PluginsUpdateContainer)
-	reqContainer.Log = log
-	reqContainer.NamespacedName = req.NamespacedName
-	reqContainer.prevSpec = nil
-	reqContainer.currentSpec = &networkPluginsReq.Spec
+	var reqInfo *PluginsUpdateInfo = new(PluginsUpdateInfo)
+	reqInfo.Log = log
+	reqInfo.NamespacedName = req.NamespacedName
+	reqInfo.prevSpec = nil
+	reqInfo.currentSpec = &networkPluginsReq.Spec
 	cm, err := r.getCurrentConfig(ctx, req)
 	if err != nil {
 		// TODO - Error fetching previous config (NOT a not found error) - ignore?
 		log.Info("Error fetching previous ConfigMap, ignoring...")
 	}
 	if cm != nil {
-		reqContainer.prevSpec, err = convertConfigMapToSpec(cm)
+		reqInfo.prevSpec, err = convertConfigMapToSpec(cm)
 		if err != nil {
 			log.Error(err, "Error converting previous ConfigMap to Spec")
 			return ctrl.Result{}, err
@@ -118,7 +120,7 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	var fileList []string
-	err = r.parseNewPlugins(reqContainer, &fileList)
+	err = r.parseNewPlugins(reqInfo, &fileList)
 	if err != nil {
 		log.Error(err, "Error applying new plugin templates")
 		return ctrl.Result{}, err
@@ -130,7 +132,7 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	var fileListMissing []string
-	err = r.parseMissingPlugins(reqContainer, &fileListMissing)
+	err = r.parseMissingPlugins(reqInfo, &fileListMissing)
 	if err != nil {
 		log.Error(err, "Error applying templates!")
 		return ctrl.Result{}, err
@@ -142,7 +144,7 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	// Everything succeeded - save Spec we just applied to ConfigMap
-	err = r.saveSpecConfig(ctx, reqContainer)
+	err = r.saveSpecConfig(ctx, reqInfo)
 	if err != nil {
 		log.Error(err, "Failed to save spec in new ConfigMap")
 		return ctrl.Result{}, err
@@ -151,7 +153,7 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	return ctrl.Result{}, nil
 }
 
-func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir string) error {
+func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir, registry string) error {
 	config := make(map[string]interface{})
 	if hostPlumberConfig.Namespace != "" {
 		config["Namespace"] = hostPlumberConfig.Namespace
@@ -159,11 +161,19 @@ func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir string) e
 		config["Namespace"] = DefaultNamespace
 	}
 
+	if hostPlumberConfig.ImagePullPolicy == "Always" {
+		config["ImagePullPolicy"] = "Always"
+	} else {
+		config["ImagePullPolicy"] = "IfNotPresent"
+	}
+
 	if hostPlumberConfig.HostPlumberImage != "" {
 		config["HostPlumberImage"] = hostPlumberConfig.HostPlumberImage
 	} else {
-		config["HostPlumberImage"] = HostplumberImage
+		config["HostPlumberImage"] = ReplaceContainerRegistry(HostPlumberImage, registry)
 	}
+
+	config["KubeRbacProxyImage"] = ReplaceContainerRegistry(KubeRbacProxyImage, registry)
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "pf9-hostplumber", "hostplumber.yaml"))
 	if err != nil {
@@ -181,13 +191,13 @@ func (hostPlumberConfig *HostPlumberT) ApplyTemplate(outputDir string) error {
 	return nil
 }
 
-func (nfdConfig *NodeFeatureDiscoveryT) WriteConfigToTemplate(outputDir string) error {
+func (nfdConfig *NodeFeatureDiscoveryT) WriteConfigToTemplate(outputDir, registry string) error {
 	config := make(map[string]interface{})
 
 	if nfdConfig.NfdImage != "" {
 		config["NfdImage"] = nfdConfig.NfdImage
 	} else {
-		config["NfdImage"] = NfdImage
+		config["NfdImage"] = ReplaceContainerRegistry(NfdImage, registry)
 	}
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "node-feature-discovery", "nfd.yaml"))
@@ -206,7 +216,7 @@ func (nfdConfig *NodeFeatureDiscoveryT) ApplyTemplate(outputDir string) error {
 	return nil
 }
 
-func (multusConfig *MultusT) WriteConfigToTemplate(outputDir string) error {
+func (multusConfig *MultusT) WriteConfigToTemplate(outputDir, registry string) error {
 	config := make(map[string]interface{})
 	if multusConfig.Namespace != "" {
 		config["Namespace"] = multusConfig.Namespace
@@ -217,7 +227,7 @@ func (multusConfig *MultusT) WriteConfigToTemplate(outputDir string) error {
 	if multusConfig.MultusImage != "" {
 		config["MultusImage"] = multusConfig.MultusImage
 	} else {
-		config["MultusImage"] = MultusImage
+		config["MultusImage"] = ReplaceContainerRegistry(MultusImage, registry)
 	}
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "multus", "multus.yaml"))
@@ -236,7 +246,7 @@ func (multusConfig *MultusT) ApplyTemplate(outputDir string) error {
 	return nil
 }
 
-func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir string) error {
+func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir, registry string) error {
 	config := make(map[string]interface{})
 	if whereaboutsConfig.Namespace != "" {
 		config["Namespace"] = whereaboutsConfig.Namespace
@@ -247,7 +257,7 @@ func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir string) e
 	if whereaboutsConfig.WhereaboutsImage != "" {
 		config["WhereaboutsImage"] = whereaboutsConfig.WhereaboutsImage
 	} else {
-		config["WhereaboutsImage"] = WhereaboutsImage
+		config["WhereaboutsImage"] = ReplaceContainerRegistry(WhereaboutsImage, registry)
 	}
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "whereabouts", "whereabouts.yaml"))
@@ -266,7 +276,7 @@ func (whereaboutsConfig *WhereaboutsT) ApplyTemplate(outputDir string) error {
 	return nil
 }
 
-func (sriovConfig *SriovT) WriteConfigToTemplate(outputDir string) error {
+func (sriovConfig *SriovT) WriteConfigToTemplate(outputDir, registry string) error {
 	config := make(map[string]interface{})
 
 	if sriovConfig.Namespace != "" {
@@ -278,13 +288,13 @@ func (sriovConfig *SriovT) WriteConfigToTemplate(outputDir string) error {
 	if sriovConfig.SriovCniImage != "" {
 		config["SriovCniImage"] = sriovConfig.SriovCniImage
 	} else {
-		config["SriovCniImage"] = SriovCniImage
+		config["SriovCniImage"] = ReplaceContainerRegistry(SriovCniImage, registry)
 	}
 
 	if sriovConfig.SriovDpImage != "" {
 		config["SriovDpImage"] = sriovConfig.SriovDpImage
 	} else {
-		config["SriovDpImage"] = SriovDpImage
+		config["SriovDpImage"] = ReplaceContainerRegistry(SriovDpImage, registry)
 	}
 
 	// Apply the SRIOV CNI
@@ -314,7 +324,7 @@ func (sriovConfig *SriovT) ApplyTemplate(outputDir string) error {
 	return nil
 }
 
-func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
+func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir, registry string) error {
 	config := make(map[string]interface{})
 
 	if ovsConfig.Namespace != "" {
@@ -326,13 +336,13 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir string) error {
 	if ovsConfig.CNIImage != "" {
 		config["CNIImage"] = ovsConfig.CNIImage
 	} else {
-		config["CNIImage"] = OvsCniImage
+		config["CNIImage"] = ReplaceContainerRegistry(OvsCniImage, registry)
 	}
 
 	if ovsConfig.MarkerImage != "" {
 		config["MarkerImage"] = ovsConfig.MarkerImage
 	} else {
-		config["MarkerImage"] = OvsMarkerImage
+		config["MarkerImage"] = ReplaceContainerRegistry(OvsMarkerImage, registry)
 	}
 
 	// Apply the OVS CNI
@@ -353,10 +363,20 @@ func (ovsConfig *OvsT) ApplyTemplate(outputDir string) error {
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) createPlugin(plugin ApplyPlugin) error {
+func ReplaceContainerRegistry(originalImage, newRegistry string) string {
+	if newRegistry == "" {
+		return originalImage
+	}
+
+	r1 := regexp.MustCompile(`^[^\/]*`)
+	privateImg := r1.ReplaceAllString(originalImage, newRegistry)
+	return privateImg
+}
+
+func (r *NetworkPluginsReconciler) createPlugin(plugin ApplyPlugin, registry string) error {
 	outputDir := CreateDir
 
-	if err := plugin.WriteConfigToTemplate(outputDir); err != nil {
+	if err := plugin.WriteConfigToTemplate(outputDir, registry); err != nil {
 		fmt.Printf("WriteConfigToTemplate returned error: %s\n", err)
 		return err
 	}
@@ -368,10 +388,10 @@ func (r *NetworkPluginsReconciler) createPlugin(plugin ApplyPlugin) error {
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) deletePlugin(plugin ApplyPlugin) error {
+func (r *NetworkPluginsReconciler) deletePlugin(plugin ApplyPlugin, registry string) error {
 	outputDir := DeleteDir
 
-	if err := plugin.WriteConfigToTemplate(outputDir); err != nil {
+	if err := plugin.WriteConfigToTemplate(outputDir, registry); err != nil {
 		return err
 	}
 
@@ -382,17 +402,23 @@ func (r *NetworkPluginsReconciler) deletePlugin(plugin ApplyPlugin) error {
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, fileList *[]string) error {
+func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateInfo, fileList *[]string) error {
 	if err := os.MkdirAll(CreateDir, os.ModePerm); err != nil {
 		return err
 	}
 
+	customRegistry := req.currentSpec.Registry
+	if customRegistry != "" {
+		r.Log.Info("Custom registry is set ", "registryPrefix", req.currentSpec.Registry)
+	} else {
+		r.Log.Info("No custom registry is set, using defaults from image")
+	}
 	r.Log.Info("new plugins: ", "plugins", req.currentSpec.Plugins)
 
 	if plugins := req.currentSpec.Plugins; plugins != nil {
 		if plugins.Multus != nil {
 			multusConfig := (*MultusT)(plugins.Multus)
-			err := r.createPlugin(multusConfig)
+			err := r.createPlugin(multusConfig, customRegistry)
 			if err != nil {
 				fmt.Printf("error: %s\n", err)
 				return err
@@ -402,7 +428,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 
 		if plugins.Sriov != nil {
 			sriovConfig := (*SriovT)(plugins.Sriov)
-			err := r.createPlugin(sriovConfig)
+			err := r.createPlugin(sriovConfig, customRegistry)
 			if err != nil {
 				return err
 			}
@@ -412,7 +438,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 
 		if plugins.Whereabouts != nil {
 			whConfig := (*WhereaboutsT)(plugins.Whereabouts)
-			err := r.createPlugin(whConfig)
+			err := r.createPlugin(whConfig, customRegistry)
 			if err != nil {
 				return err
 			}
@@ -421,7 +447,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 
 		if plugins.OVS != nil {
 			ovsConfig := (*OvsT)(plugins.OVS)
-			err := r.createPlugin(ovsConfig)
+			err := r.createPlugin(ovsConfig, customRegistry)
 			if err != nil {
 				return err
 			}
@@ -430,7 +456,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 
 		if plugins.HostPlumber != nil {
 			hostPlumberConfig := (*HostPlumberT)(plugins.HostPlumber)
-			err := r.createPlugin(hostPlumberConfig)
+			err := r.createPlugin(hostPlumberConfig, customRegistry)
 			if err != nil {
 				return err
 			}
@@ -439,7 +465,7 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 
 		if plugins.NodeFeatureDiscovery != nil {
 			nfdConfig := (*NodeFeatureDiscoveryT)(plugins.NodeFeatureDiscovery)
-			err := r.createPlugin(nfdConfig)
+			err := r.createPlugin(nfdConfig, customRegistry)
 			if err != nil {
 				return err
 			}
@@ -449,11 +475,18 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateContainer, 
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContainer, fileList *[]string) error {
+func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateInfo, fileList *[]string) error {
 	// First find out which plugins are missing from new spec vs old spec
 	if req.prevSpec == nil || req.prevSpec.Plugins == nil {
 		// Old spec was empty, nothing to delete
 		return nil
+	}
+
+	customRegistry := req.currentSpec.Registry
+	if customRegistry != "" {
+		r.Log.Info("Custom registry is set ", "registryPrefix", req.currentSpec.Registry)
+	} else {
+		r.Log.Info("No custom registry is set, using defaults from image")
 	}
 
 	old := req.prevSpec.Plugins
@@ -463,7 +496,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.Multus == nil) && old.Multus != nil {
 		multusConfig := (*MultusT)(old.Multus)
-		err := r.deletePlugin(multusConfig)
+		err := r.deletePlugin(multusConfig, customRegistry)
 		if err != nil {
 			return err
 		}
@@ -472,7 +505,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.Whereabouts == nil) && old.Whereabouts != nil {
 		whereaboutsConfig := (*WhereaboutsT)(old.Whereabouts)
-		err := r.deletePlugin(whereaboutsConfig)
+		err := r.deletePlugin(whereaboutsConfig, customRegistry)
 		if err != nil {
 			return err
 		}
@@ -481,7 +514,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.Sriov == nil) && old.Sriov != nil {
 		sriovConfig := (*SriovT)(old.Sriov)
-		err := r.deletePlugin(sriovConfig)
+		err := r.deletePlugin(sriovConfig, customRegistry)
 		if err != nil {
 			return err
 		}
@@ -491,7 +524,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.OVS == nil) && old.OVS != nil {
 		ovsConfig := (*OvsT)(old.OVS)
-		err := r.deletePlugin(ovsConfig)
+		err := r.deletePlugin(ovsConfig, customRegistry)
 		if err != nil {
 			return err
 		}
@@ -500,7 +533,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.HostPlumber == nil) && old.HostPlumber != nil {
 		hostPlumberConfig := (*HostPlumberT)(old.HostPlumber)
-		err := r.deletePlugin(hostPlumberConfig)
+		err := r.deletePlugin(hostPlumberConfig, customRegistry)
 		if err != nil {
 			return err
 		}
@@ -509,7 +542,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateContain
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.NodeFeatureDiscovery == nil) && old.NodeFeatureDiscovery != nil {
 		nfdConfig := (*NodeFeatureDiscoveryT)(old.NodeFeatureDiscovery)
-		err := r.deletePlugin(nfdConfig)
+		err := r.deletePlugin(nfdConfig, customRegistry)
 		if err != nil {
 			return err
 		}
@@ -595,7 +628,7 @@ func (r *NetworkPluginsReconciler) deleteMissingPlugins(fileList []string) error
 	return nil
 }
 
-func (r *NetworkPluginsReconciler) saveSpecConfig(ctx context.Context, plugins *PluginsUpdateContainer) error {
+func (r *NetworkPluginsReconciler) saveSpecConfig(ctx context.Context, plugins *PluginsUpdateInfo) error {
 	jsonSpec, err := json.Marshal(plugins.currentSpec)
 	if err != nil {
 		return err
