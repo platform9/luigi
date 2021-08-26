@@ -47,7 +47,7 @@ import (
 const (
 	DefaultNamespace        = "default"
 	MultusImage             = "docker.io/nfvpe/multus:v3.6"
-	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.3"
+	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.4.3"
 	SriovCniImage           = "docker.io/nfvpe/sriov-cni:v2.6"
 	SriovDpImage            = "docker.io/nfvpe/sriov-device-plugin:v3.3.1"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
@@ -59,6 +59,7 @@ const (
 	CreateDir               = TemplateDir + "create/"
 	DeleteDir               = TemplateDir + "delete/"
 	NetworkPluginsConfigMap = "pf9-networkplugins-config"
+	IpReconcilerSchedule    = "*/5 * * * *"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -258,6 +259,18 @@ func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir, registry
 		config["WhereaboutsImage"] = whereaboutsConfig.WhereaboutsImage
 	} else {
 		config["WhereaboutsImage"] = ReplaceContainerRegistry(WhereaboutsImage, registry)
+	}
+
+	if whereaboutsConfig.ImagePullPolicy == "Always" {
+		config["ImagePullPolicy"] = "Always"
+	} else {
+		config["ImagePullPolicy"] = "IfNotPresent"
+	}
+
+	if whereaboutsConfig.IpReconcilerSchedule != "" {
+		config["IpReconcilerSchedule"] = whereaboutsConfig.IpReconcilerSchedule
+	} else {
+		config["IpReconcilerSchedule"] = IpReconcilerSchedule
 	}
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "whereabouts", "whereabouts.yaml"))

@@ -89,6 +89,8 @@ spec:
                   properties:
                     imagePullPolicy:
                       type: string
+                    ipReconcilerSchedule:
+                      type: string
                     namespace:
                       type: string
                     whereaboutsImage:

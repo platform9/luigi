@@ -90,6 +90,8 @@ spec:
                   properties:
                     imagePullPolicy:
                       type: string
+                    ipReconcilerSchedule:
+                      type: string
                     namespace:
                       type: string
                     whereaboutsImage:
@@ -287,8 +289,8 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: docker.io/platform9/luigi-plugins:v0.2.3
-        imagePullPolicy: IfNotPresent
+        image: platform9/luigi-plugins:v0.2.4
+        imagePullPolicy: Always
         name: manager
       - args:
         - --secure-listen-address=0.0.0.0:8443
