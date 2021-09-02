@@ -62,9 +62,10 @@ type HostPlumber struct {
 }
 
 type Whereabouts struct {
-	Namespace        string `json:"namespace,omitempty"`
-	ImagePullPolicy  string `json:"imagePullPolicy,omitempty"`
-	WhereaboutsImage string `json:"whereaboutsImage,omitempty"`
+	Namespace            string `json:"namespace,omitempty"`
+	ImagePullPolicy      string `json:"imagePullPolicy,omitempty"`
+	WhereaboutsImage     string `json:"whereaboutsImage,omitempty"`
+	IpReconcilerSchedule string `json:"ipReconcilerSchedule,omitempty"`
 }
 
 type Multus struct {

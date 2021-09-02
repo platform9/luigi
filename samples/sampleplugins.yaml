@@ -4,13 +4,14 @@ metadata:
   name: networkplugins-sample11
 spec:
   # Add fields here
-  #registryPrefix: "localhost:5100"
+  #privateRegistryBase: "localhost:5100"
   plugins:
     hostPlumber:
       imagePullPolicy: "Always"
     nodeFeatureDiscovery: {}
     multus: {}
-    whereabouts: {}
+    whereabouts:
+      ipReconcilerSchedule: "*/1 * * * *"
     # SRIOV actually consists of two plugins - the CNI, and the device-plugin
     sriov: {}
     #ovs: {}

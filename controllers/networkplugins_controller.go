@@ -60,6 +60,7 @@ const (
 	CreateDir               = TemplateDir + "create/"
 	DeleteDir               = TemplateDir + "delete/"
 	NetworkPluginsConfigMap = "pf9-networkplugins-config"
+	IpReconcilerSchedule    = "*/5 * * * *"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -277,6 +278,12 @@ func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir, registry
 		config["WhereaboutsImage"] = whereaboutsConfig.WhereaboutsImage
 	} else {
 		config["WhereaboutsImage"] = ReplaceContainerRegistry(WhereaboutsImage, registry)
+	}
+
+	if whereaboutsConfig.IpReconcilerSchedule != "" {
+		config["IpReconcilerSchedule"] = whereaboutsConfig.IpReconcilerSchedule
+	} else {
+		config["IpReconcilerSchedule"] = IpReconcilerSchedule
 	}
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "whereabouts", "whereabouts.yaml"))
