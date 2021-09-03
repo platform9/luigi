@@ -205,4 +205,3 @@ spec:
             items:
             - key: cni-conf.json
               path: 70-multus.conf
-

@@ -46,7 +46,7 @@ import (
 
 const (
 	DefaultNamespace        = "default"
-	MultusImage             = "ghcr.io/k8snetworkplumbingwg/multus-cni:v3.7.1"
+	MultusImage             = "ghcr.io/k8snetworkplumbingwg/multus-cni:v3.7.2"
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.4.3"
 	SriovCniImage           = "docker.io/nfvpe/sriov-cni:v2.6"
 	SriovDpImage            = "docker.io/nfvpe/sriov-device-plugin:v3.3.1"
