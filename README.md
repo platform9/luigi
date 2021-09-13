@@ -1,2 +1,2 @@
 # luigi
-The plumber you'll hire to install all your Kubernetes network plumbing
+The plumber you'll hire to install all your Kubernetes network plumbing.  Luigi is a Kubernetes operator that helps with advanced networking specifically meant to enable running CNFs (Container Networking Functions). This is useful for certain networking applications like running 5G, 5G Core, 5G RAN, and IMS.  The Luigi operator simplifies the configuration of advanced technology stacks such as SR-IOV, DPDK, Multus, Device Plugins, IPVLAN, MacVlan and performs feature detection through "NFD".
