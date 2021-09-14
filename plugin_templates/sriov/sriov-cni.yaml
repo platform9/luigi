@@ -18,9 +18,8 @@ spec:
         tier: node
         app: sriov-cni
     spec:
-      hostNetwork: true
       nodeSelector:
-        beta.kubernetes.io/arch: amd64
+        kubernetes.io/arch: amd64
       tolerations:
       - key: node-role.kubernetes.io/master
         operator: Exists
@@ -30,7 +29,12 @@ spec:
         image: {{ .SriovCniImage }}
         imagePullPolicy: IfNotPresent
         securityContext:
-          privileged: true
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
         resources:
           requests:
             cpu: "100m"
@@ -45,4 +49,3 @@ spec:
         - name: cnibin
           hostPath:
             path: /opt/cni/bin
-

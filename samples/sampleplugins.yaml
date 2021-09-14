@@ -6,13 +6,12 @@ spec:
   # Add fields here
   #privateRegistryBase: "localhost:5100"
   plugins:
-    hostPlumber:
-      imagePullPolicy: "Always"
+    hostPlumber: {}
     nodeFeatureDiscovery: {}
     multus: {}
-    whereabouts: {}
-      ipReconcilerSchedule: "*/1 * * * *"
+    whereabouts:
+      ipReconcilerSchedule: "*/2 * * * *"
     # SRIOV actually consists of two plugins - the CNI, and the device-plugin
     # VFs need to be created before deploying SRIOV - manually or use hostplumber
-    #sriov: {}
+    sriov: {}
     #ovs: {}

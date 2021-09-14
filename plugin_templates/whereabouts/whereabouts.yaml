@@ -272,3 +272,4 @@ spec:
               hostPath:
                 path: /etc/cni/net.d
           restartPolicy: OnFailure
+

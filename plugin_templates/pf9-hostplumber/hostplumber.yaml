@@ -463,6 +463,13 @@ spec:
         name: manager
         securityContext:
           privileged: true
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "50Mi"
+          limits:
+            cpu: "100m"
+            memory: "125Mi"
         volumeMounts:
         - mountPath: /host
           name: host
