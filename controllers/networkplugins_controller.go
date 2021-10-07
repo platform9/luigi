@@ -578,6 +578,7 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateInfo, f
 			return err
 		}
 		*fileList = append(*fileList, "ovs-cni.yaml")
+		*fileList = append(*fileList, "ovs-daemons.yaml")
 	}
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.HostPlumber == nil) && old.HostPlumber != nil {
