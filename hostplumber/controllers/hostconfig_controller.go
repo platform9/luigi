@@ -23,18 +23,20 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	plumberv1 "hostplumber/api/v1"
 	hoststate "hostplumber/pkg/hoststate"
 	iputils "hostplumber/pkg/utils/ip"
 	linkutils "hostplumber/pkg/utils/link"
 	sriovutils "hostplumber/pkg/utils/sriov"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ovsutils "hostplumber/pkg/utils/ovs"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var log logr.Logger
@@ -56,7 +58,8 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	ctx := context.Background()
 	log = r.Log.WithValues("hostconfig", req.NamespacedName)
 
-	var hostConfigReq = plumberv1.HostNetworkTemplate{}
+	var hostConfigReq = (plumberv1.HostNetworkTemplate{})
+
 	if err := r.Get(ctx, req.NamespacedName, &hostConfigReq); err != nil {
 		log.Error(err, "unable to fetch HostNetworkTemplate")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -69,6 +72,47 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	if err := r.Get(ctx, nsm, myNode); err != nil {
 		log.Error(err, "Failed to get Node with name", "NodeName", r.NodeName)
 		return ctrl.Result{}, err
+	}
+
+	// name of our custom finalizer
+	ovsFinalizerName := "ovsFinalizer"
+
+	ovsConfigList := hostConfigReq.Spec.OvsConfig
+
+	// examine DeletionTimestamp to determine if object is under deletion
+	if hostConfigReq.ObjectMeta.DeletionTimestamp.IsZero() {
+
+		if len(ovsConfigList) > 0 {
+			log.Info(" Reconcile triggered for create/update hostnetworktemplate")
+			// The object is not being deleted, so if it does not have our finalizer,
+			// then lets add the finalizer and update the object.
+			if !containsString(hostConfigReq.GetFinalizers(), ovsFinalizerName) {
+				controllerutil.AddFinalizer(&hostConfigReq, ovsFinalizerName)
+				log.Info("Adding Finalizer for ovscleanup")
+
+				if err := r.Update(ctx, &hostConfigReq); err != nil {
+					log.Error(err, "Error Adding Finalizer")
+					return ctrl.Result{}, err
+				}
+			}
+		}
+	} else {
+		// The object is being deleted
+		if containsString(hostConfigReq.GetFinalizers(), ovsFinalizerName) {
+			if err := deleteOvsConfig(); err != nil {
+				// return so that it can be retried
+				return ctrl.Result{}, err
+			}
+
+			// remove finalizer from the list and update it.
+			controllerutil.RemoveFinalizer(&hostConfigReq, ovsFinalizerName)
+			log.Info(" Removing ovscleanup Finalizer in delete ")
+			if err := r.Update(ctx, &hostConfigReq); err != nil {
+				log.Error(err, "removing Finalizer failed")
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
 	}
 
 	selector := labels.SelectorFromSet(hostConfigReq.Spec.NodeSelector)
@@ -103,7 +147,6 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		log.Info("interfaceConfig is empty")
 	}
 
-	ovsConfigList := hostConfigReq.Spec.OvsConfig
 	if len(ovsConfigList) > 0 {
 		if err := applyOvsConfig(ovsConfigList); err != nil {
 			log.Error(err, "Failed to apply OVS config")
@@ -111,6 +154,8 @@ func (r *HostNetworkTemplateReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		} else {
 			log.Info("Successfully applied OVS config")
 		}
+	} else {
+		log.Info("No OVS config present")
 	}
 
 	hni := hoststate.New(r.NodeName, r.Namespace, r.Client)
@@ -255,6 +300,28 @@ func contains(s []byte, str string) bool {
 	return false
 }
 
+func deleteOvsConfig() error {
+	/*delete ovs bridge present on host*/
+	brList, err := ovsutils.GetOvsBrList()
+	if err != nil {
+		log.Error(err, "Error geting ovs bridge list")
+		return err
+	}
+	if len(brList) == 0 {
+		log.Info("No ovs bridge to delete")
+		return nil
+	}
+
+	for _, br := range brList {
+		log.Info("Deleting ovs bridge ", "bridge", br)
+		err := ovsutils.DeleteOvsBr(br)
+		if err != nil {
+			log.Error(err, "Error deleting ovs bridge", "br", br)
+		}
+	}
+	return nil
+}
+
 func applyOvsConfig(ovsConfigList []*plumberv1.OvsConfig) error {
 	for _, ovsConfig := range ovsConfigList {
 		nodeInterface := (*ovsConfig).NodeInterface
@@ -396,4 +463,24 @@ func (r *HostNetworkTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&plumberv1.HostNetworkTemplate{}).
 		Complete(r)
+}
+
+// Helper functions to check and remove string from a slice of strings.
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+func removeString(slice []string, s string) (result []string) {
+	for _, item := range slice {
+		if item == s {
+			continue
+		}
+		result = append(result, item)
+	}
+	return
 }
