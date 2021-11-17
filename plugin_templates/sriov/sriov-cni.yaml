@@ -29,8 +29,7 @@ spec:
         image: {{ .SriovCniImage }}
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: false
-          privileged: false
+          privileged: true
           readOnlyRootFilesystem: true
           capabilities:
             drop:
