@@ -1,0 +1,20 @@
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: whereabouts-conf
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "name": "whereaboutsexample",
+      "type": "macvlan",
+      "master": "eno2.1001",
+      "mode": "bridge",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "10.128.165.0/24",
+        "range_start": "10.128.165.32",
+        "range_end": "10.128.165.36"
+      }
+    }'
+
+

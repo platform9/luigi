@@ -10,3 +10,14 @@ spec:
     - pfName: eno2
       numVfs: 6
       vfDriver: i40evf
+      mtu: 1500
+  interfaceConfig:
+    - name: eno2
+      vlan:
+        - id: 1000
+        - id: 1001
+        - id: 1002
+  ovsConfig:
+  - bridgeName: ovs-br01
+    nodeInterface: eno2.1000
+

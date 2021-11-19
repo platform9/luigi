@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	plumberv1 "github.com/platform9/luigi/api/v1"
 	"github.com/platform9/luigi/pkg/apply"
@@ -118,6 +119,28 @@ func (r *NetworkPluginsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			log.Error(err, "Error converting previous ConfigMap to Spec")
 			return ctrl.Result{}, err
 		}
+	}
+
+	pluginsFinalizerName := "teardownPlugins"
+
+	if networkPluginsReq.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !containsString(networkPluginsReq.GetFinalizers(), pluginsFinalizerName) {
+			controllerutil.AddFinalizer(&networkPluginsReq, pluginsFinalizerName)
+			if err := r.Update(ctx, &networkPluginsReq); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		if containsString(networkPluginsReq.GetFinalizers(), pluginsFinalizerName) {
+			if err := r.TeardownPlugins(reqInfo); err != nil {
+				return ctrl.Result{}, err
+			}
+			controllerutil.RemoveFinalizer(&networkPluginsReq, pluginsFinalizerName)
+			if err := r.Update(ctx, &networkPluginsReq); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
 	}
 
 	var fileList []string
@@ -641,6 +664,33 @@ func (r *NetworkPluginsReconciler) deleteMissingPlugins(fileList []string) error
 	return nil
 }
 
+func (r *NetworkPluginsReconciler) TeardownPlugins(req *PluginsUpdateInfo) error {
+	var activePlugins []string
+	var deleteInfo *PluginsUpdateInfo = new(PluginsUpdateInfo)
+	deleteInfo.NamespacedName = req.NamespacedName
+	deleteInfo.prevSpec = req.prevSpec
+	deleteInfo.currentSpec = &plumberv1.NetworkPluginsSpec{}
+
+	if err := r.parseMissingPlugins(deleteInfo, &activePlugins); err != nil {
+		r.Log.Error(err, "Could not parse plugins to delete")
+		return err
+	}
+
+	if err := r.deleteMissingPlugins(activePlugins); err != nil {
+		r.Log.Error(err, "Could not delete all active plugins")
+		return err
+	}
+
+	cm := &corev1.ConfigMap{}
+	cm.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ConfigMap"}
+	cm.ObjectMeta = metav1.ObjectMeta{Name: NetworkPluginsConfigMap, Namespace: deleteInfo.NamespacedName.Namespace}
+	if err := r.Delete(context.TODO(), cm); err != nil {
+		r.Log.Error(err, "Could not delete NetworkPlugins ConfigMap")
+		return err
+	}
+	return nil
+}
+
 func (r *NetworkPluginsReconciler) saveSpecConfig(ctx context.Context, plugins *PluginsUpdateInfo) error {
 	jsonSpec, err := json.Marshal(plugins.currentSpec)
 	if err != nil {
@@ -713,6 +763,16 @@ func renderTemplateToFile(config map[string]interface{}, t *template.Template, f
 	}
 	f.Close()
 	return nil
+}
+
+// Helper functions to check and remove string from a slice of strings.
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *NetworkPluginsReconciler) SetupWithManager(mgr ctrl.Manager) error {
