@@ -10,7 +10,9 @@ spec:
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
-      ipReconcilerSchedule: "*/2 * * * *"
+      ipReconcilerSchedule: "*/1 * * * *"
+      ipReconcilerNodeSelector:
+         foo: bar
     # SRIOV actually consists of two plugins - the CNI, and the device-plugin
     # VFs need to be created before deploying SRIOV - manually or use hostplumber
     sriov: {}

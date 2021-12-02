@@ -309,6 +309,10 @@ func (whereaboutsConfig *WhereaboutsT) WriteConfigToTemplate(outputDir, registry
 		config["IpReconcilerSchedule"] = IpReconcilerSchedule
 	}
 
+	if whereaboutsConfig.IpReconcilerNodeSelector != nil {
+		config["NodeSelector"] = whereaboutsConfig.IpReconcilerNodeSelector
+	}
+
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "whereabouts", "whereabouts.yaml"))
 	if err != nil {
 		return err

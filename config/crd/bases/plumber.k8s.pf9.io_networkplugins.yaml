@@ -93,6 +93,10 @@ spec:
                   properties:
                     imagePullPolicy:
                       type: string
+                    ipReconcilerNodeSelector:
+                      additionalProperties:
+                        type: string
+                      type: object
                     ipReconcilerSchedule:
                       type: string
                     namespace:
