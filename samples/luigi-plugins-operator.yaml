@@ -25,10 +25,14 @@ spec:
       description: NetworkPlugins is the Schema for the networkplugins API
       properties:
         apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
           type: string
         kind:
-          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
@@ -90,6 +94,10 @@ spec:
                   properties:
                     imagePullPolicy:
                       type: string
+                    ipReconcilerNodeSelector:
+                      additionalProperties:
+                        type: string
+                      type: object
                     ipReconcilerSchedule:
                       type: string
                     namespace:
@@ -285,14 +293,6 @@ spec:
     spec:
       containers:
       - args:
-        - --metrics-addr=127.0.0.1:8080
-        - --enable-leader-election
-        command:
-        - /manager
-        image: platform9/luigi-plugins:v0.2.4
-        imagePullPolicy: Always
-        name: manager
-      - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
@@ -302,4 +302,12 @@ spec:
         ports:
         - containerPort: 8443
           name: https
+      - args:
+        - --metrics-addr=127.0.0.1:8080
+        - --enable-leader-election
+        command:
+        - /manager
+        image: platform9/luigi-plugins:v0.2.7
+        imagePullPolicy: Always
+        name: manager
       terminationGracePeriodSeconds: 10

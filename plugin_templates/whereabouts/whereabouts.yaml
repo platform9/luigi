@@ -246,14 +246,21 @@ metadata:
     tier: node
     app: whereabouts
 spec:
+  concurrencyPolicy: Forbid
   schedule: "{{ .IpReconcilerSchedule }}"
   jobTemplate:
     spec:
+      backoffLimit: 0
       template:
         metadata:
           labels:
             app: whereabouts
         spec:
+          {{if .NodeSelector -}} nodeSelector:
+          {{- range $label, $val := .NodeSelector}}
+              {{ $label -}} : {{ $val -}}
+          {{end}}
+          {{end -}}
           priorityClassName: "system-node-critical"
           containers:
             - name: whereabouts
