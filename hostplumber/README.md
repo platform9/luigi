@@ -436,3 +436,8 @@ status:
 ```
 
 We can see a detailed output of all SRIOV information, including each VF and it's PCI address. For example we can see eno1, which supports 64 VFs but does not have any configured yet. On eno2, we can see detailed info for each of the 8 VFs. We also see all other L2 link layer information for each device, along with the IPv4 and IPv6 routing tables
+
+# OS Support
+
+Currently everything should work on CentOS / RHEL
+For Ubuntu, only SRIOV and OVS configuration will work. It is planned to add Ubuntu support for interface configuration (IP configuration, MTUs, VLAN interfaces)
