@@ -16,4 +16,4 @@ spec:
     # SRIOV actually consists of two plugins - the CNI, and the device-plugin
     # VFs need to be created before deploying SRIOV - manually or use hostplumber
     sriov: {}
-    #ovs: {}
+    ovs: {}
