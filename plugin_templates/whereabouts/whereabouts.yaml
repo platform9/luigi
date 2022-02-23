@@ -278,9 +278,14 @@ spec:
               volumeMounts:
                 - name: cni-net-dir
                   mountPath: /host/etc/cni/net.d
+                - mountPath: /host/var/log/pf9
+                  name: reconciler-log
           volumes:
             - name: cni-net-dir
               hostPath:
                 path: /etc/cni/net.d
+            - name: reconciler-log
+              hostPath:
+                path: /var/log/pf9
           restartPolicy: OnFailure
 
