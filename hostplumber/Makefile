@@ -1,6 +1,7 @@
-
+SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
-IMG ?= platform9/hostplumber:master
+VER_LABEL=$(shell ../get-label.bash)
+IMG ?= platform9/hostplumber:$(VER_LABEL)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
