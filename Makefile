@@ -101,6 +101,6 @@ img-build: img-test $(BUILD_DIR)
 
 img-build-push: img-build
 	docker login
-	docker push
+	docker push ${IMG}
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 	
