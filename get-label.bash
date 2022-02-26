@@ -4,9 +4,11 @@ TAG=$(git describe --tags HEAD)
 if [[ $? -ne 0 ]]
 then
     if [[ -z "${TEAMCITY_BUILD_ID}" ]]; then
-        TAG=$(git rev-parse --short HEAD)
+        SUFFIX=$(git rev-parse --short HEAD)
     else
-        TAG=${TEAMCITY_BUILD_ID}
+        SUFFIX=${TEAMCITY_BUILD_ID}
     fi
+    # if we cannot get the tag, lets use the <branch>-<abbrev-sha1> as the tag name
+    TAG=$(git rev-parse --abbrev-ref HEAD | sed 's/[^a-zA-Z0-9]/-/g')-${SUFFIX}
 fi
 echo $TAG
