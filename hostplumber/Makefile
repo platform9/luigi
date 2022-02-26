@@ -67,11 +67,11 @@ generate: controller-gen
 docker-build: test
 	docker build --network host . -t ${IMG}
 
+
 # Push the docker image
 docker-push:
-   (docker push $(IMG) || \
-		(echo -n $${DOCKER_PASSWORD} | docker login --password-stdin -u $${DOCKER_USERNAME} && \
-		docker push $(FULL_TAG) && docker logout))
+   	docker login
+	docker push $(IMG)
 	
 # find or download controller-gen
 # download controller-gen if necessary
