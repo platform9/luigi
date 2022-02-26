@@ -69,7 +69,7 @@ docker-push:
 
 # find or download controller-gen
 # download controller-gen if necessary
-controller-gen:
+controller-gen: pre-reqs
 ifeq (, $(shell which controller-gen))
 	@{ \
 	set -e ;\
@@ -90,7 +90,7 @@ pre-reqs:
 	export PATH=$PATH:/usr/local/kubebuilder/bin
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.7-bullseye  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.17.7-bullseye  bash -c "make test"
 
 img-build: img-test $(BUILD_DIR)
 	docker build --network host . -t ${IMG}
