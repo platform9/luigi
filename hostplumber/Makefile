@@ -69,8 +69,10 @@ docker-build: test
 
 # Push the docker image
 docker-push:
-	docker push ${IMG}
-
+   (docker push $(IMG) || \
+		(echo -n $${DOCKER_PASSWORD} | docker login --password-stdin -u $${DOCKER_USERNAME} && \
+		docker push $(FULL_TAG) && docker logout))
+	
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen: pre-reqs
