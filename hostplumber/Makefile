@@ -67,10 +67,9 @@ generate: controller-gen
 docker-build: test
 	docker build --network host . -t ${IMG}
 
-
 # Push the docker image
 docker-push:
-   	docker login
+	docker login
 	docker push $(IMG)
 	
 # find or download controller-gen
@@ -103,5 +102,7 @@ img-build: img-test $(BUILD_DIR)
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
 img-build-push: img-build docker-push
+	docker login
+	docker push
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
