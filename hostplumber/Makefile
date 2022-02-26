@@ -16,6 +16,10 @@ BUILD_DIR :=$(SRCROOT)/bin
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
 
+
+$(BUILD_DIR):
+	mkdir -p $@
+
 all: manager
 
 # Run tests
