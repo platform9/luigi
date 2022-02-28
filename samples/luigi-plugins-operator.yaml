@@ -307,7 +307,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: platform9/luigi-plugins:v0.2.7
+        image: platform9/luigi-plugins:v0.2.9
         imagePullPolicy: Always
         name: manager
       terminationGracePeriodSeconds: 10

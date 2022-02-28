@@ -11,7 +11,7 @@ data:
                 "resourceName": "intel_sriov_kernel1",
                 "selectors": {
                     "drivers": ["i40evf"],
-                    "pfNames": ["eno2"]
+                    "pfNames": ["eno2#0-8"]
                 }
             }
         ]
