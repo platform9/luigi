@@ -50,7 +50,7 @@ const (
 	MultusImage             = "docker.io/platform9/multus:v3.6-pmk-1"
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.4.8"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-1"
-	SriovDpImage            = "docker.io/platform9/sriov-device-plugin:v3.3.2-pmk-1"
+	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-1"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
 	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.2.2"
