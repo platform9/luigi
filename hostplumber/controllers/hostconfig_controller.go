@@ -432,11 +432,17 @@ func applySriovConfig(sriovConfigList []plumberv1.SriovConfig) error {
 			}
 
 			if sriovConfig.VfDriver != nil {
-				sriovutils.EnableDriverForVfs(pfName, *sriovConfig.VfDriver)
+				if err := sriovutils.EnableDriverForVfs(pfName, *sriovConfig.VfDriver); err != nil {
+					log.Info("Failed to set vfDriver", "vfDriver", *sriovConfig.VfDriver, "err", err)
+					return err
+				}
 			} else {
 				// If driver field is omitted, set the default kernel driver
 				// TODO: How to determine default driver for different NICs?
-				sriovutils.EnableDriverForVfs(pfName, "ixgbevf")
+				if err := sriovutils.EnableDriverForVfs(pfName, "i40evf"); err != nil {
+					log.Info("Failed to set vfDriver i40evf", err)
+					return err
+				}
 			}
 
 			if sriovConfig.MTU != nil && *sriovConfig.MTU >= 576 {

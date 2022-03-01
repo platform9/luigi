@@ -122,6 +122,7 @@ func CreateVfsForPfName(pfName string, numVfs int) error {
 	// Only create VFs if mismatch as it is a disruptive operation
 	// Changing sriov_numvfs requires clearing it by writing 0 VFs first
 	if currVfs == numVfs {
+		fmt.Printf("numVfs is current, not recreating...\n")
 		return nil
 	}
 
@@ -192,7 +193,33 @@ func SetDriverForVf(vfPath string, driver string) error {
 	return nil
 }
 
-func EnableDriverForVfs(pfName string, driver string) {
+func GetDriverForVf(vfPath string) (string, error) {
+	driverOverrideFile := filepath.Join(vfPath, "driver_override")
+	fd, err := os.Open(driverOverrideFile)
+	defer fd.Close()
+	if err != nil {
+		return "", err
+	}
+
+	var currDriver string
+	_, err = fmt.Fscanf(fd, "%s\n", &currDriver)
+	if err != nil {
+		return "", err
+	}
+	return currDriver, nil
+}
+
+func isDriverSetOnVf(vfPath, driver string) bool {
+	currDriver, err := GetDriverForVf(vfPath)
+	fmt.Printf("vfpath: %s, currDriver: %s, newDriver: %s\n", vfPath, currDriver, driver)
+	if err != nil {
+		fmt.Printf("returning false err = %s\n", err)
+		return false
+	}
+	return driver == currDriver
+}
+
+func EnableDriverForVfs(pfName string, driver string) error {
 	devicePathLink := filepath.Join(consts.SysClassNet, pfName, "device")
 	devicePath, _ := filepath.EvalSymlinks(devicePathLink)
 	err := filepath.Walk(devicePath, func(path string, info os.FileInfo, err error) error {
@@ -204,17 +231,20 @@ func EnableDriverForVfs(pfName string, driver string) {
 				return nil
 			}
 			fullPath, _ := filepath.EvalSymlinks(path)
+			if isDriverSetOnVf(fullPath, driver) {
+				fmt.Printf("Driver is already current, skipping...\n")
+				return nil
+			}
+			fmt.Printf("Setting VF driver for VF: %s\n", name)
 			if err := SetDriverForVf(fullPath, driver); err != nil {
+				fmt.Printf("Error getting VF driver: %s: err: %s\n", driver, err)
 				return err
 			}
 		}
 
 		return nil
 	})
-	if err != nil {
-		// TODO: Why am I not returning an error here?
-		return
-	}
+	return err
 }
 
 func GetPfListForVendorAndDevice(vendor, device string) ([]string, error) {
