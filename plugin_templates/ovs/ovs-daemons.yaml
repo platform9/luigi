@@ -23,7 +23,7 @@ spec:
           hostPID: true
           hostIPC: true
           nodeSelector:
-             beta.kubernetes.io/arch: amd64
+             kubernetes.io/arch: amd64
              kubernetes.io/os: linux
           tolerations:
           - key: node-role.kubernetes.io/master
@@ -80,7 +80,7 @@ spec:
                   path: /var/log/openvswitch
 ---
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ovs-daemonset-cr
 rules:
@@ -95,7 +95,7 @@ rules:
   - patch
 ---
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ovs-daemonset-crb
 roleRef:

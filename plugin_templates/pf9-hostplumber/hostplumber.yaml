@@ -1,8 +1,8 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: hostnetworks.plumber.k8s.pf9.io
 spec:
@@ -13,146 +13,151 @@ spec:
     plural: hostnetworks
     singular: hostnetwork
   scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      description: HostNetwork is the Schema for the HostNetworks API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: HostNetworkSpec defines the desired state of HostNetwork
-          type: object
-        status:
-          description: HostNetworkStatus defines the observed state of HostNetwork
-          properties:
-            interfaceStatus:
-              items:
-                properties:
-                  deviceId:
-                    type: string
-                  ipv4:
-                    properties:
-                      address:
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                  ipv6:
-                    properties:
-                      address:
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                  mac:
-                    type: string
-                  mtu:
-                    type: integer
-                  pciAddr:
-                    type: string
-                  pfDriver:
-                    type: string
-                  pfName:
-                    type: string
-                  sriovEnabled:
-                    type: boolean
-                  sriovStatus:
-                    properties:
-                      numVfs:
-                        type: integer
-                      totalVfs:
-                        type: integer
-                      vfs:
-                        items:
-                          properties:
-                            id:
-                              type: integer
-                            mac:
-                              type: string
-                            pciAddr:
-                              type: string
-                            qos:
-                              type: integer
-                            spoofchk:
-                              type: boolean
-                            trust:
-                              type: boolean
-                            vfDriver:
-                              type: string
-                            vlan:
-                              type: integer
-                          required:
-                          - id
-                          - mac
-                          - pciAddr
-                          - qos
-                          - spoofchk
-                          - trust
-                          - vfDriver
-                          - vlan
-                          type: object
-                        type: array
-                    type: object
-                  vendorId:
-                    type: string
-                required:
-                - sriovEnabled
-                type: object
-              type: array
-            ovsStatus:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
-              items:
-                properties:
-                  bridgeName:
-                    type: string
-                  nodeInterface:
-                    type: string
-                type: object
-              type: array
-            routes:
-              properties:
-                ipv4:
-                  items:
-                    properties:
-                      dev:
-                        type: string
-                      dst:
-                        type: string
-                      gw:
-                        type: string
-                      src:
-                        type: string
-                    type: object
-                  type: array
-                ipv6:
-                  items:
-                    properties:
-                      dev:
-                        type: string
-                      dst:
-                        type: string
-                      gw:
-                        type: string
-                      src:
-                        type: string
-                    type: object
-                  type: array
-              type: object
-            sysctlConfig:
-              items:
-                type: string
-              type: array
-          type: object
-      type: object
-  version: v1
   versions:
   - name: v1
+    schema:
+      openAPIV3Schema:
+        description: HostNetwork is the Schema for the HostNetworks API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HostNetworkSpec defines the desired state of HostNetwork
+            type: object
+          status:
+            description: HostNetworkStatus defines the observed state of HostNetwork
+            properties:
+              interfaceStatus:
+                items:
+                  properties:
+                    deviceId:
+                      type: string
+                    ipv4:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    ipv6:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    mac:
+                      type: string
+                    mtu:
+                      type: integer
+                    pciAddr:
+                      type: string
+                    pfDriver:
+                      type: string
+                    pfName:
+                      type: string
+                    sriovEnabled:
+                      type: boolean
+                    sriovStatus:
+                      properties:
+                        numVfs:
+                          type: integer
+                        totalVfs:
+                          type: integer
+                        vfs:
+                          items:
+                            properties:
+                              id:
+                                type: integer
+                              mac:
+                                type: string
+                              pciAddr:
+                                type: string
+                              qos:
+                                type: integer
+                              spoofchk:
+                                type: boolean
+                              trust:
+                                type: boolean
+                              vfDriver:
+                                type: string
+                              vlan:
+                                type: integer
+                            required:
+                            - id
+                            - mac
+                            - pciAddr
+                            - qos
+                            - spoofchk
+                            - trust
+                            - vfDriver
+                            - vlan
+                            type: object
+                          type: array
+                      type: object
+                    vendorId:
+                      type: string
+                  required:
+                  - sriovEnabled
+                  type: object
+                type: array
+              ovsStatus:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                items:
+                  properties:
+                    bridgeName:
+                      type: string
+                    nodeInterface:
+                      type: string
+                  type: object
+                type: array
+              routes:
+                properties:
+                  ipv4:
+                    items:
+                      properties:
+                        dev:
+                          type: string
+                        dst:
+                          type: string
+                        gw:
+                          type: string
+                        src:
+                          type: string
+                      type: object
+                    type: array
+                  ipv6:
+                    items:
+                      properties:
+                        dev:
+                          type: string
+                        dst:
+                          type: string
+                        gw:
+                          type: string
+                        src:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              sysctlConfig:
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
     served: true
     storage: true
 status:
@@ -162,11 +167,11 @@ status:
   conditions: []
   storedVersions: []
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: hostnetworktemplates.plumber.k8s.pf9.io
 spec:
@@ -177,99 +182,103 @@ spec:
     plural: hostnetworktemplates
     singular: hostnetworktemplate
   scope: Namespaced
-  validation:
-    openAPIV3Schema:
-      description: HostNetworkTemplate is the Schema for the HostNetworkTemplates API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
-          properties:
-            interfaceConfig:
-              items:
-                properties:
-                  ipv4:
-                    properties:
-                      address:
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                  ipv6:
-                    properties:
-                      address:
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                  mtu:
-                    type: integer
-                  name:
-                    type: string
-                  vlan:
-                    items:
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                      required:
-                      - id
-                      type: object
-                    type: array
-                required:
-                - name
-                type: object
-              type: array
-            nodeSelector:
-              additionalProperties:
-                type: string
-              type: object
-            ovsConfig:
-              items:
-                properties:
-                  bridgeName:
-                    type: string
-                  nodeInterface:
-                    type: string
-                type: object
-              type: array
-            sriovConfig:
-              items:
-                properties:
-                  deviceId:
-                    type: string
-                  mtu:
-                    type: integer
-                  numVfs:
-                    type: integer
-                  pciAddr:
-                    type: string
-                  pfDriver:
-                    type: string
-                  pfName:
-                    type: string
-                  vendorId:
-                    type: string
-                  vfDriver:
-                    type: string
-                type: object
-              type: array
-          type: object
-        status:
-          description: HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate
-          type: object
-      type: object
-  version: v1
   versions:
   - name: v1
+    schema:
+      openAPIV3Schema:
+        description: HostNetworkTemplate is the Schema for the HostNetworkTemplates
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
+            properties:
+              interfaceConfig:
+                items:
+                  properties:
+                    ipv4:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    ipv6:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    mtu:
+                      type: integer
+                    name:
+                      type: string
+                    vlan:
+                      items:
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                        required:
+                        - id
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  type: object
+                type: array
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                type: object
+              ovsConfig:
+                items:
+                  properties:
+                    bridgeName:
+                      type: string
+                    nodeInterface:
+                      type: string
+                  type: object
+                type: array
+              sriovConfig:
+                items:
+                  properties:
+                    deviceId:
+                      type: string
+                    mtu:
+                      type: integer
+                    numVfs:
+                      type: integer
+                    pciAddr:
+                      type: string
+                    pfDriver:
+                      type: string
+                    pfName:
+                      type: string
+                    vendorId:
+                      type: string
+                    vfDriver:
+                      type: string
+                  type: object
+                type: array
+            type: object
+          status:
+            description: HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate
+            type: object
+        type: object
     served: true
     storage: true
 status:
@@ -348,6 +357,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: hostplumber-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: hostplumber-proxy-role
 rules:
 - apiGroups:
@@ -362,16 +381,6 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
----
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRole
-metadata:
-  name: hostplumber-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -446,6 +455,16 @@ spec:
     spec:
       containers:
       - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:18080/
+        - --logtostderr=true
+        - --v=10
+        image: {{ .KubeRbacProxyImage }}
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+      - args:
         - --metrics-addr=127.0.0.1:18080
         command:
         - /manager
@@ -475,16 +494,6 @@ spec:
           name: host
         - mountPath: /var/run/openvswitch
           name: ovs-var-run
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:18080/
-        - --logtostderr=true
-        - --v=10
-        image: {{ .KubeRbacProxyImage }}
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
       hostNetwork: true
       terminationGracePeriodSeconds: 10
       tolerations:

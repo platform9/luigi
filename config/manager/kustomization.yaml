@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: platform9/luigi-plugins
-  newTag: v0.3
+  newTag: v0.4

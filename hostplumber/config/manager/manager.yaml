@@ -21,7 +21,7 @@ spec:
       containers:
       - command:
         - /manager
-        image: controller:latest
+        image: host-plumber:latest
         imagePullPolicy: IfNotPresent
         name: manager
         securityContext:
@@ -38,9 +38,14 @@ spec:
         volumeMounts:
         - name: host
           mountPath: /host
+        - name: ovs-var-run
+          mountPath: /var/run/openvswitch
       terminationGracePeriodSeconds: 10
       hostNetwork: true
       volumes:
         - name: host
           hostPath:
             path: /
+        - name: ovs-var-run
+          hostPath:
+            path: /var/run/openvswitch

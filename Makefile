@@ -3,7 +3,8 @@ SHELL=/bin/bash
 VER_LABEL=$(shell ./get-label.bash)
 IMG ?= platform9/luigi-plugins:$(VER_LABEL)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+#CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS ?= "crd:crdVersions=v1"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -60,6 +61,7 @@ vet:
 
 # Generate code
 generate: controller-gen
+	go mod tidy
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
@@ -79,7 +81,8 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.5 ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0 ;\
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
@@ -88,9 +91,9 @@ CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
 pre-reqs:
-	curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_2.3.1_$(OS)_$(ARCH).tar.gz | tar -xz -C /tmp/
-	mv /tmp/kubebuilder_2.3.1_$(OS)_$(ARCH) /usr/local/kubebuilder
-	export PATH=$PATH:/usr/local/kubebuilder/bin
+	wget https://github.com/kubernetes-sigs/kubebuilder/releases/download/v3.4.1/kubebuilder_$(OS)_$(ARCH)
+	mv kubebuilder_$(OS)_$(ARCH) /usr/local/bin/
+	export PATH=$(PATH):/usr/local/bin
 
 img-test:
 	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.7-bullseye  bash -c "make test"
@@ -103,4 +106,4 @@ img-build-push: img-build
 	docker login
 	docker push ${IMG}
 	echo ${IMG} > $(BUILD_DIR)/container-tag
-	
+
