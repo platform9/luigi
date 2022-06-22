@@ -1,0 +1,509 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: hostnetworks.plumber.k8s.pf9.io
+spec:
+  group: plumber.k8s.pf9.io
+  names:
+    kind: HostNetwork
+    listKind: HostNetworkList
+    plural: hostnetworks
+    singular: hostnetwork
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: HostNetwork is the Schema for the HostNetworks API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HostNetworkSpec defines the desired state of HostNetwork
+            type: object
+          status:
+            description: HostNetworkStatus defines the observed state of HostNetwork
+            properties:
+              interfaceStatus:
+                items:
+                  properties:
+                    deviceId:
+                      type: string
+                    ipv4:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    ipv6:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    mac:
+                      type: string
+                    mtu:
+                      type: integer
+                    pciAddr:
+                      type: string
+                    pfDriver:
+                      type: string
+                    pfName:
+                      type: string
+                    sriovEnabled:
+                      type: boolean
+                    sriovStatus:
+                      properties:
+                        numVfs:
+                          type: integer
+                        totalVfs:
+                          type: integer
+                        vfs:
+                          items:
+                            properties:
+                              id:
+                                type: integer
+                              mac:
+                                type: string
+                              pciAddr:
+                                type: string
+                              qos:
+                                type: integer
+                              spoofchk:
+                                type: boolean
+                              trust:
+                                type: boolean
+                              vfDriver:
+                                type: string
+                              vlan:
+                                type: integer
+                            required:
+                            - id
+                            - mac
+                            - pciAddr
+                            - qos
+                            - spoofchk
+                            - trust
+                            - vfDriver
+                            - vlan
+                            type: object
+                          type: array
+                      type: object
+                    vendorId:
+                      type: string
+                  required:
+                  - sriovEnabled
+                  type: object
+                type: array
+              ovsStatus:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                items:
+                  properties:
+                    bridgeName:
+                      type: string
+                    nodeInterface:
+                      type: string
+                  type: object
+                type: array
+              routes:
+                properties:
+                  ipv4:
+                    items:
+                      properties:
+                        dev:
+                          type: string
+                        dst:
+                          type: string
+                        gw:
+                          type: string
+                        src:
+                          type: string
+                      type: object
+                    type: array
+                  ipv6:
+                    items:
+                      properties:
+                        dev:
+                          type: string
+                        dst:
+                          type: string
+                        gw:
+                          type: string
+                        src:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              sysctlConfig:
+                items:
+                  type: string
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: hostnetworktemplates.plumber.k8s.pf9.io
+spec:
+  group: plumber.k8s.pf9.io
+  names:
+    kind: HostNetworkTemplate
+    listKind: HostNetworkTemplateList
+    plural: hostnetworktemplates
+    singular: hostnetworktemplate
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: HostNetworkTemplate is the Schema for the HostNetworkTemplates
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HostNetworkTemplateSpec defines the desired state of HostNetworkTemplate
+            properties:
+              interfaceConfig:
+                items:
+                  properties:
+                    ipv4:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    ipv6:
+                      properties:
+                        address:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    mtu:
+                      type: integer
+                    name:
+                      type: string
+                    vlan:
+                      items:
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                        required:
+                        - id
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  type: object
+                type: array
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                type: object
+              ovsConfig:
+                items:
+                  properties:
+                    bridgeName:
+                      type: string
+                    nodeInterface:
+                      type: string
+                  type: object
+                type: array
+              sriovConfig:
+                items:
+                  properties:
+                    deviceId:
+                      type: string
+                    mtu:
+                      type: integer
+                    numVfs:
+                      type: integer
+                    pciAddr:
+                      type: string
+                    pfDriver:
+                      type: string
+                    pfName:
+                      type: string
+                    vendorId:
+                      type: string
+                    vfDriver:
+                      type: string
+                  type: object
+                type: array
+            type: object
+          status:
+            description: HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: hostplumber-leader-election-role
+  namespace: {{ .Namespace }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: hostplumber-manager-role
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - hostnetworktemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - hostnetworktemplates/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hostplumber-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hostplumber-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hostplumber-leader-election-rolebinding
+  namespace: {{ .Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: hostplumber-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: {{ .Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hostplumber-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hostplumber-manager-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: {{ .Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hostplumber-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hostplumber-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: {{ .Namespace }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: hostplumber-controller-manager-metrics-service
+  namespace: {{ .Namespace }}
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: hostplumber-controller-manager
+  namespace: {{ .Namespace }}
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:18080/
+        - --logtostderr=true
+        - --v=10
+        image: {{ .KubeRbacProxyImage }}
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+      - args:
+        - --metrics-addr=127.0.0.1:18080
+        command:
+        - /manager
+        env:
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: {{ .HostPlumberImage }}
+        imagePullPolicy: {{ .ImagePullPolicy }}
+        name: manager
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "50Mi"
+          limits:
+            cpu: "100m"
+            memory: "125Mi"
+        volumeMounts:
+        - mountPath: /host
+          name: host
+        - mountPath: /var/run/openvswitch
+          name: ovs-var-run
+      hostNetwork: true
+      terminationGracePeriodSeconds: 10
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /
+        name: host
+      - hostPath:
+          path: /var/run/openvswitch
+        name: ovs-var-run
