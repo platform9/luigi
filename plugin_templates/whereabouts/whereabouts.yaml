@@ -1,0 +1,292 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: whereabouts
+  namespace: {{ .Namespace }}
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: whereabouts
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: whereabouts-cni
+subjects:
+- kind: ServiceAccount
+  name: whereabouts
+  namespace: {{ .Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: whereabouts-cni
+rules:
+- apiGroups:
+  - whereabouts.cni.cncf.io
+  resources:
+  - ippools
+  - overlappingrangeipreservations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - '*'
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs:
+  - list
+  - get
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: whereabouts
+  namespace: {{ .Namespace }}
+  labels:
+    tier: node
+    app: whereabouts
+spec:
+  selector:
+    matchLabels:
+      name: whereabouts
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: whereabouts
+        name: whereabouts
+    spec:
+      hostNetwork: true      
+      serviceAccountName: whereabouts
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: whereabouts
+        image: {{ .WhereaboutsImage }}
+        imagePullPolicy: {{ .ImagePullPolicy }}
+        env:
+        - name: WHEREABOUTS_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+          limits:
+            cpu: "100m"
+            memory: "50Mi"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: cnibin
+          mountPath: /host/opt/cni/bin
+        - name: cni-net-dir
+          mountPath: /host/etc/cni/net.d
+      volumes:
+        - name: cnibin
+          hostPath:
+            path: /opt/cni/bin
+        - name: cni-net-dir
+          hostPath:
+            path: /etc/cni/net.d
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: ippools.whereabouts.cni.cncf.io
+spec:
+  group: whereabouts.cni.cncf.io
+  names:
+    kind: IPPool
+    listKind: IPPoolList
+    plural: ippools
+    singular: ippool
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: IPPool is the Schema for the ippools API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: IPPoolSpec defines the desired state of IPPool
+            properties:
+              allocations:
+                additionalProperties:
+                  description: IPAllocation represents metadata about the pod/container
+                    owner of a specific IP
+                  properties:
+                    id:
+                      type: string
+                    podref:
+                      type: string
+                  required:
+                  - id
+                  type: object
+                description: Allocations is the set of allocated IPs for the given
+                  range. Its` indices are a direct mapping to the IP with the same
+                  index/offset for the pool's range.
+                type: object
+              range:
+                description: Range is a RFC 4632/4291-style string that represents
+                  an IP address and prefix length in CIDR notation
+                type: string
+            required:
+            - allocations
+            - range
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: overlappingrangeipreservations.whereabouts.cni.cncf.io
+spec:
+  group: whereabouts.cni.cncf.io
+  names:
+    kind: OverlappingRangeIPReservation
+    listKind: OverlappingRangeIPReservationList
+    plural: overlappingrangeipreservations
+    singular: overlappingrangeipreservation
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: OverlappingRangeIPReservation is the Schema for the OverlappingRangeIPReservations
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OverlappingRangeIPReservationSpec defines the desired state
+              of OverlappingRangeIPReservation
+            properties:
+              containerid:
+                type: string
+              podref:
+                type: string
+            required:
+            - containerid
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: ip-reconciler
+  namespace: {{ .Namespace }}
+  labels:
+    tier: node
+    app: whereabouts
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "{{ .IpReconcilerSchedule }}"
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: whereabouts
+        spec:
+          {{if .NodeSelector -}} nodeSelector:
+          {{- range $label, $val := .NodeSelector}}
+              {{ $label -}} : {{ $val -}}
+          {{end}}
+          {{end -}}
+          priorityClassName: "system-node-critical"
+          containers:
+            - name: whereabouts
+              image: {{ .WhereaboutsImage }}
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "50Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "250Mi"
+              command:
+                - /ip-reconciler
+                - -kubeconfig=/host/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig
+              volumeMounts:
+                - name: cni-net-dir
+                  mountPath: /host/etc/cni/net.d
+                - mountPath: /host/var/log/pf9
+                  name: reconciler-log
+          volumes:
+            - name: cni-net-dir
+              hostPath:
+                path: /etc/cni/net.d
+            - name: reconciler-log
+              hostPath:
+                path: /var/log/pf9
+          restartPolicy: OnFailure
+

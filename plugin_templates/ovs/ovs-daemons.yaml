@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+    name: ovs-daemons
+    namespace: {{ .Namespace }}
+    labels:
+        tier: node
+        app: ovs
+spec:
+    selector:
+        matchLabels:
+            app: ovs
+    template:
+        metadata:
+          labels:
+            tier: node
+            app: ovs
+          annotations:
+            description: OVS app runs the ovsdb-server and ovs-vswitch processes as a DaemonSet on all nodes.
+        spec:
+          serviceAccountName: ovs-daemonset
+          hostNetwork: true
+          hostPID: true
+          hostIPC: true
+          nodeSelector:
+             kubernetes.io/arch: amd64
+             kubernetes.io/os: linux
+          tolerations:
+          - key: node-role.kubernetes.io/master
+            operator: Exists
+            effect: NoSchedule
+
+          initContainers:
+            - name: ovs-db-init
+              image: {{ .OVSImage }}
+              imagePullPolicy: {{ .ImagePullPolicy }}
+              command: ['/bin/sh', '-c']
+              args: ['ls /etc/openvswitch/conf.db || ovsdb-tool create']
+              securityContext:
+                privileged: true
+              volumeMounts:
+                - name: etc-ovs
+                  mountPath: /etc/openvswitch
+
+          containers:
+            - name: ovs-services
+              image: {{ .OVSImage }}
+              imagePullPolicy: {{ .ImagePullPolicy }}
+              securityContext:
+                capabilities:
+                  add: ["NET_ADMIN", "SYS_MODULE", "SYS_NICE"]
+                privileged: true
+              volumeMounts:
+                - name: etc-ovs
+                  mountPath: /etc/openvswitch
+                - name: lib-modules
+                  mountPath: /lib/modules
+                - name: var-run-ovs
+                  mountPath: /var/run/openvswitch
+                - name: var-lib-ovs
+                  mountPath: /var/lib/openvswitch
+                - name: var-log-ovs
+                  mountPath: /var/log/openvswitch
+
+          volumes:
+            - name: lib-modules
+              hostPath:
+                  path: /lib/modules
+            - name: etc-ovs
+              hostPath:
+                  path: /etc/openvswitch
+            - name: var-run-ovs
+              hostPath:
+                  path: /var/run/openvswitch
+            - name: var-lib-ovs
+              hostPath:
+                  path: /var/lib/openvswitch
+            - name: var-log-ovs
+              hostPath:
+                  path: /var/log/openvswitch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ovs-daemonset-cr
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - nodes/status
+  verbs:
+  - get
+  - update
+  - patch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ovs-daemonset-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ovs-daemonset-cr
+subjects:
+- kind: ServiceAccount
+  name: ovs-daemonset
+  namespace: {{ .Namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ovs-daemonset
+  namespace: {{ .Namespace }}

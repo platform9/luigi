@@ -1,0 +1,6 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: NetworkPlugins
+metadata:
+  name: networkplugins-sample
+spec:
+  # TODO(user): Add fields here
