@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 VER_LABEL=$(shell ./get-label.bash)
-IMG ?= platform9/luigi-plugins:$(VER_LABEL)
+IMG ?= platform9/luigi-plugins:$(VER_LABEL)-2
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
