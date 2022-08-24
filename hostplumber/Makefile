@@ -1,8 +1,12 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 VER_LABEL=$(shell ../get-label.bash)
-BUILD_NUMBER ?= 1 
-IMG ?= platform9/hostplumber:$(VER_LABEL)-$(BUILD_NUMBER)
+registry_url ?= 514845858982.dkr.ecr.us-west-1.amazonaws.com
+#registry_url ?= docker.io
+
+image_name = ${registry_url}/platform9/hostplumber
+image_tag = $(VER_LABEL)-pmk-$(TEAMCITY_BUILD_ID) 
+IMG ?= $(image_name):${image_tag}
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -104,6 +108,11 @@ img-build: img-test $(BUILD_DIR)
 
 img-build-push: img-build docker-push
 	docker login
-	docker push ${IMG}
+	docker push ${IMG} \
+	&& docker rmi $(IMG)
+	(docker push $(IMG)  || \
+		(aws ecr get-login --region=us-west-1 --no-include-email | sh && \
+		docker push $(IMG))) && \
+		docker rmi $(IMG)
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
