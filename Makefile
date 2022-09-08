@@ -19,6 +19,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 SRCROOT = $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/)
+BUILD_ROOT = $(SRCROOT)/build
 BUILD_DIR :=$(SRCROOT)/bin
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
@@ -115,4 +116,7 @@ img-build-push: img-build
 		docker push $(IMG))) && \
 		docker rmi $(IMG)
 	echo ${IMG} > $(BUILD_DIR)/container-tag
-	
+
+scan:
+	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
+	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}	
