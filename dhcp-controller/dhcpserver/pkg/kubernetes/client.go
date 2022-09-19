@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -10,9 +10,16 @@ import (
 	"k8s.io/client-go/rest"
 
 	dhcpserverv1alpha1 "dhcpserver/api/v1alpha1"
+	"time"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"time"
+)
+
+var (
+	serverLog = ctrl.Log.WithName("server")
 )
 
 // Client has info on how to connect to the kubernetes cluster
@@ -59,28 +66,16 @@ func newKubernetesClient(k8sClient client.Client, k8sClientSet *kubernetes.Clien
 	}
 }
 
-func (i *Client) CreateIPPool(ctx context.Context, isupdate bool, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPPool, error) {
+func (i *Client) CreateIPPool(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPPool, error) {
 
-	//length, _ := net.IPMask(net.ParseIP(os.Getenv("IP_RANGE_NETMASK")).To4()).Size()
-
-	if isupdate {
-		ipPool, err := i.GetIPPool(context.TODO(), ip)
-		if err != nil {
-			return ipPool, nil
-		}
-		fmt.Println("Found IPPool " + ip + " to update")
-		err = i.client.Update(context.TODO(), ipPool)
-		if err != nil {
-			return nil, err
-		}
-		return ipPool, nil
-	}
-	ipPool, err := i.GetIPPool(context.TODO(), ip)
+	// Does not create IPPool when backup is restored
+	_, err := i.GetIPPool(context.TODO(), ip)
 	if err == nil {
-		return ipPool, nil
+		return i.UpdateIPPool(context.TODO(), macid, vmiref, ip)
 	}
 
 	var alloc = map[string]dhcpserverv1alpha1.IPAllocation{ip: dhcpserverv1alpha1.IPAllocation{MacId: macid, VmiRef: vmiref}}
+
 	ipPoolCreate := &dhcpserverv1alpha1.IPPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ip,
@@ -89,7 +84,6 @@ func (i *Client) CreateIPPool(ctx context.Context, isupdate bool, macid string, 
 		Spec: dhcpserverv1alpha1.IPPoolSpec{
 			Allocations: alloc,
 			Range:       ip,
-			//Range:       ip + "/" + strconv.Itoa(length),
 		},
 	}
 
@@ -99,6 +93,27 @@ func (i *Client) CreateIPPool(ctx context.Context, isupdate bool, macid string, 
 	}
 	return ipPoolCreate, nil
 
+}
+
+func (i *Client) UpdateIPPool(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPPool, error) {
+
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocation{ip: dhcpserverv1alpha1.IPAllocation{MacId: macid, VmiRef: vmiref}}
+
+	ipPool, err := i.GetIPPool(context.TODO(), ip)
+	if err != nil {
+		return ipPool, err
+	}
+	serverLog.Info("Found IPPool " + ip + " to update")
+	ipPool.Spec = dhcpserverv1alpha1.IPPoolSpec{
+		Allocations: alloc,
+		Range:       ip,
+	}
+
+	err = i.client.Update(context.TODO(), ipPool)
+	if err != nil {
+		return nil, err
+	}
+	return ipPool, nil
 }
 
 func (i *Client) GetIPPool(ctx context.Context, name string) (*dhcpserverv1alpha1.IPPool, error) {

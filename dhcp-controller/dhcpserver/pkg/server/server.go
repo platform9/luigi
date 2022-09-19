@@ -4,13 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
-	//"net"
 	"errors"
+	"fmt"
+	"net"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
+
 	//"text/template"
 	"time"
 
@@ -19,19 +21,23 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"dhcpserver/pkg/kubernetes"
+
 	"github.com/fsnotify/fsnotify"
 )
 
 var (
-	serverLog  = ctrl.Log.WithName("server")
-	dnsmasqLog = ctrl.Log.WithName("dnsmasq")
-	leasePath  = "/var/lib/misc/dnsmasq.leases"
-	confFile   = "/etc/dnsmasq.d/dnsmasq.conf"
-	k8sClient  *kubernetes.Client
-	//hostNetwork = net.IP{}
+	serverLog   = ctrl.Log.WithName("server")
+	dnsmasqLog  = ctrl.Log.WithName("dnsmasq")
+	leasePath   = "/var/lib/misc/dnsmasq.leases"
+	confFile    = "/etc/dnsmasq.d/dnsmasq.conf"
+	k8sClient   *kubernetes.Client
+	HostNetwork = []net.IP{}
+	Netmask     = []string{}
+	Leasetime   = []string{}
 )
 
 type LeaseFile struct {
@@ -40,6 +46,39 @@ type LeaseFile struct {
 	IPAddress      string `json:"ip_addr"`
 	Hostname       string `json:"hostname"`
 	ClientID       string `json:"client-ID"`
+}
+
+func parseConfig() error {
+	f, err := os.Open(confFile)
+	if err != nil {
+		serverLog.Error(err, "Cannot open config file")
+		return err
+	}
+	defer f.Close()
+
+	fileScanner := bufio.NewScanner(f)
+
+	fileScanner.Split(bufio.ScanLines)
+
+	for fileScanner.Scan() {
+		line := fileScanner.Text()
+		if strings.Contains(line, "dhcp-range") {
+			dhcprangearray := regexp.MustCompile("[\\=\\s,]").Split(line, -1)
+
+			// TODO: when adding support for vlan, increment all the indices of dhcprangearray
+			// in this block by 1
+			Netmask = append(Netmask, dhcprangearray[3])
+			Leasetime = append(Leasetime, strings.TrimSuffix(dhcprangearray[4], "h"))
+
+			length, _ := net.IPMask(net.ParseIP(dhcprangearray[3]).To4()).Size()
+			ipv4Addr := net.ParseIP(dhcprangearray[1])
+			ipv4Mask := net.CIDRMask(length, 32)
+			HostNetwork = append(HostNetwork, ipv4Addr.Mask(ipv4Mask))
+			serverLog.Info("Set pod host network for vlan0: " + HostNetwork[len(HostNetwork)-1].String())
+
+		}
+	}
+	return nil
 }
 
 /*
@@ -108,6 +147,7 @@ func Start() {
 	}
 
 	applyInterfaceIp()
+	parseConfig()
 
 	args := []string{
 		"dnsmasq",
@@ -119,15 +159,6 @@ func Start() {
 	if err != nil {
 		serverLog.Error(err, "Failed to instantiate the Kubernetes client")
 	}
-
-	/* TODO
-	// Set hostnetwork var for this pod
-	length, _ := net.IPMask(net.ParseIP(os.Getenv("IP_RANGE_NETMASK")).To4()).Size()
-	ipv4Addr := net.ParseIP(os.Getenv("IP_RANGE_START"))
-	ipv4Mask := net.CIDRMask(length, 32)
-	hostNetwork = ipv4Addr.Mask(ipv4Mask)
-	serverLog.Info("Set pod host network: " + hostNetwork.String())
-	*/
 
 	// Create leasefile from ippool backup
 	retrieveBackup(leasePath)
@@ -183,26 +214,28 @@ func retrieveBackup(leasePath string) error {
 
 	for _, ippool := range ipPools {
 		// Restore IPs that originated from this pod
-		//tmpleaseTime, err := strconv.ParseInt(os.Getenv("LEASE_TIME"), 10, 64)
+
 		//TODO do we need to store epochTime as well
-		tmpleaseTime := 2
-		if err != nil {
-			serverLog.Error(err, "failed to get lease time")
-		}
-		//_, ipv4Net, err := net.ParseCIDR(ippool.Spec.Range)
-		if err != nil {
-			serverLog.Error(err, "failed to parse cidr")
-		}
 		// TODO : need to revisit
-		//if hostNetwork.String() == ipv4Net.IP.String() {
-		{
-			for ip, obj := range ippool.Spec.Allocations {
-				tmpline := fmt.Sprintf(strconv.FormatInt(time.Now().Add(time.Hour*time.Duration(tmpleaseTime)).Unix(), 10) + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
-				destination.WriteString(tmpline)
+		for idx, mask := range Netmask {
+			length, _ := net.IPMask(net.ParseIP(mask).To4()).Size()
+			ipv4Addr := net.ParseIP(ippool.Name)
+			ipv4Mask := net.CIDRMask(length, 32)
+
+			if HostNetwork[idx].String() == ipv4Addr.Mask(ipv4Mask).String() {
+				tmpleaseTime, err := strconv.ParseInt(Leasetime[idx], 10, 64)
+				if err != nil {
+					serverLog.Error(err, "failed to get lease time")
+				}
+				// This loop only runs once
+				for ip, obj := range ippool.Spec.Allocations {
+					tmpline := fmt.Sprintf(strconv.FormatInt(time.Now().Add(time.Hour*time.Duration(tmpleaseTime)).Unix(), 10) + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
+					destination.WriteString(tmpline)
+				}
+				serverLog.Info("Restored IPPool " + ippool.Name)
 			}
-			//} else {
-			//	serverLog.Info("Ignoring IPPool " + ippool.Name)
 		}
+
 	}
 
 	return err
@@ -250,13 +283,17 @@ func updateRecord(lf map[string]LeaseFile, record []string, isupdate bool) {
 	serverLog.Info("Updating Lease")
 	lf[record[2]] = LeaseFile{record[0], record[1], record[2], record[3], record[4]}
 
-	_, err := k8sClient.CreateIPPool(context.TODO(), isupdate, record[1], record[3], record[2])
-	if err != nil {
-		serverLog.Error(err, "failed to create IP pool")
+	if isupdate {
+		_, err := k8sClient.UpdateIPPool(context.TODO(), record[1], record[3], record[2])
+		if err != nil {
+			serverLog.Error(err, "failed to update IP pool")
+		}
+	} else {
+		_, err := k8sClient.CreateIPPool(context.TODO(), record[1], record[3], record[2])
+		if err != nil {
+			serverLog.Error(err, "failed to create IP pool")
+		}
 	}
-
-	tmp, _ := json.MarshalIndent(lf, "", "	")
-	serverLog.Info(string(tmp))
 
 }
 
@@ -332,7 +369,7 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 	serverLog.Info("Starting Watcher....")
 	var watcher *fsnotify.Watcher
 	var oldmd5 string       //Hash Comparison
-	done := make(chan bool) //Ending function
+	done := make(chan bool) //Ending the function
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		serverLog.Error(err, "Cannot watch leasefile")
@@ -370,7 +407,7 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 
 			// watch for errors
 			case err := <-watcher.Errors:
-				fmt.Println("ERROR", err)
+				serverLog.Error(err, "Watcher error")
 				done <- true
 			}
 		}
@@ -383,7 +420,7 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 	}
 	// Watcher start
 	if err := watcher.Add(leasePath); err != nil {
-		fmt.Println(err)
+		serverLog.Error(err, "Cannot start leasefile watcher")
 		done <- true
 	}
 
