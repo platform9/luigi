@@ -90,11 +90,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.IPPoolReconciler{
+	if err = (&controllers.IPAllocationReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "IPPool")
+		setupLog.Error(err, "unable to create controller", "controller", "IPAllocation")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

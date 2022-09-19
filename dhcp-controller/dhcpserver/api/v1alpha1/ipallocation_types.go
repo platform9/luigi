@@ -24,30 +24,30 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// IPPoolSpec defines the desired state of IPPool
-type IPPoolSpec struct {
+// IPAllocationSpec defines the desired state of IPAllocation
+type IPAllocationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	// Range is a RFC 4632/4291-style string that represents an IP address and prefix length in CIDR notation
 	Range string `json:"range"`
 	// Allocations is the set of allocated IPs for the given range. Its` indices are a direct mapping to the
-	// IP with the same index/offset for the pool's range.
-	Allocations map[string]IPAllocation `json:"allocations"`
+	// IP with the same index/offset for the allocation's range.
+	Allocations map[string]IPAllocationOwner `json:"allocations"`
 }
 
-// ParseCIDR formats the Range of the IPPool
-func (i IPPool) ParseCIDR() (net.IP, *net.IPNet, error) {
+// ParseCIDR formats the Range of the IPAllocation
+func (i IPAllocation) ParseCIDR() (net.IP, *net.IPNet, error) {
 	return net.ParseCIDR(i.Spec.Range)
 }
 
-// IPAllocation represents metadata about the pod/container owner of a specific IP
-type IPAllocation struct {
+// IPAllocationOwner represents metadata about the pod/container owner of a specific IP
+type IPAllocationOwner struct {
 	MacId  string `json:"id,omitempty"`
 	VmiRef string `json:"vmiref,omitempty"`
 }
 
-// IPPoolStatus defines the observed state of IPPool
-type IPPoolStatus struct {
+// IPAllocationStatus defines the observed state of IPAllocation
+type IPAllocationStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -55,24 +55,24 @@ type IPPoolStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// IPPool is the Schema for the ippools API
-type IPPool struct {
+// IPAllocation is the Schema for the ipallocations API
+type IPAllocation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IPPoolSpec   `json:"spec,omitempty"`
-	Status IPPoolStatus `json:"status,omitempty"`
+	Spec   IPAllocationSpec   `json:"spec,omitempty"`
+	Status IPAllocationStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// IPPoolList contains a list of IPPool
-type IPPoolList struct {
+// IPAllocationList contains a list of IPAllocation
+type IPAllocationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []IPPool `json:"items"`
+	Items           []IPAllocation `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&IPPool{}, &IPPoolList{})
+	SchemeBuilder.Register(&IPAllocation{}, &IPAllocationList{})
 }

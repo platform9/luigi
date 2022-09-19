@@ -1,13 +1,13 @@
-# permissions for end users to view ippools.
+# permissions for end users to view ipallocations.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: ippool-viewer-role
+  name: ipallocation-viewer-role
 rules:
 - apiGroups:
   - dhcp.plumber.k8s.pf9.io
   resources:
-  - ippools
+  - ipallocations
   verbs:
   - get
   - list
@@ -15,6 +15,6 @@ rules:
 - apiGroups:
   - dhcp.plumber.k8s.pf9.io
   resources:
-  - ippools/status
+  - ipallocations/status
   verbs:
   - get
