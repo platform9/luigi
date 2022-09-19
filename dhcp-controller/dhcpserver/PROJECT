@@ -1,0 +1,16 @@
+domain: plumber.k8s.pf9.io
+layout:
+- go.kubebuilder.io/v3
+projectName: dhcpserver
+repo: dhcpserver
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: plumber.k8s.pf9.io
+  group: dhcp
+  kind: IPPool
+  path: dhcpserver/api/v1alpha1
+  version: v1alpha1
+version: "3"
