@@ -38,6 +38,7 @@ var (
 	HostNetwork = []net.IP{}
 	Netmask     = []string{}
 	Leasetime   = []string{}
+	//hostNetwork = net.IP{}
 )
 
 type LeaseFile struct {

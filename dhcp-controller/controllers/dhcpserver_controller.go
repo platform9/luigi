@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -46,6 +47,7 @@ type DHCPServerReconciler struct {
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=dhcpservers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=dhcpservers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;delete;deletecollection;get;list;patch;update;watch
+//+kubebuilder:rbac:groups=*,resources=virtualmachineinstances,verbs=get;list;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
