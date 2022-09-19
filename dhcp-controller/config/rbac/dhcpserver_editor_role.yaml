@@ -1,0 +1,24 @@
+# permissions for end users to edit dhcpservers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dhcpserver-editor-role
+rules:
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers/status
+  verbs:
+  - get

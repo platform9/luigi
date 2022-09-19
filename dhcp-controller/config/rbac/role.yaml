@@ -1,0 +1,72 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ippools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ippools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ippools/status
+  verbs:
+  - get
+  - patch
+  - update

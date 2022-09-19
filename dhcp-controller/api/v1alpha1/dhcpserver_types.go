@@ -1,0 +1,72 @@
+/*
+Copyright 2022.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package v1alpha1
+
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// DHCPServerSpec defines the desired state of DHCPServer
+type DHCPServerSpec struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+
+	// refers to net-attach-def to be served
+	// +kubebuilder:validation:Required
+	NetworkName string `json:"networkName,omitempty"`
+	// refers to IP address to be configured at BindInterface port
+	// +kubebuilder:validation:Required
+	InterfaceIp string `json:"interfaceIp,omitempty"`
+	// dhserver range start
+	// +kubebuilder:validation:Required
+	ConfigMapName string `json:"configMapName,omitempty"`
+}
+
+// DHCPServerStatus defines the observed state of DHCPServer
+type DHCPServerStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
+// DHCPServer is the Schema for the dhcpservers API
+type DHCPServer struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   DHCPServerSpec   `json:"spec,omitempty"`
+	Status DHCPServerStatus `json:"status,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+
+// DHCPServerList contains a list of DHCPServer
+type DHCPServerList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	Items []DHCPServer `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&DHCPServer{}, &DHCPServerList{})
+}

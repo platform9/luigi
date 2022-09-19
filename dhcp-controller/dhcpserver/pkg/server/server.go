@@ -1,0 +1,391 @@
+package server
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"fmt"
+	//"net"
+	"errors"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	//"text/template"
+	"time"
+
+	"crypto/md5"
+	"encoding/csv"
+	"encoding/hex"
+	"encoding/json"
+	"io"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	"dhcpserver/pkg/kubernetes"
+	"github.com/fsnotify/fsnotify"
+)
+
+var (
+	serverLog  = ctrl.Log.WithName("server")
+	dnsmasqLog = ctrl.Log.WithName("dnsmasq")
+	leasePath  = "/var/lib/misc/dnsmasq.leases"
+	confFile   = "/etc/dnsmasq.d/dnsmasq.conf"
+	k8sClient  *kubernetes.Client
+	//hostNetwork = net.IP{}
+)
+
+type LeaseFile struct {
+	EpochTimestamp string `json:"epoch-timestamp"`
+	MacAddress     string `json:"mac_addr"`
+	IPAddress      string `json:"ip_addr"`
+	Hostname       string `json:"hostname"`
+	ClientID       string `json:"client-ID"`
+}
+
+/*
+func writeConfFile() {
+	vars := make(map[string]interface{})
+	vars["rangeStart"] = os.Getenv("IP_RANGE_START")
+	vars["rangeEnd"] = os.Getenv("IP_RANGE_END")
+	vars["gwAddress"] = os.Getenv("IP_GATEWAY")
+	vars["netMask"] = os.Getenv("IP_RANGE_NETMASK")
+	vars["listenIface"] = os.Getenv("NAD_NAME")
+	vars["leaseTime"] = os.Getenv("LEASE_TIME")
+	// parse the template
+	tmpl, err := template.ParseFiles("dnsmasq_conf.tmpl")
+	if err != nil {
+		panic(err)
+	}
+	// create a new file
+	file, err := os.Create("/etc/dnsmasq.d/dnsmasq.conf")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// apply the template to the vars map and write the result to file.
+	tmpl.Execute(file, vars)
+
+}
+*/
+
+func applyInterfaceIp() error {
+
+	address := os.Getenv("BIND_INTERFACE_IP")
+	//mask := os.Getenv("IP_RANGE_NETMASK")
+	//stringMask := net.IPMask(net.ParseIP(mask).To4())
+	//length, _ := stringMask.Size()
+
+	//TODO figure out the interface name instead of hardcoding as per image
+	args := []string{"address", "add", address, "dev", "net1"}
+	cmd := exec.Command("ip", args...)
+
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func Start() {
+
+	dnsmasqBinary, err := exec.LookPath("dnsmasq")
+	if err != nil {
+		panic("dnsmasq binary is not found!")
+	}
+
+	if _, err := os.Stat(confFile); err == nil {
+		serverLog.Info("Starting dnsmasq: confFile is present")
+	} else if errors.Is(err, os.ErrNotExist) {
+		serverLog.Error(err, "confFile not found, please check the volumeMount")
+		panic(err)
+	}
+
+	applyInterfaceIp()
+
+	args := []string{
+		"dnsmasq",
+		"--conf-dir=/etc/dnsmasq.d/",
+	}
+
+	lf := make(map[string]LeaseFile)
+	k8sClient, err = kubernetes.NewClient(10 * time.Second)
+	if err != nil {
+		serverLog.Error(err, "Failed to instantiate the Kubernetes client")
+	}
+
+	/* TODO
+	// Set hostnetwork var for this pod
+	length, _ := net.IPMask(net.ParseIP(os.Getenv("IP_RANGE_NETMASK")).To4()).Size()
+	ipv4Addr := net.ParseIP(os.Getenv("IP_RANGE_START"))
+	ipv4Mask := net.CIDRMask(length, 32)
+	hostNetwork = ipv4Addr.Mask(ipv4Mask)
+	serverLog.Info("Set pod host network: " + hostNetwork.String())
+	*/
+
+	// Create leasefile from ippool backup
+	retrieveBackup(leasePath)
+
+	serverLog.Info("Starting dnsmasq: " + strings.Join(args, " "))
+	serverStart(dnsmasqBinary, args)
+
+	for {
+		dirInit(leasePath)
+		StartWatcher(lf, leasePath)
+	}
+}
+
+func serverStart(dnsmasqBinary string, args []string) *exec.Cmd {
+	cmd := &exec.Cmd{
+		Path: dnsmasqBinary,
+		Args: args,
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		panic(err)
+	}
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+	buf := bufio.NewReader(stderr)
+	go func() {
+		for {
+			line, _, err := buf.ReadLine()
+			if err != nil {
+				break
+			}
+			dnsmasqLog.Info(string(line))
+		}
+	}()
+	return cmd
+}
+
+// Retrieve leases from backup. Will be retrieved from etcd later on
+func retrieveBackup(leasePath string) error {
+	serverLog.Info("Retrieving Backup")
+
+	ipPools, err := k8sClient.ListIPPools(context.TODO())
+	if err != nil {
+		serverLog.Error(err, "failed to fetch IPpools")
+	}
+
+	destination, err := os.Create(leasePath)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	for _, ippool := range ipPools {
+		// Restore IPs that originated from this pod
+		//tmpleaseTime, err := strconv.ParseInt(os.Getenv("LEASE_TIME"), 10, 64)
+		//TODO do we need to store epochTime as well
+		tmpleaseTime := 2
+		if err != nil {
+			serverLog.Error(err, "failed to get lease time")
+		}
+		//_, ipv4Net, err := net.ParseCIDR(ippool.Spec.Range)
+		if err != nil {
+			serverLog.Error(err, "failed to parse cidr")
+		}
+		// TODO : need to revisit
+		//if hostNetwork.String() == ipv4Net.IP.String() {
+		{
+			for ip, obj := range ippool.Spec.Allocations {
+				tmpline := fmt.Sprintf(strconv.FormatInt(time.Now().Add(time.Hour*time.Duration(tmpleaseTime)).Unix(), 10) + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
+				destination.WriteString(tmpline)
+			}
+			//} else {
+			//	serverLog.Info("Ignoring IPPool " + ippool.Name)
+		}
+	}
+
+	return err
+}
+
+// Check if the lease file exists
+func dirInit(leasePath string) {
+	_, err := os.Stat(leasePath)
+	if os.IsNotExist(err) {
+		// If not, retrieve from backup and create leasefile
+		retrieveBackup(leasePath)
+	}
+}
+
+// Checks if lease found in records exist in leasefile.
+// This is for the scenario when leases expire and dnsmasq deletes
+// the lease from the leasefile
+func leaseExist(ip string, records [][]string) (result bool) {
+	result = false
+	for _, lease := range records {
+		if lease[2] == ip {
+			result = true
+			break
+		}
+	}
+	return result
+}
+
+// Checks if existing entry in leasefile has been updated
+func checkRecord(lease LeaseFile, record []string) bool {
+	serverLog.Info("Checking lease entry....")
+	var isupdated = false
+	if record[0] != lease.EpochTimestamp ||
+		record[1] != lease.MacAddress ||
+		record[2] != lease.IPAddress ||
+		record[3] != lease.Hostname ||
+		record[4] != lease.ClientID {
+		isupdated = true
+	}
+	return isupdated
+}
+
+// updates record with new data from leasefile
+func updateRecord(lf map[string]LeaseFile, record []string, isupdate bool) {
+	serverLog.Info("Updating Lease")
+	lf[record[2]] = LeaseFile{record[0], record[1], record[2], record[3], record[4]}
+
+	_, err := k8sClient.CreateIPPool(context.TODO(), isupdate, record[1], record[3], record[2])
+	if err != nil {
+		serverLog.Error(err, "failed to create IP pool")
+	}
+
+	tmp, _ := json.MarshalIndent(lf, "", "	")
+	serverLog.Info(string(tmp))
+
+}
+
+func readLeaseFile(lf map[string]LeaseFile, leasePath string) (string, error) {
+	serverLog.Info("Reading leasefile...")
+	f, err := os.Open(leasePath)
+	if err != nil {
+		serverLog.Error(err, "Cannot open lease file")
+		return "", err
+	}
+	defer f.Close()
+
+	csvReader := csv.NewReader(f)
+	csvReader.Comma = ' '
+	records, _ := csvReader.ReadAll()
+	if err != nil {
+		serverLog.Error(err, "Cannot parse lease file")
+		return "", err
+	}
+
+	// Check if record exists in leasefile
+	for ip, _ := range lf {
+		if !leaseExist(ip, records) {
+			delete(lf, ip)
+			isdeleted, err := k8sClient.DeleteIPPool(context.TODO(), ip)
+			if err != nil {
+				serverLog.Error(err, "failed to delete IP pool")
+			}
+			if isdeleted {
+				serverLog.Info("Deleted IPPool " + ip)
+			}
+		}
+	}
+
+	// Check if lease exists in record and if it is up to date
+	for _, record := range records {
+		if lease, ok := lf[record[2]]; ok {
+			// Check if any entry in existing lease has been updated, like epoch time
+			if checkRecord(lease, record) {
+				updateRecord(lf, record, true)
+			}
+		} else {
+			updateRecord(lf, record, false)
+		}
+	}
+	tmp, _ := json.MarshalIndent(lf, "", "	")
+	serverLog.Info(string(tmp))
+
+	return hash_file_md5(leasePath)
+}
+
+func writeLeaseFile(lf map[string]LeaseFile, leasePath string) {}
+
+func hash_file_md5(filePath string) (string, error) {
+	var returnMD5String string
+	file, err := os.Open(filePath)
+	if err != nil {
+		return returnMD5String, err
+	}
+	defer file.Close()
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return returnMD5String, err
+	}
+	hashInBytes := hash.Sum(nil)[:16]
+	returnMD5String = hex.EncodeToString(hashInBytes)
+	return returnMD5String, nil
+
+}
+
+// Starts watching leasefile. Ends if error in accessing/reading leasefile
+func StartWatcher(lf map[string]LeaseFile, leasePath string) {
+	serverLog.Info("Starting Watcher....")
+	var watcher *fsnotify.Watcher
+	var oldmd5 string       //Hash Comparison
+	done := make(chan bool) //Ending function
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		serverLog.Error(err, "Cannot watch leasefile")
+	}
+	defer watcher.Close()
+
+	// leasefile event trigger
+	go func() {
+	out:
+		for {
+			select {
+			case <-done:
+				break out
+			// watch for events
+			case event := <-watcher.Events:
+
+				// Check if file is actually updated. fsnotify gives multiple write events
+				// depending on the editor and platform
+				newmd5, err := hash_file_md5(leasePath)
+				if err != nil {
+					// serverLog.Error(err, "Cannot calculate md5sum of lease file")
+					done <- true
+				}
+
+				if event.Op&fsnotify.Write == fsnotify.Write && oldmd5 != newmd5 {
+					serverLog.Info("Write Event Detected .....")
+
+					// Read the file and update IPPools CR
+					oldmd5, err = readLeaseFile(lf, leasePath)
+					if err != nil {
+						serverLog.Error(err, "Cannot read lease file")
+						done <- true
+					}
+				}
+
+			// watch for errors
+			case err := <-watcher.Errors:
+				fmt.Println("ERROR", err)
+				done <- true
+			}
+		}
+		done <- true
+	}()
+
+	oldmd5, err = readLeaseFile(lf, leasePath)
+	if err != nil {
+		serverLog.Error(err, "Cannot read lease file")
+	}
+	// Watcher start
+	if err := watcher.Add(leasePath); err != nil {
+		fmt.Println(err)
+		done <- true
+	}
+
+	<-done
+}

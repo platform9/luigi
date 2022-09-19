@@ -1,0 +1,16 @@
+domain: plumber.k8s.pf9.io
+layout:
+- go.kubebuilder.io/v3
+projectName: dhcp-controller
+repo: dhcp-controller
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: plumber.k8s.pf9.io
+  group: dhcp
+  kind: DHCPServer
+  path: dhcp-controller/api/v1alpha1
+  version: v1alpha1
+version: "3"

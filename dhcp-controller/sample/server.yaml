@@ -1,0 +1,8 @@
+apiVersion: dhcp.plumber.k8s.pf9.io/v1alpha1 
+kind: DHCPServer
+metadata:
+  name: dhcpserver-sample
+spec:
+  networkName: ovs-ipam-vm-trunk-net
+  interfaceIp: 192.168.15.9
+  configMapName: dhcp1-config
