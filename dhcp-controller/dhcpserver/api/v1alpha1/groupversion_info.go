@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the dhcp v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=dhcp.plumber.k8s.pf9.io
+// +kubebuilder:object:generate=true
+// +groupName=dhcp.plumber.k8s.pf9.io
 package v1alpha1
 
 import (

@@ -5,20 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: ippools.dhcp.plumber.k8s.pf9.io
+  name: ipallocations.dhcp.plumber.k8s.pf9.io
 spec:
   group: dhcp.plumber.k8s.pf9.io
   names:
-    kind: IPPool
-    listKind: IPPoolList
-    plural: ippools
-    singular: ippool
+    kind: IPAllocation
+    listKind: IPAllocationList
+    plural: ipallocations
+    singular: ipallocation
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: IPPool is the Schema for the ippools API
+        description: IPAllocation is the Schema for the ipallocations API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,11 +33,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: IPPoolSpec defines the desired state of IPPool
+            description: IPAllocationSpec defines the desired state of IPAllocation
             properties:
               allocations:
                 additionalProperties:
-                  description: IPAllocation represents metadata about the pod/container
+                  description: IPAllocationOwner represents metadata about the pod/container
                     owner of a specific IP
                   properties:
                     id:
@@ -47,7 +47,7 @@ spec:
                   type: object
                 description: Allocations is the set of allocated IPs for the given
                   range. Its` indices are a direct mapping to the IP with the same
-                  index/offset for the pool's range.
+                  index/offset for the allocation's range.
                 type: object
               range:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -60,7 +60,7 @@ spec:
             - range
             type: object
           status:
-            description: IPPoolStatus defines the observed state of IPPool
+            description: IPAllocationStatus defines the observed state of IPAllocation
             type: object
         type: object
     served: true

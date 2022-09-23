@@ -160,7 +160,7 @@ func Start() {
 		serverLog.Error(err, "Failed to instantiate the Kubernetes client")
 	}
 
-	// Create leasefile from ippool backup
+	// Create leasefile from ipallocation backup
 	retrieveBackup(leasePath)
 
 	serverLog.Info("Starting dnsmasq: " + strings.Join(args, " "))
@@ -201,9 +201,9 @@ func serverStart(dnsmasqBinary string, args []string) *exec.Cmd {
 func retrieveBackup(leasePath string) error {
 	serverLog.Info("Retrieving Backup")
 
-	ipPools, err := k8sClient.ListIPPools(context.TODO())
+	ipAllocations, err := k8sClient.ListIPAllocations(context.TODO())
 	if err != nil {
-		serverLog.Error(err, "failed to fetch IPpools")
+		serverLog.Error(err, "failed to fetch IPallocations")
 	}
 
 	destination, err := os.Create(leasePath)
@@ -212,14 +212,14 @@ func retrieveBackup(leasePath string) error {
 	}
 	defer destination.Close()
 
-	for _, ippool := range ipPools {
+	for _, ipallocation := range ipAllocations {
 		// Restore IPs that originated from this pod
 
 		//TODO do we need to store epochTime as well
 		// TODO : need to revisit
 		for idx, mask := range Netmask {
 			length, _ := net.IPMask(net.ParseIP(mask).To4()).Size()
-			ipv4Addr := net.ParseIP(ippool.Name)
+			ipv4Addr := net.ParseIP(ipallocation.Name)
 			ipv4Mask := net.CIDRMask(length, 32)
 
 			if HostNetwork[idx].String() == ipv4Addr.Mask(ipv4Mask).String() {
@@ -228,11 +228,11 @@ func retrieveBackup(leasePath string) error {
 					serverLog.Error(err, "failed to get lease time")
 				}
 				// This loop only runs once
-				for ip, obj := range ippool.Spec.Allocations {
+				for ip, obj := range ipallocation.Spec.Allocations {
 					tmpline := fmt.Sprintf(strconv.FormatInt(time.Now().Add(time.Hour*time.Duration(tmpleaseTime)).Unix(), 10) + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
 					destination.WriteString(tmpline)
 				}
-				serverLog.Info("Restored IPPool " + ippool.Name)
+				serverLog.Info("Restored IPAllocation " + ipallocation.Name)
 			}
 		}
 
@@ -284,14 +284,14 @@ func updateRecord(lf map[string]LeaseFile, record []string, isupdate bool) {
 	lf[record[2]] = LeaseFile{record[0], record[1], record[2], record[3], record[4]}
 
 	if isupdate {
-		_, err := k8sClient.UpdateIPPool(context.TODO(), record[1], record[3], record[2])
+		_, err := k8sClient.UpdateIPAllocation(context.TODO(), record[1], record[3], record[2])
 		if err != nil {
-			serverLog.Error(err, "failed to update IP pool")
+			serverLog.Error(err, "failed to update IP allocation")
 		}
 	} else {
-		_, err := k8sClient.CreateIPPool(context.TODO(), record[1], record[3], record[2])
+		_, err := k8sClient.CreateIPAllocation(context.TODO(), record[1], record[3], record[2])
 		if err != nil {
-			serverLog.Error(err, "failed to create IP pool")
+			serverLog.Error(err, "failed to create IP allocation")
 		}
 	}
 
@@ -318,12 +318,12 @@ func readLeaseFile(lf map[string]LeaseFile, leasePath string) (string, error) {
 	for ip, _ := range lf {
 		if !leaseExist(ip, records) {
 			delete(lf, ip)
-			isdeleted, err := k8sClient.DeleteIPPool(context.TODO(), ip)
+			isdeleted, err := k8sClient.DeleteIPAllocation(context.TODO(), ip)
 			if err != nil {
-				serverLog.Error(err, "failed to delete IP pool")
+				serverLog.Error(err, "failed to delete IP allocation")
 			}
 			if isdeleted {
-				serverLog.Info("Deleted IPPool " + ip)
+				serverLog.Info("Deleted IPAllocation " + ip)
 			}
 		}
 	}
@@ -397,7 +397,7 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 				if event.Op&fsnotify.Write == fsnotify.Write && oldmd5 != newmd5 {
 					serverLog.Info("Write Event Detected .....")
 
-					// Read the file and update IPPools CR
+					// Read the file and update IPAllocations CR
 					oldmd5, err = readLeaseFile(lf, leasePath)
 					if err != nil {
 						serverLog.Error(err, "Cannot read lease file")

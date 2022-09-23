@@ -1,6 +1,6 @@
 apiVersion: dhcp.plumber.k8s.pf9.io/v1alpha1
-kind: IPPool
+kind: IPAllocation
 metadata:
-  name: ippool-sample
+  name: ipallocation-sample
 spec:
   # TODO(user): Add fields here

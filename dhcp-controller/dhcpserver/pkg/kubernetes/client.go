@@ -10,9 +10,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	dhcpserverv1alpha1 "dhcpserver/api/v1alpha1"
-	"time"
-
 	ctrl "sigs.k8s.io/controller-runtime"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -66,86 +65,86 @@ func newKubernetesClient(k8sClient client.Client, k8sClientSet *kubernetes.Clien
 	}
 }
 
-func (i *Client) CreateIPPool(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPPool, error) {
+func (i *Client) CreateIPAllocation(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
-	// Does not create IPPool when backup is restored
-	_, err := i.GetIPPool(context.TODO(), ip)
+	// Does not create IPAllocation when backup is restored
+	_, err := i.GetIPAllocation(context.TODO(), ip)
 	if err == nil {
-		return i.UpdateIPPool(context.TODO(), macid, vmiref, ip)
+		return i.UpdateIPAllocation(context.TODO(), macid, vmiref, ip)
 	}
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocation{ip: dhcpserverv1alpha1.IPAllocation{MacId: macid, VmiRef: vmiref}}
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacId: macid, VmiRef: vmiref}}
 
-	ipPoolCreate := &dhcpserverv1alpha1.IPPool{
+	ipAllocationCreate := &dhcpserverv1alpha1.IPAllocation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ip,
 			Namespace: "default",
 		},
-		Spec: dhcpserverv1alpha1.IPPoolSpec{
+		Spec: dhcpserverv1alpha1.IPAllocationSpec{
 			Allocations: alloc,
 			Range:       ip,
 		},
 	}
 
-	err = i.client.Create(context.TODO(), ipPoolCreate)
+	err = i.client.Create(context.TODO(), ipAllocationCreate)
 	if err != nil {
 		return nil, err
 	}
-	return ipPoolCreate, nil
+	return ipAllocationCreate, nil
 
 }
 
-func (i *Client) UpdateIPPool(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPPool, error) {
+func (i *Client) UpdateIPAllocation(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocation{ip: dhcpserverv1alpha1.IPAllocation{MacId: macid, VmiRef: vmiref}}
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacId: macid, VmiRef: vmiref}}
 
-	ipPool, err := i.GetIPPool(context.TODO(), ip)
+	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
 	if err != nil {
-		return ipPool, err
+		return ipAllocation, err
 	}
-	serverLog.Info("Found IPPool " + ip + " to update")
-	ipPool.Spec = dhcpserverv1alpha1.IPPoolSpec{
+	serverLog.Info("Found IPAllocation " + ip + " to update")
+	ipAllocation.Spec = dhcpserverv1alpha1.IPAllocationSpec{
 		Allocations: alloc,
 		Range:       ip,
 	}
 
-	err = i.client.Update(context.TODO(), ipPool)
+	err = i.client.Update(context.TODO(), ipAllocation)
 	if err != nil {
 		return nil, err
 	}
-	return ipPool, nil
+	return ipAllocation, nil
 }
 
-func (i *Client) GetIPPool(ctx context.Context, name string) (*dhcpserverv1alpha1.IPPool, error) {
-	ipPool := &dhcpserverv1alpha1.IPPool{}
+func (i *Client) GetIPAllocation(ctx context.Context, name string) (*dhcpserverv1alpha1.IPAllocation, error) {
+	ipAllocation := &dhcpserverv1alpha1.IPAllocation{}
 	err := i.client.Get(context.TODO(), types.NamespacedName{
 		Name:      name,
 		Namespace: "default",
-	}, ipPool)
+	}, ipAllocation)
 	if err != nil {
 		return nil, err
 	}
-	return ipPool, nil
+	return ipAllocation, nil
 
 }
 
-func (i *Client) ListIPPools(ctx context.Context) ([]dhcpserverv1alpha1.IPPool, error) {
-	ipPoolList := &dhcpserverv1alpha1.IPPoolList{}
+func (i *Client) ListIPAllocations(ctx context.Context) ([]dhcpserverv1alpha1.IPAllocation, error) {
+	ipAllocationList := &dhcpserverv1alpha1.IPAllocationList{}
 
-	if err := i.client.List(context.TODO(), ipPoolList, &client.ListOptions{}); err != nil {
+	if err := i.client.List(context.TODO(), ipAllocationList, &client.ListOptions{}); err != nil {
 		return nil, err
 	}
 
-	return ipPoolList.Items, nil
+	return ipAllocationList.Items, nil
 }
 
-func (i *Client) DeleteIPPool(ctx context.Context, name string) (bool, error) {
-	ipPool, err := i.GetIPPool(context.TODO(), name)
+func (i *Client) DeleteIPAllocation(ctx context.Context, name string) (bool, error) {
+	ipAllocation, err := i.GetIPAllocation(context.TODO(), name)
 	if err != nil {
 		return false, err
 	}
 
-	if err := i.client.Delete(context.TODO(), ipPool); err != nil {
+	if err := i.client.Delete(context.TODO(), ipAllocation); err != nil {
 		return false, err
 	}
 	return true, nil

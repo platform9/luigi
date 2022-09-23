@@ -47,7 +47,7 @@ rules:
 - apiGroups:
   - dhcp.plumber.k8s.pf9.io
   resources:
-  - ippools
+  - ipallocations
   verbs:
   - create
   - delete
@@ -59,13 +59,13 @@ rules:
 - apiGroups:
   - dhcp.plumber.k8s.pf9.io
   resources:
-  - ippools/finalizers
+  - ipallocations/finalizers
   verbs:
   - update
 - apiGroups:
   - dhcp.plumber.k8s.pf9.io
   resources:
-  - ippools/status
+  - ipallocations/status
   verbs:
   - get
   - patch
