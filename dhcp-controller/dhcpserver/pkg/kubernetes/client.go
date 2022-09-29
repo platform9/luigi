@@ -68,9 +68,9 @@ func newKubernetesClient(k8sClient client.Client, k8sClientSet *kubernetes.Clien
 func (i *Client) CreateIPAllocation(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
 	// Does not create IPAllocation when backup is restored
-	_, err := i.GetIPAllocation(context.TODO(), ip)
-	if err == nil {
-		return i.UpdateIPAllocation(context.TODO(), macid, vmiref, ip)
+	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
+	if err != nil {
+		return ipAllocation, err
 	}
 
 	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacId: macid, VmiRef: vmiref}}
