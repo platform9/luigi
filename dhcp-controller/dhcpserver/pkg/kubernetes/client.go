@@ -69,7 +69,7 @@ func (i *Client) CreateIPAllocation(ctx context.Context, macid string, vmiref st
 
 	// Does not create IPAllocation when backup is restored
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
-	if err != nil {
+	if ipAllocation != nil {
 		return ipAllocation, err
 	}
 

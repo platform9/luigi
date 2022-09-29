@@ -229,7 +229,7 @@ func retrieveBackup(leasePath string) error {
 				}
 				// This loop only runs once
 				for ip, obj := range ipallocation.Spec.Allocations {
-					tmpline := fmt.Sprintf(strconv.FormatInt(time.Now().Add(time.Hour*time.Duration(tmpleaseTime)).Unix(), 10) + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
+					tmpline := fmt.Sprintf(strconv.FormatInt(time.Now().Add(time.Hour*time.Duration(tmpleaseTime+1)).Unix(), 10) + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
 					destination.WriteString(tmpline)
 				}
 				serverLog.Info("Restored IPAllocation " + ipallocation.Name)
