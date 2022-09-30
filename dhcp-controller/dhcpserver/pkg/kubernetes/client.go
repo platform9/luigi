@@ -65,7 +65,7 @@ func newKubernetesClient(k8sClient client.Client, k8sClientSet *kubernetes.Clien
 	}
 }
 
-func (i *Client) CreateIPAllocation(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
+func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
 	// Does not create IPAllocation when backup is restored
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
@@ -83,6 +83,7 @@ func (i *Client) CreateIPAllocation(ctx context.Context, macid string, vmiref st
 		Spec: dhcpserverv1alpha1.IPAllocationSpec{
 			Allocations: alloc,
 			Range:       ip,
+			EpochExpiry: epochexpiry,
 		},
 	}
 
@@ -94,7 +95,7 @@ func (i *Client) CreateIPAllocation(ctx context.Context, macid string, vmiref st
 
 }
 
-func (i *Client) UpdateIPAllocation(ctx context.Context, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
+func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
 	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacId: macid, VmiRef: vmiref}}
 
@@ -106,6 +107,7 @@ func (i *Client) UpdateIPAllocation(ctx context.Context, macid string, vmiref st
 	ipAllocation.Spec = dhcpserverv1alpha1.IPAllocationSpec{
 		Allocations: alloc,
 		Range:       ip,
+		EpochExpiry: epochexpiry,
 	}
 
 	err = i.client.Update(context.TODO(), ipAllocation)

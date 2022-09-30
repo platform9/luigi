@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"time"
@@ -36,7 +35,6 @@ var (
 	k8sClient   *kubernetes.Client
 	HostNetwork = []net.IP{}
 	Netmask     = []string{}
-	Leasetime   = []string{}
 )
 
 type LeaseFile struct {
@@ -67,7 +65,6 @@ func parseConfig() error {
 			// TODO: when adding support for vlan, increment all the indices of dhcprangearray
 			// in this block by 1
 			Netmask = append(Netmask, dhcprangearray[3])
-			Leasetime = append(Leasetime, strings.TrimSuffix(dhcprangearray[4], "h"))
 
 			length, _ := net.IPMask(net.ParseIP(dhcprangearray[3]).To4()).Size()
 			ipv4Addr := net.ParseIP(dhcprangearray[1])
@@ -191,13 +188,12 @@ func retrieveBackup(leasePath string) error {
 			ipv4Mask := net.CIDRMask(length, 32)
 
 			if HostNetwork[idx].String() == ipv4Addr.Mask(ipv4Mask).String() {
-				tmpleaseTime, err := strconv.ParseInt(Leasetime[idx], 10, 64)
 				if err != nil {
 					serverLog.Error(err, "failed to get lease time")
 				}
 				// This loop only runs once
 				for ip, obj := range ipallocation.Spec.Allocations {
-					tmpline := fmt.Sprintf(strconv.FormatInt(time.Now().Add(time.Hour*time.Duration(tmpleaseTime+1)).Unix(), 10) + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
+					tmpline := fmt.Sprintf(ipallocation.Spec.EpochExpiry + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
 					destination.WriteString(tmpline)
 				}
 				serverLog.Info("Restored IPAllocation " + ipallocation.Name)
@@ -252,12 +248,12 @@ func updateRecord(lf map[string]LeaseFile, record []string, isupdate bool) {
 	lf[record[2]] = LeaseFile{record[0], record[1], record[2], record[3], record[4]}
 
 	if isupdate {
-		_, err := k8sClient.UpdateIPAllocation(context.TODO(), record[1], record[3], record[2])
+		_, err := k8sClient.UpdateIPAllocation(context.TODO(), record[0], record[1], record[3], record[2])
 		if err != nil {
 			serverLog.Error(err, "failed to update IP allocation")
 		}
 	} else {
-		_, err := k8sClient.CreateIPAllocation(context.TODO(), record[1], record[3], record[2])
+		_, err := k8sClient.CreateIPAllocation(context.TODO(), record[0], record[1], record[3], record[2])
 		if err != nil {
 			serverLog.Error(err, "failed to create IP allocation")
 		}

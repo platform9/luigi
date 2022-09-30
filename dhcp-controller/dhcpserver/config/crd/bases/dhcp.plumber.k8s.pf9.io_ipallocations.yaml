@@ -49,14 +49,16 @@ spec:
                   range. Its` indices are a direct mapping to the IP with the same
                   index/offset for the allocation's range.
                 type: object
+              epochexpiry:
+                description: EpochExpiry is the epoch time when the IP was set to
+                  expire in the leasefile
+                type: string
               range:
-                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                  Important: Run "make" to regenerate code after modifying this file
-                  Range is a RFC 4632/4291-style string that represents an IP address
-                  and prefix length in CIDR notation'
+                description: Range is a string that represents an IP address
                 type: string
             required:
             - allocations
+            - epochexpiry
             - range
             type: object
           status:

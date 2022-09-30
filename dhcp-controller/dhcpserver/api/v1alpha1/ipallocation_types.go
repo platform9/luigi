@@ -26,13 +26,13 @@ import (
 
 // IPAllocationSpec defines the desired state of IPAllocation
 type IPAllocationSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// Range is a RFC 4632/4291-style string that represents an IP address and prefix length in CIDR notation
+	// Range is a string that represents an IP address
 	Range string `json:"range"`
 	// Allocations is the set of allocated IPs for the given range. Its` indices are a direct mapping to the
 	// IP with the same index/offset for the allocation's range.
 	Allocations map[string]IPAllocationOwner `json:"allocations"`
+	// EpochExpiry is the epoch time when the IP was set to expire in the leasefile
+	EpochExpiry string `json:"epochexpiry"`
 }
 
 // ParseCIDR formats the Range of the IPAllocation
