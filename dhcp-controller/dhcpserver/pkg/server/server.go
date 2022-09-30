@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	//"text/template"
 	"time"
 
 	"crypto/md5"
@@ -81,39 +80,9 @@ func parseConfig() error {
 	return nil
 }
 
-/*
-func writeConfFile() {
-	vars := make(map[string]interface{})
-	vars["rangeStart"] = os.Getenv("IP_RANGE_START")
-	vars["rangeEnd"] = os.Getenv("IP_RANGE_END")
-	vars["gwAddress"] = os.Getenv("IP_GATEWAY")
-	vars["netMask"] = os.Getenv("IP_RANGE_NETMASK")
-	vars["listenIface"] = os.Getenv("NAD_NAME")
-	vars["leaseTime"] = os.Getenv("LEASE_TIME")
-	// parse the template
-	tmpl, err := template.ParseFiles("dnsmasq_conf.tmpl")
-	if err != nil {
-		panic(err)
-	}
-	// create a new file
-	file, err := os.Create("/etc/dnsmasq.d/dnsmasq.conf")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	// apply the template to the vars map and write the result to file.
-	tmpl.Execute(file, vars)
-
-}
-*/
-
 func applyInterfaceIp() error {
 
 	address := os.Getenv("BIND_INTERFACE_IP")
-	//mask := os.Getenv("IP_RANGE_NETMASK")
-	//stringMask := net.IPMask(net.ParseIP(mask).To4())
-	//length, _ := stringMask.Size()
 
 	//TODO figure out the interface name instead of hardcoding as per image
 	args := []string{"address", "add", address, "dev", "net1"}
@@ -216,7 +185,6 @@ func retrieveBackup(leasePath string) error {
 		// Restore IPs that originated from this pod
 
 		//TODO do we need to store epochTime as well
-		// TODO : need to revisit
 		for idx, mask := range Netmask {
 			length, _ := net.IPMask(net.ParseIP(mask).To4()).Size()
 			ipv4Addr := net.ParseIP(ipallocation.Name)
@@ -385,12 +353,10 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 				break out
 			// watch for events
 			case event := <-watcher.Events:
-
 				// Check if file is actually updated. fsnotify gives multiple write events
 				// depending on the editor and platform
 				newmd5, err := hash_file_md5(leasePath)
 				if err != nil {
-					// serverLog.Error(err, "Cannot calculate md5sum of lease file")
 					done <- true
 				}
 
