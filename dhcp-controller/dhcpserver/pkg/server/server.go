@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"time"
@@ -61,16 +62,21 @@ func parseConfig() error {
 		line := fileScanner.Text()
 		if strings.Contains(line, "dhcp-range") {
 			dhcprangearray := regexp.MustCompile("[\\=\\s,]").Split(line, -1)
-
+			dhcprangearraylen := len(dhcprangearray)
 			// TODO: when adding support for vlan, increment all the indices of dhcprangearray
 			// in this block by 1
-			Netmask = append(Netmask, dhcprangearray[3])
+			Netmask = append(Netmask, dhcprangearray[dhcprangearraylen-2])
 
-			length, _ := net.IPMask(net.ParseIP(dhcprangearray[3]).To4()).Size()
-			ipv4Addr := net.ParseIP(dhcprangearray[1])
+			length, _ := net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2]).To4()).Size()
+			ipv4Addr := net.ParseIP(dhcprangearray[dhcprangearraylen-4])
 			ipv4Mask := net.CIDRMask(length, 32)
 			HostNetwork = append(HostNetwork, ipv4Addr.Mask(ipv4Mask))
-			serverLog.Info("Set pod host network for vlan0: " + HostNetwork[len(HostNetwork)-1].String())
+
+			if dhcprangearraylen == 6 {
+				serverLog.Info("Set pod host network for " + dhcprangearray[1] + ": " + HostNetwork[len(HostNetwork)-1].String())
+			} else {
+				serverLog.Info("Set pod host network for vlan0: " + HostNetwork[len(HostNetwork)-1].String())
+			}
 
 		}
 	}
@@ -79,21 +85,25 @@ func parseConfig() error {
 
 func applyInterfaceIp() error {
 
-	address := os.Getenv("BIND_INTERFACE_IP")
+	addresses := strings.Split(os.Getenv("BIND_INTERFACE_IP"), ",")
 
-	//TODO figure out the interface name instead of hardcoding as per image
-	args := []string{"address", "add", address, "dev", "net1"}
-	cmd := exec.Command("ip", args...)
+	for idx, address := range addresses {
+		//TODO figure out the interface name instead of hardcoding as per image
+		args := []string{"address", "add", address, "dev", "net" + strconv.Itoa(idx+1)}
 
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
+		cmd := exec.Command("ip", args...)
 
-	err := cmd.Run()
-	if err != nil {
-		return err
+		var out bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 
 }
