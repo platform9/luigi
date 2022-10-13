@@ -42,8 +42,8 @@ func (i IPAllocation) ParseCIDR() (net.IP, *net.IPNet, error) {
 
 // IPAllocationOwner represents metadata about the pod/container owner of a specific IP
 type IPAllocationOwner struct {
-	MacId  string `json:"id,omitempty"`
-	VmiRef string `json:"vmiref,omitempty"`
+	MacAddr string `json:"macaddr,omitempty"`
+	VmiRef  string `json:"vmiref,omitempty"`
 }
 
 // IPAllocationStatus defines the observed state of IPAllocation

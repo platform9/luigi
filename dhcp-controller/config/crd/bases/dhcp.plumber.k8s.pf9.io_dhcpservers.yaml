@@ -35,16 +35,40 @@ spec:
           spec:
             description: DHCPServerSpec defines the desired state of DHCPServer
             properties:
-              configMapName:
-                description: configmap to be mounted as dnsmasq.conf
-                type: string
-              interfaceIp:
-                description: refers to IP address to be configured at BindInterface
-                  port
-                type: string
-              networkName:
-                description: refers to net-attach-def to be served
-                type: string
+              servers:
+                description: Details of Servers
+                items:
+                  properties:
+                    cidr:
+                      description: refers to CIDR of server
+                      properties:
+                        gwAddress:
+                          description: refers to gateway IP
+                          type: string
+                        rangeEndIp:
+                          description: refers to end IP of range
+                          type: string
+                        rangeNetMask:
+                          description: refers to subnet mask
+                          type: string
+                        rangeStartIp:
+                          description: refers to start IP of range
+                          type: string
+                      type: object
+                    interfaceIp:
+                      description: refers to IP address to bind interface to
+                      type: string
+                    leaseTime:
+                      description: refers to leasetime of IP
+                      type: string
+                    networkName:
+                      description: refers to net-attach-def to be served
+                      type: string
+                    vlanid:
+                      description: refers to vlan
+                      type: string
+                  type: object
+                type: array
             type: object
           status:
             description: DHCPServerStatus defines the observed state of DHCPServer

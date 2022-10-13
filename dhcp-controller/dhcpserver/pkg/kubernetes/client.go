@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,7 +74,8 @@ func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, mac
 		return ipAllocation, err
 	}
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacId: macid, VmiRef: vmiref}}
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, VmiRef: vmiref}}
+	serverLog.Info(fmt.Sprintf("Creating IPAllocation: %+v", alloc))
 
 	ipAllocationCreate := &dhcpserverv1alpha1.IPAllocation{
 		ObjectMeta: metav1.ObjectMeta{
@@ -97,13 +99,15 @@ func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, mac
 
 func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacId: macid, VmiRef: vmiref}}
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, VmiRef: vmiref}}
 
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
 	if err != nil {
 		return ipAllocation, err
 	}
-	serverLog.Info("Found IPAllocation " + ip + " to update")
+	serverLog.Info(fmt.Sprintf("IPAllocation created: %+v", alloc))
+
+	serverLog.Info(fmt.Sprintf("Found IPAllocation %s to update: %+v", ip, ipAllocation.Spec.Allocations))
 	ipAllocation.Spec = dhcpserverv1alpha1.IPAllocationSpec{
 		Allocations: alloc,
 		Range:       ip,

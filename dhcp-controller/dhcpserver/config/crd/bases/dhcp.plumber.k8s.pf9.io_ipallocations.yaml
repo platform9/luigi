@@ -40,7 +40,7 @@ spec:
                   description: IPAllocationOwner represents metadata about the pod/container
                     owner of a specific IP
                   properties:
-                    id:
+                    macaddr:
                       type: string
                     vmiref:
                       type: string

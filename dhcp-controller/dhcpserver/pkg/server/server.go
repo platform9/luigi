@@ -26,6 +26,7 @@ import (
 	"dhcpserver/pkg/kubernetes"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/gocarina/gocsv"
 )
 
 var (
@@ -203,7 +204,7 @@ func retrieveBackup(leasePath string) error {
 				}
 				// This loop only runs once
 				for ip, obj := range ipallocation.Spec.Allocations {
-					tmpline := fmt.Sprintf(ipallocation.Spec.EpochExpiry + " " + obj.MacId + " " + ip + " " + obj.VmiRef + " *\n")
+					tmpline := fmt.Sprintf(ipallocation.Spec.EpochExpiry + " " + obj.MacAddr + " " + ip + " " + obj.VmiRef + " *\n")
 					destination.WriteString(tmpline)
 				}
 				serverLog.Info("Restored IPAllocation " + ipallocation.Name)
@@ -227,10 +228,10 @@ func dirInit(leasePath string) {
 // Checks if lease found in records exist in leasefile.
 // This is for the scenario when leases expire and dnsmasq deletes
 // the lease from the leasefile
-func leaseExist(ip string, records [][]string) (result bool) {
+func leaseExist(ip string, records []LeaseFile) (result bool) {
 	result = false
 	for _, lease := range records {
-		if lease[2] == ip {
+		if lease.IPAddress == ip {
 			result = true
 			break
 		}
@@ -239,31 +240,31 @@ func leaseExist(ip string, records [][]string) (result bool) {
 }
 
 // Checks if existing entry in leasefile has been updated
-func checkRecord(lease LeaseFile, record []string) bool {
+func checkRecord(lease LeaseFile, record LeaseFile) bool {
 	serverLog.Info("Checking lease entry....")
 	var isupdated = false
-	if record[0] != lease.EpochTimestamp ||
-		record[1] != lease.MacAddress ||
-		record[2] != lease.IPAddress ||
-		record[3] != lease.Hostname ||
-		record[4] != lease.ClientID {
+	if record.EpochTimestamp != lease.EpochTimestamp ||
+		record.MacAddress != lease.MacAddress ||
+		record.IPAddress != lease.IPAddress ||
+		record.Hostname != lease.Hostname ||
+		record.ClientID != lease.ClientID {
 		isupdated = true
 	}
 	return isupdated
 }
 
 // updates record with new data from leasefile
-func updateRecord(lf map[string]LeaseFile, record []string, isupdate bool) {
+func updateRecord(lf map[string]LeaseFile, record LeaseFile, isupdate bool) {
 	serverLog.Info("Updating Lease")
-	lf[record[2]] = LeaseFile{record[0], record[1], record[2], record[3], record[4]}
+	lf[record.IPAddress] = record
 
 	if isupdate {
-		_, err := k8sClient.UpdateIPAllocation(context.TODO(), record[0], record[1], record[3], record[2])
+		_, err := k8sClient.UpdateIPAllocation(context.TODO(), record.EpochTimestamp, record.MacAddress, record.Hostname, record.IPAddress)
 		if err != nil {
 			serverLog.Error(err, "failed to update IP allocation")
 		}
 	} else {
-		_, err := k8sClient.CreateIPAllocation(context.TODO(), record[0], record[1], record[3], record[2])
+		_, err := k8sClient.CreateIPAllocation(context.TODO(), record.EpochTimestamp, record.MacAddress, record.Hostname, record.IPAddress)
 		if err != nil {
 			serverLog.Error(err, "failed to create IP allocation")
 		}
@@ -280,10 +281,11 @@ func readLeaseFile(lf map[string]LeaseFile, leasePath string) (string, error) {
 	}
 	defer f.Close()
 
-	csvReader := csv.NewReader(f)
-	csvReader.Comma = ' '
-	records, _ := csvReader.ReadAll()
-	if err != nil {
+	var records []LeaseFile
+	csvReader2 := csv.NewReader(f)
+	csvReader2.Comma = ' '
+	err = gocsv.UnmarshalCSVWithoutHeaders(csvReader2, &records)
+	if err != nil && err != gocsv.ErrEmptyCSVFile {
 		serverLog.Error(err, "Cannot parse lease file")
 		return "", err
 	}
@@ -304,7 +306,7 @@ func readLeaseFile(lf map[string]LeaseFile, leasePath string) (string, error) {
 
 	// Check if lease exists in record and if it is up to date
 	for _, record := range records {
-		if lease, ok := lf[record[2]]; ok {
+		if lease, ok := lf[record.IPAddress]; ok {
 			// Check if any entry in existing lease has been updated, like epoch time
 			if checkRecord(lease, record) {
 				updateRecord(lf, record, true)

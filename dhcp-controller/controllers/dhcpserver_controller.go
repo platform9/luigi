@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strings"
 
 	dhcpv1alpha1 "dhcp-controller/api/v1alpha1"
 )
@@ -46,6 +48,7 @@ type DHCPServerReconciler struct {
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=dhcpservers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=dhcpservers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;delete;deletecollection;get;list;patch;update;watch
+//+kubebuilder:rbac:groups=core,resources=configmaps,verbs=create;delete;deletecollection;get;list;patch;update;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -73,6 +76,10 @@ func (r *DHCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if len(serverList) > 0 {
 		for _, server := range serverList {
 			log.Infof("server %s", server.Name)
+			err := r.genConfigMap(server)
+			if err != nil {
+				log.Error(err, "ConfigMap Not created")
+			}
 			result, err := r.ensureServer(req, server, r.backendDeployment(server))
 			if result != nil {
 				log.Error(err, "DHCP server Not ready")
@@ -84,6 +91,32 @@ func (r *DHCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *DHCPServerReconciler) genConfigMap(server dhcpv1alpha1.DHCPServer) error {
+	configMapData := make(map[string]string, 0)
+	dnsmasqConfData := "port=0\n"
+	for _, server := range server.Spec.Servers {
+		if server.VlanID == "" {
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, server.ServerCIDR.RangeNetMask, server.LeaseTime)
+		} else {
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", server.VlanID, server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, server.ServerCIDR.RangeNetMask, server.LeaseTime)
+		}
+		dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", server.ServerCIDR.GwAddress)
+	}
+	configMapData["dnsmasq.conf"] = dnsmasqConfData
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      server.Name,
+			Namespace: server.Namespace,
+		},
+		Data: configMapData,
+	}
+	err := r.Create(context.TODO(), configMap)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
@@ -119,7 +152,7 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 
 // backendDeployment is a code for Creating Deployment
 func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *appsv1.Deployment {
-
+	networkNames, interfaceIps := parseNetwork(v.Spec.Servers)
 	size := int32(1)
 	memReq := resource.NewQuantity(64*1024*1024, resource.BinarySI)
 	memLimit := resource.NewQuantity(128*1024*1024, resource.BinarySI)
@@ -136,7 +169,7 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      map[string]string{"app": "dnsmasq", "name": v.Name},
-					Annotations: map[string]string{"k8s.v1.cni.cncf.io/networks": v.Spec.NetworkName},
+					Annotations: map[string]string{"k8s.v1.cni.cncf.io/networks": networkNames},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
@@ -158,12 +191,8 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 						Name:            v.Name,
 						Env: []corev1.EnvVar{
 							{
-								Name:  "NAD_NAME",
-								Value: v.Spec.NetworkName,
-							},
-							{
 								Name:  "BIND_INTERFACE_IP",
-								Value: v.Spec.InterfaceIp,
+								Value: interfaceIps,
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{{
@@ -176,7 +205,7 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: v.Spec.ConfigMapName,
+									Name: v.Name,
 								},
 								Items: []corev1.KeyToPath{{
 									Key:  "dnsmasq.conf",
@@ -192,6 +221,16 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 
 	controllerutil.SetControllerReference(&v, dep, r.Scheme)
 	return dep
+}
+
+func parseNetwork(servers []dhcpv1alpha1.Server) (string, string) {
+	var name []string
+	var ip []string
+	for _, server := range servers {
+		name = append(name, server.NetworkName)
+		ip = append(ip, server.InterfaceIp)
+	}
+	return strings.Join(name, ","), strings.Join(ip, ",")
 }
 
 // SetupWithManager sets up the controller with the Manager.

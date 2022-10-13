@@ -22,18 +22,42 @@ import (
 
 // DHCPServerSpec defines the desired state of DHCPServer
 type DHCPServerSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Details of Servers
+	// +kubebuilder:validation:Required
+	Servers []Server `json:"servers,omitempty"`
+}
 
+type Server struct {
 	// refers to net-attach-def to be served
 	// +kubebuilder:validation:Required
 	NetworkName string `json:"networkName,omitempty"`
-	// refers to IP address to be configured at BindInterface port
+	// refers to IP address to bind interface to
 	// +kubebuilder:validation:Required
 	InterfaceIp string `json:"interfaceIp,omitempty"`
-	// configmap to be mounted as dnsmasq.conf
+	// refers to CIDR of server
 	// +kubebuilder:validation:Required
-	ConfigMapName string `json:"configMapName,omitempty"`
+	ServerCIDR CIDR `json:"cidr,omitempty"`
+	// refers to leasetime of IP
+	// +kubebuilder:validation:Required
+	LeaseTime string `json:"leaseTime,omitempty"`
+	// refers to vlan
+	VlanID string `json:"vlanid,omitempty"`
+}
+
+// CIDR defines CIDR of each network
+type CIDR struct {
+	// refers to start IP of range
+	// +kubebuilder:validation:Required
+	RangeStartIp string `json:"rangeStartIp,omitempty"`
+	// refers to end IP of range
+	// +kubebuilder:validation:Required
+	RangeEndIp string `json:"rangeEndIp,omitempty"`
+	// refers to subnet mask
+	// +kubebuilder:validation:Required
+	RangeNetMask string `json:"rangeNetMask,omitempty"`
+	// refers to gateway IP
+	// +kubebuilder:validation:Required
+	GwAddress string `json:"gwAddress,omitempty"`
 }
 
 // DHCPServerStatus defines the observed state of DHCPServer
