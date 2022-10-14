@@ -64,14 +64,15 @@ func parseConfig() error {
 		if strings.Contains(line, "dhcp-range") {
 			dhcprangearray := regexp.MustCompile("[\\=\\s,]").Split(line, -1)
 			dhcprangearraylen := len(dhcprangearray)
-			// TODO: when adding support for vlan, increment all the indices of dhcprangearray
-			// in this block by 1
-			Netmask = append(Netmask, dhcprangearray[dhcprangearraylen-2])
 
-			length, _ := net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2]).To4()).Size()
-			ipv4Addr := net.ParseIP(dhcprangearray[dhcprangearraylen-4])
-			ipv4Mask := net.CIDRMask(length, 32)
-			HostNetwork = append(HostNetwork, ipv4Addr.Mask(ipv4Mask))
+			Netmask = append(Netmask, dhcprangearray[dhcprangearraylen-2])
+			length, total := net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2])).Size()
+			if total == 0 {
+				length, total = net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2]).To4()).Size()
+			}
+			ipvAddr := net.ParseIP(dhcprangearray[dhcprangearraylen-4])
+			ipvMask := net.CIDRMask(length, total)
+			HostNetwork = append(HostNetwork, ipvAddr.Mask(ipvMask))
 
 			if dhcprangearraylen == 6 {
 				serverLog.Info("Set pod host network for " + dhcprangearray[1] + ": " + HostNetwork[len(HostNetwork)-1].String())
@@ -191,14 +192,15 @@ func retrieveBackup(leasePath string) error {
 
 	for _, ipallocation := range ipAllocations {
 		// Restore IPs that originated from this pod
-
-		//TODO do we need to store epochTime as well
 		for idx, mask := range Netmask {
-			length, _ := net.IPMask(net.ParseIP(mask).To4()).Size()
-			ipv4Addr := net.ParseIP(ipallocation.Name)
-			ipv4Mask := net.CIDRMask(length, 32)
+			length, total := net.IPMask(net.ParseIP(mask).Size()
+			if total == 0 {
+				length, total = net.IPMask(net.ParseIP(mask.To4()).Size()
+			}
+			ipvAddr := net.ParseIP(ipallocation.Name)
+			ipvMask := net.CIDRMask(length, total)
 
-			if HostNetwork[idx].String() == ipv4Addr.Mask(ipv4Mask).String() {
+			if HostNetwork[idx].String() == ipvAddr.Mask(ipvMask).String() {
 				if err != nil {
 					serverLog.Error(err, "failed to get lease time")
 				}

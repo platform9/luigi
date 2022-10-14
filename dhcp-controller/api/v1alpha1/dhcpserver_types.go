@@ -48,13 +48,11 @@ type Server struct {
 type CIDR struct {
 	// refers to start IP of range
 	// +kubebuilder:validation:Required
+	CIDRIP string `json:"cidrIp,omitempty"`
+	// refers to start IP of range
 	RangeStartIp string `json:"rangeStartIp,omitempty"`
 	// refers to end IP of range
-	// +kubebuilder:validation:Required
 	RangeEndIp string `json:"rangeEndIp,omitempty"`
-	// refers to subnet mask
-	// +kubebuilder:validation:Required
-	RangeNetMask string `json:"rangeNetMask,omitempty"`
 	// refers to gateway IP
 	// +kubebuilder:validation:Required
 	GwAddress string `json:"gwAddress,omitempty"`

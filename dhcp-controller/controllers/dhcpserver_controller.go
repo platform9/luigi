@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	cidr "github.com/apparentlymart/go-cidr/cidr"
 	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"net"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -93,22 +95,37 @@ func (r *DHCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
-func (r *DHCPServerReconciler) genConfigMap(server dhcpv1alpha1.DHCPServer) error {
+func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) error {
 	configMapData := make(map[string]string, 0)
 	dnsmasqConfData := "port=0\n"
-	for _, server := range server.Spec.Servers {
+
+	for _, server := range dhcpserver.Spec.Servers {
+
+		_, ipvNet, err := net.ParseCIDR(server.ServerCIDR.CIDRIP)
+		if err != nil {
+			return err
+		}
+		firstIP, lastIP := cidr.AddressRange(ipvNet)
+		if server.ServerCIDR.RangeStartIp == "" {
+			server.ServerCIDR.RangeStartIp = cidr.Inc(firstIP).String()
+		}
+		if server.ServerCIDR.RangeEndIp == "" {
+			server.ServerCIDR.RangeEndIp = cidr.Dec(lastIP).String()
+		}
+		RangeNetMask := net.IP(ipvNet.Mask).String()
+
 		if server.VlanID == "" {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, server.ServerCIDR.RangeNetMask, server.LeaseTime)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, RangeNetMask, server.LeaseTime)
 		} else {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", server.VlanID, server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, server.ServerCIDR.RangeNetMask, server.LeaseTime)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", server.VlanID, server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, RangeNetMask, server.LeaseTime)
 		}
 		dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", server.ServerCIDR.GwAddress)
 	}
 	configMapData["dnsmasq.conf"] = dnsmasqConfData
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      server.Name,
-			Namespace: server.Namespace,
+			Name:      dhcpserver.Name,
+			Namespace: dhcpserver.Namespace,
 		},
 		Data: configMapData,
 	}

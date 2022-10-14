@@ -5,20 +5,20 @@ metadata:
 spec:
   servers:
     - networkName: ovs-dnsmasq-test
-      interfaceIp: 192.168.15.54  
+      interfaceIp: 192.168.15.54
       leaseTime: 10m
       vlanid: vlan1
       cidr:
+        cidrIp: 192.168.15.0/24
         rangeStartIp: 192.168.15.10
         rangeEndIp: 192.168.15.100
-        rangeNetMask: 255.255.255.0
         gwAddress: 192.168.15.1
     - networkName: ovs-build-pmk-provider-net
-      interfaceIp: 10.128.144.90   
+      interfaceIp: 10.128.144.90
       leaseTime: 10m
       vlanid: vlan2
       cidr:
+        cidrIp: 10.128.144.0/23
         rangeStartIp: 10.128.144.10
         rangeEndIp: 10.128.145.200
-        rangeNetMask: 255.255.254.0
         gwAddress: 10.128.144.1
