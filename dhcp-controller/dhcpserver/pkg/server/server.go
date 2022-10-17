@@ -193,7 +193,7 @@ func retrieveBackup(leasePath string) error {
 	for _, ipallocation := range ipAllocations {
 		// Restore IPs that originated from this pod
 		for idx, mask := range Netmask {
-			length, total := net.IPMask(net.ParseIP(mask).Size()
+			length, total := net.IPMask(net.ParseIP(mask).Size())
 			if total == 0 {
 				length, total = net.IPMask(net.ParseIP(mask.To4()).Size()
 			}
