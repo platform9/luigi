@@ -36,7 +36,7 @@ type Server struct {
 	InterfaceIp string `json:"interfaceIp,omitempty"`
 	// refers to CIDR of server
 	// +kubebuilder:validation:Required
-	ServerCIDR CIDR `json:"cidr,omitempty"`
+	ServerCIDR CIDR `json:"cidr"`
 	// refers to leasetime of IP
 	// +kubebuilder:validation:Required
 	LeaseTime string `json:"leaseTime,omitempty"`
@@ -46,16 +46,15 @@ type Server struct {
 
 // CIDR defines CIDR of each network
 type CIDR struct {
-	// refers to start IP of range
+	// refers to cidr range
 	// +kubebuilder:validation:Required
-	CIDRIP string `json:"cidrIp,omitempty"`
+	CIDRIP string `json:"range"`
 	// refers to start IP of range
-	RangeStartIp string `json:"rangeStartIp,omitempty"`
+	RangeStartIp string `json:"range_start,omitempty"`
 	// refers to end IP of range
-	RangeEndIp string `json:"rangeEndIp,omitempty"`
+	RangeEndIp string `json:"range_end,omitempty"`
 	// refers to gateway IP
-	// +kubebuilder:validation:Required
-	GwAddress string `json:"gwAddress,omitempty"`
+	GwAddress string `json:"gateway,omitempty"`
 }
 
 // DHCPServerStatus defines the observed state of DHCPServer
