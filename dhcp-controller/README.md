@@ -20,29 +20,49 @@ This uses dnsmasq to cater the client request. Etcd is used for storing the allo
 
     // DHCPServerSpec defines the desired state of DHCPServer
     type DHCPServerSpec struct {
-        // refers to net-attach-def to be served
-        NetworkName string `json:"networkName,omitempty"`
-        // refers to IP address to be configured at BindInterface port
-        InterfaceIp string `json:"interfaceIp,omitempty"`
-		// configmap to be mounted as dnsmasq.conf
-        ConfigMapName string `json:"configMapName,omitempty"`
-	}
+    	// Details of Servers
+    	Servers []Server `json:"servers,omitempty"`
+    }
+    type Server struct {
+    	// refers to net-attach-def to be served
+    	NetworkName string `json:"networkName,omitempty"`
+    	// refers to IP address to bind interface to
+    	InterfaceIp string `json:"interfaceIp,omitempty"`
+    	// refers to CIDR of server
+    	ServerCIDR CIDR `json:"cidr"`
+    	// refers to leasetime of IP
+    	LeaseTime string `json:"leaseTime,omitempty"`
+    	// refers to vlan
+    	VlanID string `json:"vlanid,omitempty"`
+    }
+    // CIDR defines CIDR of each network
+    type CIDR struct {
+    	// refers to cidr range
+    	CIDRIP string `json:"range"`
+    	// refers to start IP of range
+    	RangeStartIp string `json:"range_start,omitempty"`
+    	// refers to end IP of range
+    	RangeEndIp string `json:"range_end,omitempty"`
+    	// refers to gateway IP
+    	GwAddress string `json:"gateway,omitempty"`
+    }
 
-### Schema for Ippools used by controller to store/manage the Allocation 
+### Schema for IPAllocation used by controller to store/manage the Allocation 
 
     // IPAllocationSpec defines the desired state of IPAllocation
     type IPAllocationSpec struct {
-            // Range is a RFC 4632/4291-style string that represents an IP address and prefix length in CIDR notation
-            Range string `json:"range"`
-            // Allocations is the set of allocated IPs for the given range. Its indices are a direct mapping to the
-            // IP with the same index/offset for the allocation's range.
-            Allocations map[string]IPAllocationOwner `json:"allocations"`
+    	// Range is a string that represents an IP address
+    	Range string `json:"range"`
+    	// Allocations is the set of allocated IPs for the given range. Its` indices are a direct mapping to the
+    	// IP with the same index/offset for the allocation's range.
+    	Allocations map[string]IPAllocationOwner `json:"allocations"`
+    	// EpochExpiry is the epoch time when the IP was set to expire in the leasefile
+    	EpochExpiry string `json:"epochexpiry"`
     }
-
     // IPAllocationOwner represents metadata about the pod/container owner of a specific IP
     type IPAllocationOwner struct {
-            MacId  string `json:"id,omitempty"`
-            VmiRef string `json:"vmiref,omitempty"`
+    	MacAddr string `json:"macaddr,omitempty"`
+    	VmiRef  string `json:"vmiref,omitempty"`
     }
 
 
@@ -52,7 +72,7 @@ This uses dnsmasq to cater the client request. Etcd is used for storing the allo
     apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: dhcp1-config
+      name: dhcpserver-sample
       namespace: default
     data:
       dnsmasq.conf: |
@@ -65,11 +85,39 @@ This uses dnsmasq to cater the client request. Etcd is used for storing the allo
     metadata:
       name: dhcpserver-sample
     spec:
-      networkName: ovs-ipam-vm-trunk-net //Multus network-attachment-definition
-      interfaceIp: 192.168.15.9
-      configMapName: dhcp1-config
+      servers:
+        - networkName: ovs-dnsmasq-test
+          interfaceIp: 192.168.15.54
+          leaseTime: 10m
+          vlanid: vlan1
+          cidr:
+            range: 192.168.15.0/24
+            range_start: 192.168.15.10
+            range_end: 192.168.15.100
+            gateway: 192.168.15.1
+        - networkName: ovs-build-pmk-provider-net
+          interfaceIp: 10.128.144.90
+          leaseTime: 10m
+          vlanid: vlan2
+          cidr:
+            range: 10.128.144.0/23
+            range_start: 10.128.144.10
+            range_end: 10.128.145.200
 
-**Note**: The dnsmasq.conf must be in a valid dnsmasq config format
+**Note**: Providing the configmap is optional. If not provided, one will automatically be generated with the needed configurations. If any custom parameters are needed to be set, create a configmap with valid dnsmasq.conf parameters. Along with this, ```dhcp-range``` must be in one of the two formats
+1. ```dhcp-range=<start_IP>,<end_ip>,<netmask>,<leasetime>```
+2. ```dhcp-range=<vlanID>,<start_ip>,<end_ip>,<netmask>,<leasetime>```
+
+## Working
+
+* Using the luigi addons, DHCPController is created in dhcp-controller-system namespace.
+* When DHCPServer is created, a deployment is made. It creates a DHCPServer pod, which runs with dnsmasq.
+* A configmap is generated based on the DHCPServer. This is a conf file for dnsmasq. It can be overridden by creating a valid configmap with the same name as that of the DHCPServer.
+* Changes to the configmap will cause redeployment of the DHCPServer.
+* The leasefile is watched for changes (write events). Accordingly, IPAllocation objects are created/deleted/updated. Epoch time of the lease is also stored.
+* If a VM live-migrates, all IPs allocated to the secondary interfaces are retained, provided that the MacAddresses of the NICs stay the same
+* If a DHCPServer is redeployed, leases that belong to the network(s) that the DHCPServer is serving are restored with the same lease time from the IPAllocations.
+
 
 
 ## Getting Started

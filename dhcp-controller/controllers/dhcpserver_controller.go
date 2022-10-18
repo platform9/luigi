@@ -116,7 +116,9 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 		} else {
 			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", server.VlanID, server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, RangeNetMask, server.LeaseTime)
 		}
-		dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", server.ServerCIDR.GwAddress)
+		if server.ServerCIDR.GwAddress != "" {
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", server.ServerCIDR.GwAddress)
+		}
 	}
 	configMapData["dnsmasq.conf"] = dnsmasqConfData
 	configMap := &corev1.ConfigMap{
