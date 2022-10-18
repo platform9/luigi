@@ -30,11 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"net"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
+	"time"
 
 	dhcpv1alpha1 "dhcp-controller/api/v1alpha1"
 )
@@ -64,8 +66,6 @@ type DHCPServerReconciler struct {
 func (r *DHCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	//_ = log.FromContext(ctx)
 
-	//log := r.Log.WithValues("dhcpservers", req.NamespacedName)
-
 	var dhcpConfigReq = dhcpv1alpha1.DHCPServerList{}
 	if err := r.List(ctx, &dhcpConfigReq); err != nil {
 		log.Error(err, "unable to fetch DHCPServer")
@@ -78,10 +78,7 @@ func (r *DHCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if len(serverList) > 0 {
 		for _, server := range serverList {
 			log.Infof("server %s", server.Name)
-			err := r.genConfigMap(server)
-			if err != nil {
-				log.Error(err, "ConfigMap Not created")
-			}
+
 			result, err := r.ensureServer(req, server, r.backendDeployment(server))
 			if result != nil {
 				log.Error(err, "DHCP server Not ready")
@@ -95,7 +92,7 @@ func (r *DHCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
-func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) error {
+func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) (error, *corev1.ConfigMap) {
 	configMapData := make(map[string]string, 0)
 	dnsmasqConfData := "port=0\n"
 
@@ -103,7 +100,7 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 
 		_, ipvNet, err := net.ParseCIDR(server.ServerCIDR.CIDRIP)
 		if err != nil {
-			return err
+			return err, nil
 		}
 		firstIP, lastIP := cidr.AddressRange(ipvNet)
 		if server.ServerCIDR.RangeStartIp == "" {
@@ -129,11 +126,7 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 		},
 		Data: configMapData,
 	}
-	err := r.Create(context.TODO(), configMap)
-	if err != nil {
-		return err
-	}
-	return nil
+	return nil, configMap
 }
 
 func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
@@ -141,9 +134,53 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 	dep *appsv1.Deployment,
 ) (*reconcile.Result, error) {
 
-	// See if deployment already exists and create if it doesn't
 	found := &appsv1.Deployment{}
-	err := r.Get(context.TODO(), types.NamespacedName{
+	err, cm := r.genConfigMap(server)
+	if err != nil {
+		log.Error(err, "Failed to generate ConfigMap")
+		return &reconcile.Result{}, err
+	}
+
+	oldcm := &corev1.ConfigMap{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: dep.Name, Namespace: server.Namespace}, oldcm)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info(" Creating Configmap...")
+		controllerutil.SetControllerReference(&server, cm, r.Scheme)
+		if err := r.Create(context.TODO(), cm); err != nil {
+			log.Error(err, "Failed to create new ConfigMap")
+			return &reconcile.Result{}, err
+		}
+	} else if err != nil {
+		log.Error(err, "Failed to get pre-existing ConfigMap")
+	} else if err == nil {
+		log.Info("Configmap exists with same name")
+		if reflect.DeepEqual(cm.Data, oldcm.Data) == false {
+			controllerutil.SetControllerReference(&server, cm, r.Scheme)
+			if err := r.Update(context.TODO(), cm); err != nil {
+				log.Error(err, "Failed to update ConfigMap")
+				return &reconcile.Result{}, err
+			}
+			// Delete the deployment, will be recreated with new configmap
+			err = r.Delete(context.TODO(), dep)
+			if err != nil {
+				log.Error(err, "Failed to recreate the deployment")
+				return &reconcile.Result{}, err
+			}
+			err = r.Get(context.TODO(), types.NamespacedName{Name: dep.Name, Namespace: server.Namespace}, found)
+			for {
+				if err != nil && errors.IsNotFound(err) {
+					break
+				}
+				err = r.Get(context.TODO(), types.NamespacedName{Name: dep.Name, Namespace: server.Namespace}, found)
+				time.Sleep(2 * time.Second)
+			}
+		} else {
+			log.Info("server spec is unchanged, not updating ConfigMap")
+			return &reconcile.Result{}, err
+		}
+	}
+	// See if deployment already exists and create if it doesn't
+	err = r.Get(context.TODO(), types.NamespacedName{
 		Name:      dep.Name,
 		Namespace: server.Namespace,
 	}, found)

@@ -41,16 +41,40 @@ spec:
           spec:
             description: DHCPServerSpec defines the desired state of DHCPServer
             properties:
-              configMapName:
-                description: configmap to be mounted as dnsmasq.conf
-                type: string
-              interfaceIp:
-                description: refers to IP address to be configured at BindInterface
-                  port
-                type: string
-              networkName:
-                description: refers to net-attach-def to be served
-                type: string
+              servers:
+                description: Details of Servers
+                items:
+                  properties:
+                    cidr:
+                      description: refers to CIDR of server
+                      properties:
+                        cidrIp:
+                          description: refers to start IP of range
+                          type: string
+                        gwAddress:
+                          description: refers to gateway IP
+                          type: string
+                        rangeEndIp:
+                          description: refers to end IP of range
+                          type: string
+                        rangeStartIp:
+                          description: refers to start IP of range
+                          type: string
+                      type: object
+                    interfaceIp:
+                      description: refers to IP address to bind interface to
+                      type: string
+                    leaseTime:
+                      description: refers to leasetime of IP
+                      type: string
+                    networkName:
+                      description: refers to net-attach-def to be served
+                      type: string
+                    vlanid:
+                      description: refers to vlan
+                      type: string
+                  type: object
+                type: array
             type: object
           status:
             description: DHCPServerStatus defines the observed state of DHCPServer
@@ -115,6 +139,19 @@ rules:
   - apps
   resources:
   - deployments
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
   verbs:
   - create
   - delete
@@ -315,8 +352,7 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: {{ .KubeRbacProxyImage }}
-        imagePullPolicy: {{ .ImagePullPolicy }}
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.12.0
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -330,7 +366,7 @@ spec:
             cpu: 5m
             memory: 64Mi
         securityContext:
-          allowPrivilegeEscalation: false
+          allowPrivilegeEscalation: true
           capabilities:
             drop:
             - ALL
@@ -340,8 +376,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: {{ .DhcpControllerImage }}
-        imagePullPolicy: {{ .ImagePullPolicy }}
+        image: docker.io/ataa/dhcp-controller:latest
         livenessProbe:
           httpGet:
             path: /healthz
@@ -363,21 +398,14 @@ spec:
             cpu: 10m
             memory: 64Mi
         securityContext:
-          allowPrivilegeEscalation: false
+          allowPrivilegeEscalation: true
           capabilities:
             drop:
             - ALL
       securityContext:
-        runAsNonRoot: true
+        runAsNonRoot: false
       serviceAccountName: dhcp-controller-controller-manager
       terminationGracePeriodSeconds: 10
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    control-plane: controller-manager
-  name: dhcpserver-system
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -420,7 +448,7 @@ spec:
                   description: IPAllocationOwner represents metadata about the pod/container
                     owner of a specific IP
                   properties:
-                    id:
+                    macaddr:
                       type: string
                     vmiref:
                       type: string
@@ -429,14 +457,87 @@ spec:
                   range. Its` indices are a direct mapping to the IP with the same
                   index/offset for the allocation's range.
                 type: object
+              epochexpiry:
+                description: EpochExpiry is the epoch time when the IP was set to
+                  expire in the leasefile
+                type: string
               range:
-                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                  Important: Run "make" to regenerate code after modifying this file
-                  Range is a RFC 4632/4291-style string that represents an IP address
-                  and prefix length in CIDR notation'
+                description: Range is a string that represents an IP address
                 type: string
             required:
             - allocations
+            - epochexpiry
+            - range
+            type: object
+          status:
+            description: IPAllocationStatus defines the observed state of IPAllocation
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.0
+  creationTimestamp: null
+  name: ipallocations.dhcp.plumber.k8s.pf9.io
+spec:
+  group: dhcp.plumber.k8s.pf9.io
+  names:
+    kind: IPAllocation
+    listKind: IPAllocationList
+    plural: ipallocations
+    singular: ipallocation
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: IPAllocation is the Schema for the ipallocations API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: IPAllocationSpec defines the desired state of IPAllocation
+            properties:
+              allocations:
+                additionalProperties:
+                  description: IPAllocationOwner represents metadata about the pod/container
+                    owner of a specific IP
+                  properties:
+                    macaddr:
+                      type: string
+                    vmiref:
+                      type: string
+                  type: object
+                description: Allocations is the set of allocated IPs for the given
+                  range. Its` indices are a direct mapping to the IP with the same
+                  index/offset for the allocation's range.
+                type: object
+              epochexpiry:
+                description: EpochExpiry is the epoch time when the IP was set to
+                  expire in the leasefile
+                type: string
+              range:
+                description: Range is a string that represents an IP address
+                type: string
+            required:
+            - allocations
+            - epochexpiry
             - range
             type: object
           status:
@@ -452,13 +553,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: dhcpserver-controller-manager
-  namespace: dhcpserver-system
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: dhcpserver-leader-election-role
-  namespace: dhcpserver-system
+  namespace: default
 rules:
 - apiGroups:
   - ""
@@ -557,7 +658,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: dhcpserver-leader-election-rolebinding
-  namespace: dhcpserver-system
+  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -565,7 +666,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: dhcpserver-controller-manager
-  namespace: dhcpserver-system
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -578,7 +679,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: dhcpserver-controller-manager
-  namespace: dhcpserver-system
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -591,7 +692,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: dhcpserver-controller-manager
-  namespace: dhcpserver-system
+  namespace: default
 ---
 apiVersion: v1
 data:
@@ -620,7 +721,7 @@ data:
 kind: ConfigMap
 metadata:
   name: dhcpserver-manager-config
-  namespace: dhcpserver-system
+  namespace: default
 ---
 apiVersion: v1
 kind: Service
@@ -628,7 +729,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: dhcpserver-controller-manager-metrics-service
-  namespace: dhcpserver-system
+  namespace: default
 spec:
   ports:
   - name: https
