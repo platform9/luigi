@@ -243,7 +243,7 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 								"memory": *memReq,
 							},
 						},
-						ImagePullPolicy: corev1.PullAlways,
+						ImagePullPolicy: corev1.PullIfNotPresent,
 						Name:            v.Name,
 						Env: []corev1.EnvVar{
 							{
