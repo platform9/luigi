@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	kubevirtv1 "kubevirt.io/api/core/v1"
 
 	dhcpserverv1alpha1 "dhcpserver/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,6 +33,7 @@ type Client struct {
 func NewClient(timeout time.Duration) (*Client, error) {
 	scheme := runtime.NewScheme()
 	_ = dhcpserverv1alpha1.AddToScheme(scheme)
+	_ = kubevirtv1.AddToScheme(scheme)
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
@@ -68,6 +70,21 @@ func newKubernetesClient(k8sClient client.Client, k8sClientSet *kubernetes.Clien
 
 func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
+	// Set vmiref for the ipAllocation
+	vmilist, err := i.ListVmi(context.TODO())
+	if err != nil {
+		serverLog.Error(err, "Could not list vmi")
+	}
+
+foundvmi:
+	for _, vmi := range vmilist {
+		for _, netinterface := range vmi.Status.Interfaces {
+			if macid == netinterface.MAC {
+				vmiref = vmi.ObjectMeta.Name
+				break foundvmi
+			}
+		}
+	}
 	// Does not create IPAllocation when backup is restored
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
 	if ipAllocation != nil {
@@ -99,12 +116,13 @@ func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, mac
 
 func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, VmiRef: vmiref}}
-
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
 	if err != nil {
 		return ipAllocation, err
 	}
+
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, VmiRef: ipAllocation.Spec.Allocations[ip].VmiRef}}
+
 	serverLog.Info(fmt.Sprintf("IPAllocation created: %+v", alloc))
 
 	serverLog.Info(fmt.Sprintf("Found IPAllocation %s to update: %+v", ip, ipAllocation.Spec.Allocations))
@@ -154,4 +172,14 @@ func (i *Client) DeleteIPAllocation(ctx context.Context, name string) (bool, err
 		return false, err
 	}
 	return true, nil
+}
+
+func (i *Client) ListVmi(ctx context.Context) ([]kubevirtv1.VirtualMachineInstance, error) {
+	vmiList := &kubevirtv1.VirtualMachineInstanceList{}
+
+	if err := i.client.List(context.TODO(), vmiList, &client.ListOptions{}); err != nil {
+		return nil, err
+	}
+
+	return vmiList.Items, nil
 }
