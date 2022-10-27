@@ -37,6 +37,7 @@ var (
 	k8sClient   *kubernetes.Client
 	HostNetwork = []net.IP{}
 	Netmask     = []string{}
+	IPRanges    = []IPRange{}
 )
 
 type LeaseFile struct {
@@ -45,6 +46,11 @@ type LeaseFile struct {
 	IPAddress      string `json:"ip_addr"`
 	Hostname       string `json:"hostname"`
 	ClientID       string `json:"client-ID"`
+}
+
+type IPRange struct {
+	StartIP net.IP
+	EndIP   net.IP
 }
 
 func parseConfig() error {
@@ -66,6 +72,7 @@ func parseConfig() error {
 			dhcprangearraylen := len(dhcprangearray)
 
 			Netmask = append(Netmask, dhcprangearray[dhcprangearraylen-2])
+			IPRanges = append(IPRanges, IPRange{net.ParseIP(dhcprangearray[dhcprangearraylen-4]), net.ParseIP(dhcprangearray[dhcprangearraylen-3])})
 			length, total := net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2])).Size()
 			if total == 0 {
 				length, total = net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2]).To4()).Size()
@@ -110,6 +117,44 @@ func applyInterfaceIp() error {
 
 }
 
+func delVMfromLease(vmirefs []string) error {
+	for _, vmiref := range vmirefs {
+		f, err := os.Open(leasePath)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		var bs []byte
+		buf := bytes.NewBuffer(bs)
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			if !strings.Contains(scanner.Text(), vmiref) {
+				_, err := buf.Write(scanner.Bytes())
+				if err != nil {
+					return err
+				}
+				_, err = buf.WriteString("\n")
+				if err != nil {
+					return err
+				}
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+
+		err = os.WriteFile(leasePath, buf.Bytes(), 0666)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
 func Start() {
 
 	dnsmasqBinary, err := exec.LookPath("dnsmasq")
@@ -129,6 +174,7 @@ func Start() {
 
 	args := []string{
 		"dnsmasq",
+		"--no-daemon",
 		"--conf-dir=/etc/dnsmasq.d/",
 	}
 
@@ -137,12 +183,29 @@ func Start() {
 	if err != nil {
 		serverLog.Error(err, "Failed to instantiate the Kubernetes client")
 	}
+	go k8sClient.WatchVm()
 
 	// Create leasefile from ipallocation backup
 	retrieveBackup(leasePath)
 
-	serverLog.Info("Starting dnsmasq: " + strings.Join(args, " "))
-	serverStart(dnsmasqBinary, args)
+	cmd := serverStart(dnsmasqBinary, args)
+	fmt.Printf("%v\n", cmd.Process)
+
+	go func() {
+		for {
+			select {
+			case delvm := <-kubernetes.RestartDnsmasq:
+				fmt.Println(delvm)
+				fmt.Printf("%v\n", cmd)
+				serverStop(cmd)
+				err := delVMfromLease(delvm)
+				if err != nil {
+					serverLog.Error(err, "failed to delete lease on vm deletion")
+				}
+				cmd = serverStart(dnsmasqBinary, args)
+			}
+		}
+	}()
 
 	for {
 		dirInit(leasePath)
@@ -172,7 +235,20 @@ func serverStart(dnsmasqBinary string, args []string) *exec.Cmd {
 			dnsmasqLog.Info(string(line))
 		}
 	}()
+	serverLog.Info("Starting dnsmasq: " + strings.Join(args, " "))
 	return cmd
+}
+
+func serverStop(cmd *exec.Cmd) {
+	timer := time.AfterFunc(1*time.Second, func() {
+		err := cmd.Process.Kill()
+		if err != nil {
+			panic(err)
+		}
+	})
+	cmd.Wait()
+	timer.Stop()
+	serverLog.Info("Stopping dnsmasq")
 }
 
 // Retrieve leases from backup. Will be retrieved from etcd later on
@@ -200,10 +276,7 @@ func retrieveBackup(leasePath string) error {
 			ipvAddr := net.ParseIP(ipallocation.Name)
 			ipvMask := net.CIDRMask(length, total)
 
-			if HostNetwork[idx].String() == ipvAddr.Mask(ipvMask).String() {
-				if err != nil {
-					serverLog.Error(err, "failed to get lease time")
-				}
+			if HostNetwork[idx].String() == ipvAddr.Mask(ipvMask).String() && (bytes.Compare(ipvAddr, IPRanges[idx].StartIP) >= 0 && bytes.Compare(ipvAddr, IPRanges[idx].EndIP) <= 0) {
 				// This loop only runs once
 				for ip, obj := range ipallocation.Spec.Allocations {
 					tmpline := fmt.Sprintf(ipallocation.Spec.EpochExpiry + " " + obj.MacAddr + " " + ip + " " + obj.VmiRef + " *\n")

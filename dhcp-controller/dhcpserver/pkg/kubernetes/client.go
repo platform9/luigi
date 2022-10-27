@@ -12,6 +12,7 @@ import (
 	kubevirtv1 "kubevirt.io/api/core/v1"
 
 	dhcpserverv1alpha1 "dhcpserver/api/v1alpha1"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"time"
 
@@ -20,7 +21,8 @@ import (
 )
 
 var (
-	serverLog = ctrl.Log.WithName("server")
+	serverLog      = ctrl.Log.WithName("server")
+	RestartDnsmasq = make(chan []string)
 )
 
 // Client has info on how to connect to the kubernetes cluster
@@ -65,6 +67,44 @@ func newKubernetesClient(k8sClient client.Client, k8sClientSet *kubernetes.Clien
 		client:    k8sClient,
 		clientSet: k8sClientSet,
 		timeout:   timeout,
+	}
+}
+func (i *Client) WatchVm() {
+	oldvmlist, err := i.ListVm(context.TODO())
+	if err != nil {
+		serverLog.Error(err, "Could not list vm")
+	}
+	ticker := time.NewTicker(10 * time.Minute)
+	for {
+		select {
+		case _ = <-ticker.C:
+			newvmlist, err := i.ListVm(context.TODO())
+			if err != nil {
+				serverLog.Error(err, "Could not list vm")
+			}
+			if reflect.DeepEqual(oldvmlist, newvmlist) == false {
+				m := make(map[string]bool)
+				var diff []string
+
+				for _, newvm := range newvmlist {
+					m[newvm.Name] = true
+				}
+
+				for _, oldvm := range oldvmlist {
+					if _, ok := m[oldvm.Name]; !ok {
+						if oldvm.Spec.Template.Spec.Hostname == "" {
+							diff = append(diff, oldvm.Name)
+						} else {
+							diff = append(diff, oldvm.Spec.Template.Spec.Hostname)
+						}
+					}
+				}
+				oldvmlist = newvmlist
+				if len(diff) > 0 {
+					RestartDnsmasq <- diff
+				}
+			}
+		}
 	}
 }
 
@@ -182,4 +222,14 @@ func (i *Client) ListVmi(ctx context.Context) ([]kubevirtv1.VirtualMachineInstan
 	}
 
 	return vmiList.Items, nil
+}
+
+func (i *Client) ListVm(ctx context.Context) ([]kubevirtv1.VirtualMachine, error) {
+	vmList := &kubevirtv1.VirtualMachineList{}
+
+	if err := i.client.List(context.TODO(), vmList, &client.ListOptions{}); err != nil {
+		return nil, err
+	}
+
+	return vmList.Items, nil
 }
