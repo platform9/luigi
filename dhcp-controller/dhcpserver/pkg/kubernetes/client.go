@@ -78,6 +78,7 @@ func (i *Client) WatchVm() {
 	for {
 		select {
 		case _ = <-ticker.C:
+			// fmt.Println("Tick at", t)
 			newvmlist, err := i.ListVm(context.TODO())
 			if err != nil {
 				serverLog.Error(err, "Could not list vm")
@@ -100,6 +101,7 @@ func (i *Client) WatchVm() {
 					}
 				}
 				oldvmlist = newvmlist
+				// fmt.Println(m, diff)
 				if len(diff) > 0 {
 					RestartDnsmasq <- diff
 				}

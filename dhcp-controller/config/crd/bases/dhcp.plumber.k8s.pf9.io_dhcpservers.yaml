@@ -35,8 +35,8 @@ spec:
           spec:
             description: DHCPServerSpec defines the desired state of DHCPServer
             properties:
-              servers:
-                description: Details of Servers
+              networks:
+                description: Details of Networks
                 items:
                   properties:
                     cidr:

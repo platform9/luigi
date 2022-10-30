@@ -97,28 +97,28 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 	configMapData := make(map[string]string, 0)
 	dnsmasqConfData := "port=0\n"
 
-	for _, server := range dhcpserver.Spec.Servers {
+	for _, network := range dhcpserver.Spec.Networks {
 
-		_, ipvNet, err := net.ParseCIDR(server.ServerCIDR.CIDRIP)
+		_, ipvNet, err := net.ParseCIDR(network.ServerCIDR.CIDRIP)
 		if err != nil {
 			return err, nil
 		}
 		firstIP, lastIP := cidr.AddressRange(ipvNet)
-		if server.ServerCIDR.RangeStartIp == "" {
-			server.ServerCIDR.RangeStartIp = cidr.Inc(firstIP).String()
+		if network.ServerCIDR.RangeStartIp == "" {
+			network.ServerCIDR.RangeStartIp = cidr.Inc(firstIP).String()
 		}
-		if server.ServerCIDR.RangeEndIp == "" {
-			server.ServerCIDR.RangeEndIp = cidr.Dec(lastIP).String()
+		if network.ServerCIDR.RangeEndIp == "" {
+			network.ServerCIDR.RangeEndIp = cidr.Dec(lastIP).String()
 		}
 		RangeNetMask := net.IP(ipvNet.Mask).String()
 
-		if server.VlanID == "" {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, RangeNetMask, server.LeaseTime)
+		if network.VlanID == "" {
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", network.ServerCIDR.RangeStartIp, network.ServerCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
 		} else {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", server.VlanID, server.ServerCIDR.RangeStartIp, server.ServerCIDR.RangeEndIp, RangeNetMask, server.LeaseTime)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", network.VlanID, network.ServerCIDR.RangeStartIp, network.ServerCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
 		}
-		if server.ServerCIDR.GwAddress != "" {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", server.ServerCIDR.GwAddress)
+		if network.ServerCIDR.GwAddress != "" {
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", network.ServerCIDR.GwAddress)
 		}
 	}
 	configMapData["dnsmasq.conf"] = dnsmasqConfData
@@ -209,7 +209,7 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 
 // backendDeployment is a code for Creating Deployment
 func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *appsv1.Deployment {
-	networkNames, interfaceIps := parseNetwork(v.Spec.Servers)
+	networkNames, interfaceIps := parseNetwork(v.Spec.Networks)
 	size := int32(1)
 	memReq := resource.NewQuantity(64*1024*1024, resource.BinarySI)
 	memLimit := resource.NewQuantity(128*1024*1024, resource.BinarySI)
@@ -280,12 +280,12 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 	return dep
 }
 
-func parseNetwork(servers []dhcpv1alpha1.Server) (string, string) {
+func parseNetwork(networks []dhcpv1alpha1.Network) (string, string) {
 	var name []string
 	var ip []string
-	for _, server := range servers {
-		name = append(name, server.NetworkName)
-		ip = append(ip, server.InterfaceIp)
+	for _, network := range networks {
+		name = append(name, network.NetworkName)
+		ip = append(ip, network.InterfaceIp)
 	}
 	return strings.Join(name, ","), strings.Join(ip, ",")
 }

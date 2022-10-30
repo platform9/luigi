@@ -30,14 +30,12 @@ import (
 )
 
 var (
-	serverLog   = ctrl.Log.WithName("server")
-	dnsmasqLog  = ctrl.Log.WithName("dnsmasq")
-	leasePath   = "/var/lib/misc/dnsmasq.leases"
-	confFile    = "/etc/dnsmasq.d/dnsmasq.conf"
-	k8sClient   *kubernetes.Client
-	HostNetwork = []net.IP{}
-	Netmask     = []string{}
-	IPRanges    = []IPRange{}
+	serverLog  = ctrl.Log.WithName("server")
+	dnsmasqLog = ctrl.Log.WithName("dnsmasq")
+	leasePath  = "/var/lib/misc/dnsmasq.leases"
+	confFile   = "/etc/dnsmasq.d/dnsmasq.conf"
+	k8sClient  *kubernetes.Client
+	IPRanges   = []IPRange{}
 )
 
 type LeaseFile struct {
@@ -51,6 +49,7 @@ type LeaseFile struct {
 type IPRange struct {
 	StartIP net.IP
 	EndIP   net.IP
+	VlanID  string
 }
 
 func parseConfig() error {
@@ -71,22 +70,12 @@ func parseConfig() error {
 			dhcprangearray := regexp.MustCompile("[\\=\\s,]").Split(line, -1)
 			dhcprangearraylen := len(dhcprangearray)
 
-			Netmask = append(Netmask, dhcprangearray[dhcprangearraylen-2])
-			IPRanges = append(IPRanges, IPRange{net.ParseIP(dhcprangearray[dhcprangearraylen-4]), net.ParseIP(dhcprangearray[dhcprangearraylen-3])})
-			length, total := net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2])).Size()
-			if total == 0 {
-				length, total = net.IPMask(net.ParseIP(dhcprangearray[dhcprangearraylen-2]).To4()).Size()
-			}
-			ipvAddr := net.ParseIP(dhcprangearray[dhcprangearraylen-4])
-			ipvMask := net.CIDRMask(length, total)
-			HostNetwork = append(HostNetwork, ipvAddr.Mask(ipvMask))
-
+			vlanid := ""
 			if dhcprangearraylen == 6 {
-				serverLog.Info("Set pod host network for " + dhcprangearray[1] + ": " + HostNetwork[len(HostNetwork)-1].String())
-			} else {
-				serverLog.Info("Set pod host network for vlan0: " + HostNetwork[len(HostNetwork)-1].String())
+				vlanid = dhcprangearray[1]
 			}
 
+			IPRanges = append(IPRanges, IPRange{net.ParseIP(dhcprangearray[dhcprangearraylen-4]), net.ParseIP(dhcprangearray[dhcprangearraylen-3]), vlanid})
 		}
 	}
 	return nil
@@ -189,14 +178,11 @@ func Start() {
 	retrieveBackup(leasePath)
 
 	cmd := serverStart(dnsmasqBinary, args)
-	fmt.Printf("%v\n", cmd.Process)
 
 	go func() {
 		for {
 			select {
 			case delvm := <-kubernetes.RestartDnsmasq:
-				fmt.Println(delvm)
-				fmt.Printf("%v\n", cmd)
 				serverStop(cmd)
 				err := delVMfromLease(delvm)
 				if err != nil {
@@ -267,16 +253,9 @@ func retrieveBackup(leasePath string) error {
 	defer destination.Close()
 
 	for _, ipallocation := range ipAllocations {
-		// Restore IPs that originated from this pod
-		for idx, mask := range Netmask {
-			length, total := net.IPMask(net.ParseIP(mask)).Size()
-			if total == 0 {
-				length, total = net.IPMask(net.ParseIP(mask).To4()).Size()
-			}
-			ipvAddr := net.ParseIP(ipallocation.Name)
-			ipvMask := net.CIDRMask(length, total)
-
-			if HostNetwork[idx].String() == ipvAddr.Mask(ipvMask).String() && (bytes.Compare(ipvAddr, IPRanges[idx].StartIP) >= 0 && bytes.Compare(ipvAddr, IPRanges[idx].EndIP) <= 0) {
+		ipvAddr := net.ParseIP(ipallocation.Name)
+		for _, iprange := range IPRanges {
+			if bytes.Compare(ipvAddr, iprange.StartIP) >= 0 && bytes.Compare(ipvAddr, iprange.EndIP) <= 0 {
 				// This loop only runs once
 				for ip, obj := range ipallocation.Spec.Allocations {
 					tmpline := fmt.Sprintf(ipallocation.Spec.EpochExpiry + " " + obj.MacAddr + " " + ip + " " + obj.VmiRef + " *\n")

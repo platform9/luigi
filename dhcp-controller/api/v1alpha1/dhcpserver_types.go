@@ -22,12 +22,12 @@ import (
 
 // DHCPServerSpec defines the desired state of DHCPServer
 type DHCPServerSpec struct {
-	// Details of Servers
+	// Details of Networks
 	// +kubebuilder:validation:Required
-	Servers []Server `json:"servers,omitempty"`
+	Networks []Network `json:"networks,omitempty"`
 }
 
-type Server struct {
+type Network struct {
 	// refers to net-attach-def to be served
 	// +kubebuilder:validation:Required
 	NetworkName string `json:"networkName,omitempty"`
