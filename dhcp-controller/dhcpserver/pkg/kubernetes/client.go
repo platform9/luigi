@@ -110,7 +110,7 @@ func (i *Client) WatchVm() {
 	}
 }
 
-func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
+func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string, vlanid string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
 	// Set vmiref for the ipAllocation
 	vmilist, err := i.ListVmi(context.TODO())
@@ -143,7 +143,7 @@ foundvmi:
 		},
 		Spec: dhcpserverv1alpha1.IPAllocationSpec{
 			Allocations: alloc,
-			Range:       ip,
+			Range:       ip + "@" + vlanid,
 			EpochExpiry: epochexpiry,
 		},
 	}
@@ -156,7 +156,7 @@ foundvmi:
 
 }
 
-func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string) (*dhcpserverv1alpha1.IPAllocation, error) {
+func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string, vlanid string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
 	if err != nil {
@@ -170,7 +170,7 @@ func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, mac
 	serverLog.Info(fmt.Sprintf("Found IPAllocation %s to update: %+v", ip, ipAllocation.Spec.Allocations))
 	ipAllocation.Spec = dhcpserverv1alpha1.IPAllocationSpec{
 		Allocations: alloc,
-		Range:       ip,
+		Range:       ip + "@" + vlanid,
 		EpochExpiry: epochexpiry,
 	}
 

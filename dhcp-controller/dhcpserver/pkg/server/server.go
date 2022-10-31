@@ -255,7 +255,7 @@ func retrieveBackup(leasePath string) error {
 	for _, ipallocation := range ipAllocations {
 		ipvAddr := net.ParseIP(ipallocation.Name)
 		for _, iprange := range IPRanges {
-			if bytes.Compare(ipvAddr, iprange.StartIP) >= 0 && bytes.Compare(ipvAddr, iprange.EndIP) <= 0 {
+			if iprange.VlanID == strings.Split(ipallocation.Spec.Range, "@")[1] && bytes.Compare(ipvAddr, iprange.StartIP) >= 0 && bytes.Compare(ipvAddr, iprange.EndIP) <= 0 {
 				// This loop only runs once
 				for ip, obj := range ipallocation.Spec.Allocations {
 					tmpline := fmt.Sprintf(ipallocation.Spec.EpochExpiry + " " + obj.MacAddr + " " + ip + " " + obj.VmiRef + " *\n")
@@ -312,13 +312,20 @@ func updateRecord(lf map[string]LeaseFile, record LeaseFile, isupdate bool) {
 	serverLog.Info("Updating Lease")
 	lf[record.IPAddress] = record
 
+	vlanid := ""
+	for _, iprange := range IPRanges {
+		if bytes.Compare(net.ParseIP(record.IPAddress), iprange.StartIP) >= 0 && bytes.Compare(net.ParseIP(record.IPAddress), iprange.EndIP) <= 0 {
+			vlanid = iprange.VlanID
+		}
+	}
+
 	if isupdate {
-		_, err := k8sClient.UpdateIPAllocation(context.TODO(), record.EpochTimestamp, record.MacAddress, record.Hostname, record.IPAddress)
+		_, err := k8sClient.UpdateIPAllocation(context.TODO(), record.EpochTimestamp, record.MacAddress, record.Hostname, record.IPAddress, vlanid)
 		if err != nil {
 			serverLog.Error(err, "failed to update IP allocation")
 		}
 	} else {
-		_, err := k8sClient.CreateIPAllocation(context.TODO(), record.EpochTimestamp, record.MacAddress, record.Hostname, record.IPAddress)
+		_, err := k8sClient.CreateIPAllocation(context.TODO(), record.EpochTimestamp, record.MacAddress, record.Hostname, record.IPAddress, vlanid)
 		if err != nil {
 			serverLog.Error(err, "failed to create IP allocation")
 		}
