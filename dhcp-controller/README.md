@@ -10,7 +10,6 @@ This has issues with VM migration scenario. VM migration involves deletion of vi
 
 ### Alternative 
 
-
 To have a DHCP server running inside pod/vm to cater to the DHCP requests from virtual machine instance(not pod in case of Kubevirt).
 Multus net-attac-def planning to use dhcp server, need not to specify IPAM plugin in there. Client/Consumer VM will need dhclient for sendingd request.
 
@@ -20,10 +19,10 @@ This uses dnsmasq to cater the client request. Etcd is used for storing the allo
 
     // DHCPServerSpec defines the desired state of DHCPServer
     type DHCPServerSpec struct {
-    	// Details of Servers
-    	Servers []Server `json:"servers,omitempty"`
+    	// Details of networks
+    	Networks []Network `json:"network,omitempty"`
     }
-    type Server struct {
+    type Network struct {
     	// refers to net-attach-def to be served
     	NetworkName string `json:"networkName,omitempty"`
     	// refers to IP address to bind interface to
@@ -85,24 +84,13 @@ This uses dnsmasq to cater the client request. Etcd is used for storing the allo
     metadata:
       name: dhcpserver-sample
     spec:
-      servers:
+      networks:
         - networkName: ovs-dnsmasq-test
           interfaceIp: 192.168.15.54
           leaseTime: 10m
           vlanid: vlan1
           cidr:
             range: 192.168.15.0/24
-            range_start: 192.168.15.10
-            range_end: 192.168.15.100
-            gateway: 192.168.15.1
-        - networkName: ovs-build-pmk-provider-net
-          interfaceIp: 10.128.144.90
-          leaseTime: 10m
-          vlanid: vlan2
-          cidr:
-            range: 10.128.144.0/23
-            range_start: 10.128.144.10
-            range_end: 10.128.145.200
 
 **Note**: Providing the configmap is optional. If not provided, one will automatically be generated with the needed configurations. If any custom parameters are needed to be set, create a configmap with valid dnsmasq.conf parameters. Along with this, ```dhcp-range``` must be in one of the two formats
 1. ```dhcp-range=<start_IP>,<end_ip>,<netmask>,<leasetime>```
@@ -117,6 +105,16 @@ This uses dnsmasq to cater the client request. Etcd is used for storing the allo
 * The leasefile is watched for changes (write events). Accordingly, IPAllocation objects are created/deleted/updated. Epoch time of the lease is also stored.
 * If a VM live-migrates, all IPs allocated to the secondary interfaces are retained, provided that the MacAddresses of the NICs stay the same
 * If a DHCPServer is redeployed, leases that belong to the network(s) that the DHCPServer is serving are restored with the same lease time from the IPAllocations.
+
+
+## Considerations:
+* Mac address of Kubevirt vmis are not persisted across reboot. As dhcp works on mac-address, this becomes an issue.
+Kubemacpool can be used to get a fixed mac from specified pool of mac-address
+https://docs.openshift.com/container-platform/4.7/virt/virtual_machines/vm_networking/virt-using-mac-address-pool-for-vms.html
+"If you enable the KubeMacPool component for a namespace, virtual machine NICs in that namespace are allocated MAC addresses from a MAC address pool. This ensures that the NIC is assigned a unique MAC address that does not conflict with the MAC address of another virtual machine.
+Virtual machine instances created from that virtual machine retain the assigned MAC address across reboots."
+
+* As of now its tested with ovs-cni only.
 
 
 

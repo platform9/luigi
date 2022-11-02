@@ -257,6 +257,7 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 							MountPath: "/etc/dnsmasq.d/",
 						}},
 					}},
+					ServiceAccountName: "dhcpserver-controller-manager",
 					Volumes: []corev1.Volume{{
 						Name: "dnsmasq-cfg",
 						VolumeSource: corev1.VolumeSource{
