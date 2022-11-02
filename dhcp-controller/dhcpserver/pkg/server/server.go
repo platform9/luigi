@@ -106,11 +106,12 @@ func applyInterfaceIp() error {
 
 }
 
-func delVMfromLease(vmirefs []string) error {
-	for _, vmiref := range vmirefs {
+func delLeasefromVMPod(refs []string) (bool, error) {
+	var leasedeleted = false
+	for _, ref := range refs {
 		f, err := os.Open(leasePath)
 		if err != nil {
-			return err
+			return leasedeleted, err
 		}
 		defer f.Close()
 
@@ -119,28 +120,29 @@ func delVMfromLease(vmirefs []string) error {
 
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
-			if !strings.Contains(scanner.Text(), vmiref) {
+			if !strings.Contains(scanner.Text(), ref) {
+				leasedeleted = true
 				_, err := buf.Write(scanner.Bytes())
 				if err != nil {
-					return err
+					return leasedeleted, err
 				}
 				_, err = buf.WriteString("\n")
 				if err != nil {
-					return err
+					return leasedeleted, err
 				}
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			return err
+			return leasedeleted, err
 		}
 
 		err = os.WriteFile(leasePath, buf.Bytes(), 0666)
 		if err != nil {
-			return err
+			return leasedeleted, err
 		}
 	}
 
-	return nil
+	return leasedeleted, nil
 
 }
 
@@ -173,6 +175,7 @@ func Start() {
 		serverLog.Error(err, "Failed to instantiate the Kubernetes client")
 	}
 	go k8sClient.WatchVm()
+	go k8sClient.WatchPod()
 
 	// Create leasefile from ipallocation backup
 	retrieveBackup(leasePath)
@@ -183,12 +186,15 @@ func Start() {
 		for {
 			select {
 			case delvm := <-kubernetes.RestartDnsmasq:
-				serverStop(cmd)
-				err := delVMfromLease(delvm)
+				leasedeleted, err := delLeasefromVMPod(delvm)
 				if err != nil {
 					serverLog.Error(err, "failed to delete lease on vm deletion")
 				}
-				cmd = serverStart(dnsmasqBinary, args)
+				if leasedeleted {
+					serverStop(cmd)
+					cmd = serverStart(dnsmasqBinary, args)
+				}
+
 			}
 		}
 	}()

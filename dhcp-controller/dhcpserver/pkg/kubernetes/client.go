@@ -2,13 +2,17 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	kubevirtv1 "kubevirt.io/api/core/v1"
 
 	dhcpserverv1alpha1 "dhcpserver/api/v1alpha1"
@@ -69,6 +73,36 @@ func newKubernetesClient(k8sClient client.Client, k8sClientSet *kubernetes.Clien
 		timeout:   timeout,
 	}
 }
+func (i *Client) WatchPod() {
+
+	stopper := make(chan struct{})
+	defer close(stopper)
+
+	factory := informers.NewSharedInformerFactory(i.clientSet, 0)
+	informer := factory.Core().V1().Pods().Informer()
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj interface{}) {
+			var diff []string
+			pod, _ := obj.(*corev1.Pod)
+			networkstatus := []map[string]string{}
+			json.Unmarshal([]byte(pod.Annotations["k8s.v1.cni.cncf.io/network-status"]), &networkstatus)
+
+			for _, network := range networkstatus {
+				if _, ok := network["mac"]; ok {
+					diff = append(diff, network["mac"])
+				}
+			}
+			if len(diff) > 0 {
+				RestartDnsmasq <- diff
+			}
+		},
+	})
+
+	go informer.Run(stopper)
+	<-stopper
+}
+
 func (i *Client) WatchVm() {
 	oldvmlist, err := i.ListVm(context.TODO())
 	if err != nil {
