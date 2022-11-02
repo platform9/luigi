@@ -1,7 +1,6 @@
 
 # dhcp-controller
 
-This is primarily for kubevirt VM's, but intention is to have  a generic solution which can be used by pods as well.
 
 ### Issue with CNI approach
 
