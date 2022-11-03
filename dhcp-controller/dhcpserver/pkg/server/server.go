@@ -106,43 +106,46 @@ func applyInterfaceIp() error {
 
 }
 
-func delLeasefromVMPod(refs []string) (bool, error) {
-	var leasedeleted = false
-	for _, ref := range refs {
-		f, err := os.Open(leasePath)
-		if err != nil {
-			return leasedeleted, err
-		}
-		defer f.Close()
+func delLeasefromVMPod(refs []string) error {
+	f, err := os.Open(leasePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-		var bs []byte
-		buf := bytes.NewBuffer(bs)
+	var bs []byte
+	var dowrite = true
+	buf := bytes.NewBuffer(bs)
 
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			if !strings.Contains(scanner.Text(), ref) {
-				leasedeleted = true
-				_, err := buf.Write(scanner.Bytes())
-				if err != nil {
-					return leasedeleted, err
-				}
-				_, err = buf.WriteString("\n")
-				if err != nil {
-					return leasedeleted, err
-				}
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		for _, ref := range refs {
+			if strings.Contains(scanner.Text(), ref) {
+				dowrite = false
 			}
 		}
-		if err := scanner.Err(); err != nil {
-			return leasedeleted, err
+		if dowrite {
+			_, err := buf.Write(scanner.Bytes())
+			if err != nil {
+				return err
+			}
+			_, err = buf.WriteString("\n")
+			if err != nil {
+				return err
+			}
 		}
-
-		err = os.WriteFile(leasePath, buf.Bytes(), 0666)
-		if err != nil {
-			return leasedeleted, err
-		}
+		dowrite = true
+	}
+	if err := scanner.Err(); err != nil {
+		return err
 	}
 
-	return leasedeleted, nil
+	err = os.WriteFile(leasePath, buf.Bytes(), 0666)
+	if err != nil {
+		return err
+	}
+
+	return nil
 
 }
 
@@ -186,15 +189,12 @@ func Start() {
 		for {
 			select {
 			case delvm := <-kubernetes.RestartDnsmasq:
-				leasedeleted, err := delLeasefromVMPod(delvm)
+				serverStop(cmd)
+				err := delLeasefromVMPod(delvm)
 				if err != nil {
 					serverLog.Error(err, "failed to delete lease on vm deletion")
 				}
-				if leasedeleted {
-					serverStop(cmd)
-					cmd = serverStart(dnsmasqBinary, args)
-				}
-
+				cmd = serverStart(dnsmasqBinary, args)
 			}
 		}
 	}()

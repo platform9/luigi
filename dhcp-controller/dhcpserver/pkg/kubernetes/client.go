@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,6 +86,9 @@ func (i *Client) WatchPod() {
 		DeleteFunc: func(obj interface{}) {
 			var diff []string
 			pod, _ := obj.(*corev1.Pod)
+			if strings.Contains(pod.Name, "virt-launcher") {
+				return
+			}
 			networkstatus := []map[string]string{}
 			json.Unmarshal([]byte(pod.Annotations["k8s.v1.cni.cncf.io/network-status"]), &networkstatus)
 
@@ -105,6 +109,8 @@ func (i *Client) WatchPod() {
 
 func (i *Client) WatchVm() {
 	oldvmlist, err := i.ListVm(context.TODO())
+	oldvmilist, err := i.ListVmi(context.TODO())
+
 	if err != nil {
 		serverLog.Error(err, "Could not list vm")
 	}
@@ -114,6 +120,7 @@ func (i *Client) WatchVm() {
 		case _ = <-ticker.C:
 			// fmt.Println("Tick at", t)
 			newvmlist, err := i.ListVm(context.TODO())
+			newvmilist, err := i.ListVmi(context.TODO())
 			if err != nil {
 				serverLog.Error(err, "Could not list vm")
 			}
@@ -127,14 +134,17 @@ func (i *Client) WatchVm() {
 
 				for _, oldvm := range oldvmlist {
 					if _, ok := m[oldvm.Name]; !ok {
-						if oldvm.Spec.Template.Spec.Hostname == "" {
-							diff = append(diff, oldvm.Name)
-						} else {
-							diff = append(diff, oldvm.Spec.Template.Spec.Hostname)
+						for _, vmi := range oldvmilist {
+							if vmi.Name == oldvm.Name && vmi.Namespace == oldvm.Namespace {
+								for _, netinterface := range vmi.Status.Interfaces {
+									diff = append(diff, netinterface.MAC)
+								}
+							}
 						}
 					}
 				}
 				oldvmlist = newvmlist
+				oldvmilist = newvmilist
 				// fmt.Println(m, diff)
 				if len(diff) > 0 {
 					RestartDnsmasq <- diff
