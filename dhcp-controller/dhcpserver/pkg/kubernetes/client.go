@@ -37,6 +37,11 @@ type Client struct {
 	timeout   time.Duration
 }
 
+type VMKey struct {
+	name      string
+	namespace string
+}
+
 func NewClient(timeout time.Duration) (*Client, error) {
 	scheme := runtime.NewScheme()
 	_ = dhcpserverv1alpha1.AddToScheme(scheme)
@@ -118,22 +123,27 @@ func (i *Client) WatchVm() {
 	for {
 		select {
 		case _ = <-ticker.C:
-			// fmt.Println("Tick at", t)
 			newvmlist, err := i.ListVm(context.TODO())
 			newvmilist, err := i.ListVmi(context.TODO())
 			if err != nil {
 				serverLog.Error(err, "Could not list vm")
 			}
 			if reflect.DeepEqual(oldvmlist, newvmlist) == false {
-				m := make(map[string]bool)
+				m := make(map[VMKey]bool)
 				var diff []string
 
 				for _, newvm := range newvmlist {
-					m[newvm.Name] = true
+					m[VMKey{
+						name:      newvm.Name,
+						namespace: newvm.Namespace,
+					}] = true
 				}
 
 				for _, oldvm := range oldvmlist {
-					if _, ok := m[oldvm.Name]; !ok {
+					if _, ok := m[VMKey{
+						name:      oldvm.Name,
+						namespace: oldvm.Namespace,
+					}]; !ok {
 						for _, vmi := range oldvmilist {
 							if vmi.Name == oldvm.Name && vmi.Namespace == oldvm.Namespace {
 								for _, netinterface := range vmi.Status.Interfaces {
