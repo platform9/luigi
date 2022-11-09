@@ -166,11 +166,11 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 				log.Error(err, "Failed to update ConfigMap")
 				return &reconcile.Result{}, err
 			}
+			log.Info("server spec is changed, updating ConfigMap")
 			// Delete the deployment, will be recreated with new configmap
 			err = r.Delete(context.TODO(), dep)
 			if err != nil {
-				log.Error(err, "Failed to recreate the deployment")
-				return &reconcile.Result{}, err
+				log.Error(err, "Failed to delete the deployment or there is none")
 			}
 			err = r.Get(context.TODO(), types.NamespacedName{Name: dep.Name, Namespace: server.Namespace}, found)
 			for {
@@ -182,7 +182,6 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 			}
 		} else {
 			log.Info("server spec is unchanged, not updating ConfigMap")
-			return &reconcile.Result{}, err
 		}
 	}
 	// See if deployment already exists and create if it doesn't
