@@ -72,7 +72,6 @@ spec:
                   required:
                   - cidr
                   - interfaceIp
-                  - leaseDuration
                   - networkName
                   type: object
                 type: array
