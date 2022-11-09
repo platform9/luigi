@@ -111,10 +111,14 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 		}
 		RangeNetMask := net.IP(ipvNet.Mask).String()
 
+		if network.LeaseDuration == "" {
+			network.LeaseDuration = "1h"
+		}
+
 		if network.VlanID == "" {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseDuration)
 		} else {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", network.VlanID, network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", network.VlanID, network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseDuration)
 		}
 		if network.NetworkCIDR.GwAddress != "" {
 			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", network.NetworkCIDR.GwAddress)

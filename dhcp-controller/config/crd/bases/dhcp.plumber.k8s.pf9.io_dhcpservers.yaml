@@ -60,7 +60,7 @@ spec:
                     interfaceIp:
                       description: refers to IP address to bind interface to
                       type: string
-                    leaseTime:
+                    leaseDuration:
                       description: refers to leasetime of IP
                       type: string
                     networkName:
@@ -72,6 +72,7 @@ spec:
                   required:
                   - cidr
                   - interfaceIp
+                  - leaseDuration
                   - networkName
                   type: object
                 type: array

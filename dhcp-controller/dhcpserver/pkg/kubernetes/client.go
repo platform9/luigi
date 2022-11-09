@@ -46,6 +46,7 @@ func NewClient(timeout time.Duration) (*Client, error) {
 	scheme := runtime.NewScheme()
 	_ = dhcpserverv1alpha1.AddToScheme(scheme)
 	_ = kubevirtv1.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
@@ -164,9 +165,10 @@ func (i *Client) WatchVm() {
 	}
 }
 
-func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string, vlanid string) (*dhcpserverv1alpha1.IPAllocation, error) {
+func (i *Client) CreateIPAllocation(ctx context.Context, leaseexpiry string, macaddr string, entityref string, ip string, vlanid string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
-	// Set vmiref for the ipAllocation
+	var found = false
+	// Set entityref for the ipAllocation
 	vmilist, err := i.ListVmi(context.TODO())
 	if err != nil {
 		serverLog.Error(err, "Could not list vmi")
@@ -175,20 +177,38 @@ func (i *Client) CreateIPAllocation(ctx context.Context, epochexpiry string, mac
 foundvmi:
 	for _, vmi := range vmilist {
 		for _, netinterface := range vmi.Status.Interfaces {
-			if macid == netinterface.MAC {
-				vmiref = vmi.ObjectMeta.Name
+			if macaddr == netinterface.MAC {
+				entityref = vmi.ObjectMeta.Name
+				found = true
 				break foundvmi
 			}
 		}
 	}
+
+	if !found {
+		podlist, err := i.ListPod(context.TODO())
+		if err != nil {
+			serverLog.Error(err, "Could not list pods")
+		}
+
+	foundpod:
+		for _, pod := range podlist {
+			networkstatus := []map[string]string{}
+			json.Unmarshal([]byte(pod.Annotations["k8s.v1.cni.cncf.io/network-status"]), &networkstatus)
+			for _, network := range networkstatus {
+				if macaddr == network["mac"] {
+					entityref = pod.Name
+					break foundpod
+				}
+			}
+		}
+	}
+
 	// Does not create IPAllocation when backup is restored
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
 	if ipAllocation != nil {
 		return ipAllocation, err
 	}
-
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, ObjectRef: vmiref}}
-	serverLog.Info(fmt.Sprintf("Creating IPAllocation: %+v", alloc))
 
 	ipAllocationCreate := &dhcpserverv1alpha1.IPAllocation{
 		ObjectMeta: metav1.ObjectMeta{
@@ -196,9 +216,10 @@ foundvmi:
 			Namespace: "default",
 		},
 		Spec: dhcpserverv1alpha1.IPAllocationSpec{
-			Allocations: alloc,
-			Range:       ip + "@" + vlanid,
-			LeaseExpiry: epochexpiry,
+			MacAddr:     macaddr,
+			EntityRef:   entityref,
+			VlanID:      vlanid,
+			LeaseExpiry: leaseexpiry,
 		},
 	}
 
@@ -206,32 +227,34 @@ foundvmi:
 	if err != nil {
 		return nil, err
 	}
+	serverLog.Info(fmt.Sprintf("Creating IPAllocation: %+v", ipAllocationCreate))
+
 	return ipAllocationCreate, nil
 
 }
 
-func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, macid string, vmiref string, ip string, vlanid string) (*dhcpserverv1alpha1.IPAllocation, error) {
+func (i *Client) UpdateIPAllocation(ctx context.Context, leaseexpiry string, macaddr string, ip string, vlanid string) (*dhcpserverv1alpha1.IPAllocation, error) {
 
 	ipAllocation, err := i.GetIPAllocation(context.TODO(), ip)
 	if err != nil {
 		return ipAllocation, err
 	}
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, ObjectRef: ipAllocation.Spec.Allocations[ip].ObjectRef}}
-
-	serverLog.Info(fmt.Sprintf("IPAllocation created: %+v", alloc))
-
-	serverLog.Info(fmt.Sprintf("Found IPAllocation %s to update: %+v", ip, ipAllocation.Spec.Allocations))
+	serverLog.Info(fmt.Sprintf("Found IPAllocation %s to update: %+v", ip, ipAllocation.Spec))
 	ipAllocation.Spec = dhcpserverv1alpha1.IPAllocationSpec{
-		Allocations: alloc,
-		Range:       ip + "@" + vlanid,
-		LeaseExpiry: epochexpiry,
+		MacAddr:     macaddr,
+		EntityRef:   ipAllocation.Spec.EntityRef,
+		VlanID:      vlanid,
+		LeaseExpiry: leaseexpiry,
 	}
 
 	err = i.client.Update(context.TODO(), ipAllocation)
 	if err != nil {
 		return nil, err
 	}
+
+	serverLog.Info(fmt.Sprintf("IPAllocation updated: %+v", ipAllocation.Spec))
+
 	return ipAllocation, nil
 }
 
@@ -288,4 +311,14 @@ func (i *Client) ListVm(ctx context.Context) ([]kubevirtv1.VirtualMachine, error
 	}
 
 	return vmList.Items, nil
+}
+
+func (i *Client) ListPod(ctx context.Context) ([]corev1.Pod, error) {
+	podList := &corev1.PodList{}
+
+	if err := i.client.List(context.TODO(), podList, &client.ListOptions{}); err != nil {
+		return nil, err
+	}
+
+	return podList.Items, nil
 }

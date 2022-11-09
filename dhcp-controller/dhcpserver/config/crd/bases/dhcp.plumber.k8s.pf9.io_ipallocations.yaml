@@ -35,31 +35,24 @@ spec:
           spec:
             description: IPAllocationSpec defines the desired state of IPAllocation
             properties:
-              allocations:
-                additionalProperties:
-                  description: IPAllocationOwner represents metadata about the pod/container
-                    owner of a specific IP
-                  properties:
-                    macAddr:
-                      type: string
-                    objectRef:
-                      type: string
-                  type: object
-                description: Allocations is the set of allocated IPs for the given
-                  range. Its` indices are a direct mapping to the IP with the same
-                  index/offset for the allocation's range.
-                type: object
+              entityRef:
+                description: EntityRef is the name of the VMI or pod who owns the
+                  lease
+                type: string
               leaseExpiry:
                 description: LeaseExpiry is the epoch time when the IP was set to
                   expire in the leasefile
                 type: string
-              range:
-                description: Range is a string that represents an IP address
+              macAddr:
+                description: MacAddr is the mac address of interface
+                type: string
+              vlanId:
+                description: VlanID is the epoch time when the IP was set to expire
+                  in the leasefile
                 type: string
             required:
-            - allocations
             - leaseExpiry
-            - range
+            - vlanId
             type: object
           status:
             description: IPAllocationStatus defines the observed state of IPAllocation
