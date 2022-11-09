@@ -72,11 +72,13 @@ spec:
                     networkName:
                       description: refers to net-attach-def to be served
                       type: string
-                    vlanid:
+                    vlanId:
                       description: refers to vlan
                       type: string
                   required:
                   - cidr
+                  - interfaceIp
+                  - networkName
                   type: object
                 type: array
             type: object
@@ -454,17 +456,17 @@ spec:
                   description: IPAllocationOwner represents metadata about the pod/container
                     owner of a specific IP
                   properties:
-                    macaddr:
+                    macAddr:
                       type: string
-                    vmiref:
+                    objectRef:
                       type: string
                   type: object
                 description: Allocations is the set of allocated IPs for the given
                   range. Its` indices are a direct mapping to the IP with the same
                   index/offset for the allocation's range.
                 type: object
-              epochexpiry:
-                description: EpochExpiry is the epoch time when the IP was set to
+              leaseExpiry:
+                description: LeaseExpiry is the epoch time when the IP was set to
                   expire in the leasefile
                 type: string
               range:
@@ -472,78 +474,7 @@ spec:
                 type: string
             required:
             - allocations
-            - epochexpiry
-            - range
-            type: object
-          status:
-            description: IPAllocationStatus defines the observed state of IPAllocation
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
-  creationTimestamp: null
-  name: ipallocations.dhcp.plumber.k8s.pf9.io
-spec:
-  group: dhcp.plumber.k8s.pf9.io
-  names:
-    kind: IPAllocation
-    listKind: IPAllocationList
-    plural: ipallocations
-    singular: ipallocation
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: IPAllocation is the Schema for the ipallocations API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: IPAllocationSpec defines the desired state of IPAllocation
-            properties:
-              allocations:
-                additionalProperties:
-                  description: IPAllocationOwner represents metadata about the pod/container
-                    owner of a specific IP
-                  properties:
-                    macaddr:
-                      type: string
-                    vmiref:
-                      type: string
-                  type: object
-                description: Allocations is the set of allocated IPs for the given
-                  range. Its` indices are a direct mapping to the IP with the same
-                  index/offset for the allocation's range.
-                type: object
-              epochexpiry:
-                description: EpochExpiry is the epoch time when the IP was set to
-                  expire in the leasefile
-                type: string
-              range:
-                description: Range is a string that represents an IP address
-                type: string
-            required:
-            - allocations
-            - epochexpiry
+            - leaseExpiry
             - range
             type: object
           status:
@@ -605,6 +536,27 @@ metadata:
   creationTimestamp: null
   name: dhcpserver-manager-role
 rules:
+- apiGroups:
+  - '*'
+  resources:
+  - pods
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachineinstances
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachines
+  verbs:
+  - list
+  - watch
 - apiGroups:
   - dhcp.plumber.k8s.pf9.io
   resources:

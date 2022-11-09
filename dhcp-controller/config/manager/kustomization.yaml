@@ -13,4 +13,3 @@ kind: Kustomization
 images:
 - name: controller
   newName: docker.io/ataa/dhcp-controller
-  newTag: latest

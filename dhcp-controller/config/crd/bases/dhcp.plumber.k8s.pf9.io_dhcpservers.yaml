@@ -66,11 +66,13 @@ spec:
                     networkName:
                       description: refers to net-attach-def to be served
                       type: string
-                    vlanid:
+                    vlanId:
                       description: refers to vlan
                       type: string
                   required:
                   - cidr
+                  - interfaceIp
+                  - networkName
                   type: object
                 type: array
             type: object

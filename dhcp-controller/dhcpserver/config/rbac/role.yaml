@@ -6,6 +6,27 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - '*'
+  resources:
+  - pods
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachineinstances
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachines
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - dhcp.plumber.k8s.pf9.io
   resources:
   - ipallocations

@@ -30,18 +30,18 @@ type DHCPServerSpec struct {
 type Network struct {
 	// refers to net-attach-def to be served
 	// +kubebuilder:validation:Required
-	NetworkName string `json:"networkName,omitempty"`
+	NetworkName string `json:"networkName"`
 	// refers to IP address to bind interface to
 	// +kubebuilder:validation:Required
-	InterfaceIp string `json:"interfaceIp,omitempty"`
+	InterfaceIp string `json:"interfaceIp"`
 	// refers to CIDR of server
 	// +kubebuilder:validation:Required
-	ServerCIDR CIDR `json:"cidr"`
+	NetworkCIDR CIDR `json:"cidr"`
 	// refers to leasetime of IP
 	// +kubebuilder:validation:Required
 	LeaseTime string `json:"leaseTime,omitempty"`
 	// refers to vlan
-	VlanID string `json:"vlanid,omitempty"`
+	VlanID string `json:"vlanId,omitempty"`
 }
 
 // CIDR defines CIDR of each network

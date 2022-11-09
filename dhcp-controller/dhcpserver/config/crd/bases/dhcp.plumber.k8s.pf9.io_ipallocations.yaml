@@ -40,17 +40,17 @@ spec:
                   description: IPAllocationOwner represents metadata about the pod/container
                     owner of a specific IP
                   properties:
-                    macaddr:
+                    macAddr:
                       type: string
-                    vmiref:
+                    objectRef:
                       type: string
                   type: object
                 description: Allocations is the set of allocated IPs for the given
                   range. Its` indices are a direct mapping to the IP with the same
                   index/offset for the allocation's range.
                 type: object
-              epochexpiry:
-                description: EpochExpiry is the epoch time when the IP was set to
+              leaseExpiry:
+                description: LeaseExpiry is the epoch time when the IP was set to
                   expire in the leasefile
                 type: string
               range:
@@ -58,7 +58,7 @@ spec:
                 type: string
             required:
             - allocations
-            - epochexpiry
+            - leaseExpiry
             - range
             type: object
           status:

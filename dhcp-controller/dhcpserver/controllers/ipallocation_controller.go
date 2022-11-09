@@ -36,6 +36,9 @@ type IPAllocationReconciler struct {
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=ipallocations,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=ipallocations/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=ipallocations/finalizers,verbs=update
+//+kubebuilder:rbac:groups=*,resources=pods,verbs=watch;list;
+//+kubebuilder:rbac:groups=*,resources=virtualmachines,verbs=watch;list;
+//+kubebuilder:rbac:groups=*,resources=virtualmachineinstances,verbs=watch;list;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

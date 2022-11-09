@@ -187,7 +187,7 @@ foundvmi:
 		return ipAllocation, err
 	}
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, VmiRef: vmiref}}
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, ObjectRef: vmiref}}
 	serverLog.Info(fmt.Sprintf("Creating IPAllocation: %+v", alloc))
 
 	ipAllocationCreate := &dhcpserverv1alpha1.IPAllocation{
@@ -198,7 +198,7 @@ foundvmi:
 		Spec: dhcpserverv1alpha1.IPAllocationSpec{
 			Allocations: alloc,
 			Range:       ip + "@" + vlanid,
-			EpochExpiry: epochexpiry,
+			LeaseExpiry: epochexpiry,
 		},
 	}
 
@@ -217,7 +217,7 @@ func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, mac
 		return ipAllocation, err
 	}
 
-	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, VmiRef: ipAllocation.Spec.Allocations[ip].VmiRef}}
+	var alloc = map[string]dhcpserverv1alpha1.IPAllocationOwner{ip: dhcpserverv1alpha1.IPAllocationOwner{MacAddr: macid, ObjectRef: ipAllocation.Spec.Allocations[ip].ObjectRef}}
 
 	serverLog.Info(fmt.Sprintf("IPAllocation created: %+v", alloc))
 
@@ -225,7 +225,7 @@ func (i *Client) UpdateIPAllocation(ctx context.Context, epochexpiry string, mac
 	ipAllocation.Spec = dhcpserverv1alpha1.IPAllocationSpec{
 		Allocations: alloc,
 		Range:       ip + "@" + vlanid,
-		EpochExpiry: epochexpiry,
+		LeaseExpiry: epochexpiry,
 	}
 
 	err = i.client.Update(context.TODO(), ipAllocation)

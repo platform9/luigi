@@ -264,7 +264,7 @@ func retrieveBackup(leasePath string) error {
 			if iprange.VlanID == strings.Split(ipallocation.Spec.Range, "@")[1] && bytes.Compare(ipvAddr, iprange.StartIP) >= 0 && bytes.Compare(ipvAddr, iprange.EndIP) <= 0 {
 				// This loop only runs once
 				for ip, obj := range ipallocation.Spec.Allocations {
-					tmpline := fmt.Sprintf(ipallocation.Spec.EpochExpiry + " " + obj.MacAddr + " " + ip + " " + obj.VmiRef + " *\n")
+					tmpline := fmt.Sprintf(ipallocation.Spec.LeaseExpiry + " " + obj.MacAddr + " " + ip + " " + obj.ObjectRef + " *\n")
 					destination.WriteString(tmpline)
 				}
 				serverLog.Info("Restored IPAllocation " + ipallocation.Name)

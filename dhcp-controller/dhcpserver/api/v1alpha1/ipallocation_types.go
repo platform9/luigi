@@ -31,8 +31,8 @@ type IPAllocationSpec struct {
 	// Allocations is the set of allocated IPs for the given range. Its` indices are a direct mapping to the
 	// IP with the same index/offset for the allocation's range.
 	Allocations map[string]IPAllocationOwner `json:"allocations"`
-	// EpochExpiry is the epoch time when the IP was set to expire in the leasefile
-	EpochExpiry string `json:"epochexpiry"`
+	// LeaseExpiry is the epoch time when the IP was set to expire in the leasefile
+	LeaseExpiry string `json:"leaseExpiry"`
 }
 
 // ParseCIDR formats the Range of the IPAllocation
@@ -42,8 +42,8 @@ func (i IPAllocation) ParseCIDR() (net.IP, *net.IPNet, error) {
 
 // IPAllocationOwner represents metadata about the pod/container owner of a specific IP
 type IPAllocationOwner struct {
-	MacAddr string `json:"macaddr,omitempty"`
-	VmiRef  string `json:"vmiref,omitempty"`
+	MacAddr   string `json:"macAddr,omitempty"`
+	ObjectRef string `json:"objectRef,omitempty"`
 }
 
 // IPAllocationStatus defines the observed state of IPAllocation

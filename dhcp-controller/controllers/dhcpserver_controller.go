@@ -53,7 +53,6 @@ type DHCPServerReconciler struct {
 //+kubebuilder:rbac:groups=dhcp.plumber.k8s.pf9.io,resources=dhcpservers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;delete;deletecollection;get;list;patch;update;watch
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=create;delete;deletecollection;get;list;patch;update;watch
-//+kubebuilder:rbac:groups=*,resources=virtualmachineinstances,verbs=get;list;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -99,26 +98,26 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 
 	for _, network := range dhcpserver.Spec.Networks {
 
-		_, ipvNet, err := net.ParseCIDR(network.ServerCIDR.CIDRIP)
+		_, ipvNet, err := net.ParseCIDR(network.NetworkCIDR.CIDRIP)
 		if err != nil {
 			return err, nil
 		}
 		firstIP, lastIP := cidr.AddressRange(ipvNet)
-		if network.ServerCIDR.RangeStartIp == "" {
-			network.ServerCIDR.RangeStartIp = cidr.Inc(firstIP).String()
+		if network.NetworkCIDR.RangeStartIp == "" {
+			network.NetworkCIDR.RangeStartIp = cidr.Inc(firstIP).String()
 		}
-		if network.ServerCIDR.RangeEndIp == "" {
-			network.ServerCIDR.RangeEndIp = cidr.Dec(lastIP).String()
+		if network.NetworkCIDR.RangeEndIp == "" {
+			network.NetworkCIDR.RangeEndIp = cidr.Dec(lastIP).String()
 		}
 		RangeNetMask := net.IP(ipvNet.Mask).String()
 
 		if network.VlanID == "" {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", network.ServerCIDR.RangeStartIp, network.ServerCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
 		} else {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", network.VlanID, network.ServerCIDR.RangeStartIp, network.ServerCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", network.VlanID, network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseTime)
 		}
-		if network.ServerCIDR.GwAddress != "" {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", network.ServerCIDR.GwAddress)
+		if network.NetworkCIDR.GwAddress != "" {
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", network.NetworkCIDR.GwAddress)
 		}
 	}
 	configMapData["dnsmasq.conf"] = dnsmasqConfData
