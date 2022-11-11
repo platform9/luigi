@@ -57,7 +57,7 @@ const (
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.26.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.26.2"
 	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.4"
-	DhcpControllerImage     = "docker.io/ataa/dhcp-controller:latest"
+	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v0.1"
 	KubeRbacProxyImage      = "gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0"
 	NfdImage                = "docker.io/platform9/node-feature-discovery:v0.6.0-pmk-1"
 	TemplateDir             = "/etc/plugin_templates/"

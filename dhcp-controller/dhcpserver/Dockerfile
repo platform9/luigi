@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM alpine:3.12
+FROM alpine:3.16
 RUN apk add --no-cache dnsmasq
 WORKDIR /
 COPY --from=builder /workspace/manager .

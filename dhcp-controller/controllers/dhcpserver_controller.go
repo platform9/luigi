@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"net"
 	"reflect"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -40,6 +41,13 @@ import (
 
 	dhcpv1alpha1 "dhcp-controller/api/v1alpha1"
 )
+
+const (
+
+	envVarDockerRegistry = "DOCKER_REGISTRY"
+        defaultDockerRegistry = ""
+)
+
 
 // DHCPServerReconciler reconciles a DHCPServer object
 type DHCPServerReconciler struct {
@@ -215,6 +223,10 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 	size := int32(1)
 	memReq := resource.NewQuantity(64*1024*1024, resource.BinarySI)
 	memLimit := resource.NewQuantity(128*1024*1024, resource.BinarySI)
+        dockerRegistry := getRegistry(envVarDockerRegistry, defaultDockerRegistry)
+        image := dockerRegistry + "platform9/pf9-dnsmasq:v0.1" 
+	log.Infof("image with registry %s", image)
+       
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name,
@@ -283,6 +295,15 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 	return dep
 }
 
+// getRegistry gets the override registry value or the default one
+func getRegistry(envVar, defaultValue string) string {
+	registry := os.Getenv(envVar)
+	if registry == "" {
+		registry = defaultValue
+	}
+	return registry
+}
+
 func parseNetwork(networks []dhcpv1alpha1.Network) (string, string) {
 	var name []string
 	var ip []string
@@ -292,6 +313,10 @@ func parseNetwork(networks []dhcpv1alpha1.Network) (string, string) {
 	}
 	return strings.Join(name, ","), strings.Join(ip, ",")
 }
+
+
+
+
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DHCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
