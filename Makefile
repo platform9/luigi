@@ -81,6 +81,14 @@ docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
+.PHONY: img-build
+img-build: $(BUILD_DIR)
+	docker build --network host . -t ${IMG}
+	echo ${IMG} > $(BUILD_DIR)/container-tag
+
+.PHONY: img-build-push 
+img-build-push: img-build
+	docker push ${IMG}
 ##@ Deployment
 
 ifndef ignore-not-found
