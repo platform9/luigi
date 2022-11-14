@@ -1,8 +1,8 @@
 
 # Image URL to use all building/pushing image targets
 #IMG ?= controller:latest
-VER_LABEL=$(shell ../get-label.bash)
-IMG ?= platform9/luigi-plugins:$(VER_LABEL)
+#VER_LABEL=$(shell ../get-label.bash)
+IMG ?= platform9/luigi-plugins:v0.4
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
