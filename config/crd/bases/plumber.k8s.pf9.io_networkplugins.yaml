@@ -37,6 +37,13 @@ spec:
             properties:
               plugins:
                 properties:
+                  dhcpController:
+                    properties:
+                      DHCPControllerImage:
+                        type: string
+                      imagePullPolicy:
+                        type: string
+                    type: object
                   hostPlumber:
                     properties:
                       hostPlumberImage:

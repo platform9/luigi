@@ -39,6 +39,7 @@ type Plugins struct {
 	HostPlumber          *HostPlumber          `json:"hostPlumber,omitempty"`
 	NodeFeatureDiscovery *NodeFeatureDiscovery `json:"nodeFeatureDiscovery,omitempty"`
 	OVS                  *Ovs                  `json:"ovs,omitempty"`
+	DhcpController       *DhcpController       `json:"dhcpController,omitempty"`
 }
 
 type Ovs struct {
@@ -81,6 +82,11 @@ type Sriov struct {
 	SriovCniImage   string `json:"sriovCniImage,omitempty"`
 	SriovDpImage    string `json:"sriovDpImage,omitempty"`
 	SriovConfigMap  string `json:"sriovConfigMap,omitempty"`
+}
+
+type DhcpController struct {
+	ImagePullPolicy     string `json:"imagePullPolicy,omitempty"`
+	DhcpControllerImage string `json:"DHCPControllerImage,omitempty"`
 }
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins

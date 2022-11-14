@@ -1,0 +1,6 @@
+apiVersion: dhcp.plumber.k8s.pf9.io/v1alpha1
+kind: DHCPServer
+metadata:
+  name: dhcpserver-sample
+spec:
+  # TODO(user): Add fields here

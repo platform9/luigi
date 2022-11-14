@@ -1,0 +1,23 @@
+apiVersion: dhcp.plumber.k8s.pf9.io/v1alpha1 
+kind: DHCPServer
+metadata:
+  name: dhcpserver-sample
+spec:
+  networks:
+    - networkName: ovs-dnsmasq-test
+      interfaceIp: 192.168.15.54/24
+      leaseTime: 10m
+      vlanid: vlan1
+      cidr:
+        range: 192.168.15.0/24
+        range_start: 192.168.15.10
+        range_end: 192.168.15.100
+        gateway: 192.168.15.1
+    - networkName: ovs-build-pmk-provider-net
+      interfaceIp: 10.128.144.90/23
+      leaseTime: 10m
+      vlanid: vlan2
+      cidr:
+        range: 10.128.144.0/23
+        range_start: 10.128.144.10
+        range_end: 10.128.145.200

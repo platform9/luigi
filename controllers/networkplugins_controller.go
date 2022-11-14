@@ -57,6 +57,7 @@ const (
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.26.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.26.2"
 	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.4"
+	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v0.1"
 	KubeRbacProxyImage      = "gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0"
 	NfdImage                = "docker.io/platform9/node-feature-discovery:v0.6.0-pmk-1"
 	TemplateDir             = "/etc/plugin_templates/"
@@ -85,6 +86,7 @@ type WhereaboutsT plumberv1.Whereabouts
 type SriovT plumberv1.Sriov
 type OvsT plumberv1.Ovs
 type HostPlumberT plumberv1.HostPlumber
+type DhcpControllerT plumberv1.DhcpController
 type NodeFeatureDiscoveryT plumberv1.NodeFeatureDiscovery
 
 type ApplyPlugin interface {
@@ -225,6 +227,39 @@ func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir, registry
 
 func (hostPlumberConfig *HostPlumberT) ApplyTemplate(outputDir string) error {
 	fmt.Printf("Applying PF9 Host Plumber\n")
+	return nil
+}
+
+func (dhcpControllerConfig *DhcpControllerT) WriteConfigToTemplate(outputDir, registry string) error {
+	config := make(map[string]interface{})
+
+	if dhcpControllerConfig.ImagePullPolicy == "Always" {
+		config["ImagePullPolicy"] = "Always"
+	} else {
+		config["ImagePullPolicy"] = "IfNotPresent"
+	}
+
+	if dhcpControllerConfig.DhcpControllerImage != "" {
+		config["DhcpControllerImage"] = dhcpControllerConfig.DhcpControllerImage
+	} else {
+		config["DhcpControllerImage"] = ReplaceContainerRegistry(DhcpControllerImage, registry)
+	}
+
+	config["KubeRbacProxyImage"] = ReplaceContainerRegistry(KubeRbacProxyImage, registry)
+
+	t, err := template.ParseFiles(filepath.Join(TemplateDir, "dhcpcontroller", "dhcpcontroller.yaml"))
+	if err != nil {
+		return err
+	}
+
+	if err := renderTemplateToFile(config, t, filepath.Join(outputDir, "dhcpcontroller.yaml")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dhcpControllerConfig *DhcpControllerT) ApplyTemplate(outputDir string) error {
+	fmt.Printf("Applying PF9 dhcp-controller\n")
 	return nil
 }
 
@@ -551,6 +586,15 @@ func (r *NetworkPluginsReconciler) parseNewPlugins(req *PluginsUpdateInfo, fileL
 			*fileList = append(*fileList, "hostplumber.yaml")
 		}
 
+		if plugins.DhcpController != nil {
+			dhcpControllerConfig := (*DhcpControllerT)(plugins.DhcpController)
+			err := r.createPlugin(dhcpControllerConfig, customRegistry)
+			if err != nil {
+				return err
+			}
+			*fileList = append(*fileList, "dhcpcontroller.yaml")
+		}
+
 		if plugins.NodeFeatureDiscovery != nil {
 			nfdConfig := (*NodeFeatureDiscoveryT)(plugins.NodeFeatureDiscovery)
 			err := r.createPlugin(nfdConfig, customRegistry)
@@ -627,6 +671,15 @@ func (r *NetworkPluginsReconciler) parseMissingPlugins(req *PluginsUpdateInfo, f
 			return err
 		}
 		*fileList = append(*fileList, "hostplumber.yaml")
+	}
+
+	if (noOldPlugins == true || req.currentSpec.Plugins.DhcpController == nil) && old.DhcpController != nil {
+		dhcpControllerConfig := (*DhcpControllerT)(old.DhcpController)
+		err := r.deletePlugin(dhcpControllerConfig, customRegistry)
+		if err != nil {
+			return err
+		}
+		*fileList = append(*fileList, "dhcpcontroller.yaml")
 	}
 
 	if (noOldPlugins == true || req.currentSpec.Plugins.NodeFeatureDiscovery == nil) && old.NodeFeatureDiscovery != nil {
