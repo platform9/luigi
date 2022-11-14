@@ -43,11 +43,9 @@ import (
 )
 
 const (
-
-	envVarDockerRegistry = "DOCKER_REGISTRY"
-        defaultDockerRegistry = ""
+	envVarDockerRegistry  = "DOCKER_REGISTRY"
+	defaultDockerRegistry = ""
 )
-
 
 // DHCPServerReconciler reconciles a DHCPServer object
 type DHCPServerReconciler struct {
@@ -223,10 +221,10 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 	size := int32(1)
 	memReq := resource.NewQuantity(64*1024*1024, resource.BinarySI)
 	memLimit := resource.NewQuantity(128*1024*1024, resource.BinarySI)
-        dockerRegistry := getRegistry(envVarDockerRegistry, defaultDockerRegistry)
-        image := dockerRegistry + "platform9/pf9-dnsmasq:v0.1" 
+	dockerRegistry := getRegistry(envVarDockerRegistry, defaultDockerRegistry)
+	image := dockerRegistry + "platform9/pf9-dnsmasq:v0.1"
 	log.Infof("image with registry %s", image)
-       
+
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name,
@@ -244,7 +242,7 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Image: "docker.io/ataa/dnsmasq:latest",
+						Image: image,
 						SecurityContext: &corev1.SecurityContext{
 							Capabilities: &corev1.Capabilities{
 								Add: []corev1.Capability{
@@ -313,10 +311,6 @@ func parseNetwork(networks []dhcpv1alpha1.Network) (string, string) {
 	}
 	return strings.Join(name, ","), strings.Join(ip, ",")
 }
-
-
-
-
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DHCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {

@@ -76,11 +76,11 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${IMG_REGISTRY}/${IMG_REPO}:${IMG_TAG} .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	docker push ${IMG_REGISTRY}/${IMG_REPO}:${IMG_TAG}
 
 img-build: $(BUILD_DIR)
 	docker build --network host . -t ${IMG_REGISTRY}/${IMG_REPO}:${IMG_TAG}
