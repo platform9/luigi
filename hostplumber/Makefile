@@ -117,6 +117,6 @@ img-build-push: img-build docker-push
 		docker rmi $(IMG)
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
-scan: 
+scan:
 	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
 	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}
