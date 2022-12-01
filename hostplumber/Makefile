@@ -1,12 +1,10 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 VER_LABEL=$(shell ../get-label.bash)
-registry_url ?= 514845858982.dkr.ecr.us-west-1.amazonaws.com
-#registry_url ?= docker.io
+registry_url ?= docker.io
 
 image_name = ${registry_url}/platform9/hostplumber
-image_tag = $(VER_LABEL)-pmk-$(TEAMCITY_BUILD_ID) 
-IMG ?= $(image_name):${image_tag}
+IMG ?= $(image_name):${VER_LABEL}
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
