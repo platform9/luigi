@@ -107,14 +107,11 @@ img-build: img-test $(BUILD_DIR)
 
 img-build-push: img-build docker-push
 	docker login
-	docker push ${IMG} \
-	&& docker rmi $(IMG)
-	(docker push $(IMG)  || \
-		(aws ecr get-login --region=us-west-1 --no-include-email | sh && \
-		docker push $(IMG))) && \
-		docker rmi $(IMG)
+	docker push ${IMG} 
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
 scan:
-	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
-	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}
+	mkdir -p $(BUILD_ROOT)/library
+	mkdir -p $(BUILD_ROOT)/os
+	docker run -v $(BUILD_ROOT):/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library/library_vulnerabilities.json --exit-code 22 ${IMG}
+	docker run -v $(BUILD_ROOT):/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os/os_vulnerabilities.json --exit-code 22 ${IMG}
