@@ -24,6 +24,10 @@ ARCH=$(shell go env GOARCH)
 $(BUILD_DIR):
 	mkdir -p $@
 
+$(BUILD_ROOT):
+	mkdir -p $@
+	mkdir -p $@/luigi
+
 all: manager
 
 # Run tests
@@ -110,8 +114,6 @@ img-build-push: img-build docker-push
 	docker push ${IMG} 
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
-scan:
-	mkdir -p $(BUILD_ROOT)/library
-	mkdir -p $(BUILD_ROOT)/os
-	docker run -v $(BUILD_ROOT):/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library/library_vulnerabilities.json --exit-code 22 ${IMG}
-	docker run -v $(BUILD_ROOT):/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os/os_vulnerabilities.json --exit-code 22 ${IMG}
+scan:$(BUILD_ROOT)
+	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
+	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}

@@ -23,6 +23,10 @@ ARCH=$(shell go env GOARCH)
 $(BUILD_DIR):
 	mkdir -p $@
 
+$(BUILD_ROOT):
+	mkdir -p $@
+	mkdir -p $@/luigi
+
 all: manager
 
 # Run tests
@@ -108,6 +112,6 @@ img-build-push: img-build
 	docker push ${IMG}
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
-scan:
+scan:$(BUILD_ROOT)
 	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
 	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}	
