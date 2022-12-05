@@ -15,12 +15,8 @@ endif
 
 SRCROOT = $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/)
 BUILD_ROOT = $(SRCROOT)/build
-BUILD_DIR :=$(SRCROOT)/bin
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
-
-$(BUILD_DIR):
-	mkdir -p $@
 
 $(BUILD_ROOT):
 	mkdir -p $@
@@ -86,12 +82,11 @@ run: manifests generate fmt vet ## Run a controller from your host.
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .
-	echo ${IMG} > $(BUILD_DIR)/container-tag
+	
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
 
 ##@ Deployment
 
@@ -151,15 +146,15 @@ $(ENVTEST): $(LOCALBIN)
 img-test:
 	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.7-bullseye  bash -c "make test"
 
-img-build: img-test $(BUILD_DIR)
+img-build: img-test $(BUILD_ROOT)
 	docker build --network host . -t ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
+	echo ${IMG} > $(BUILD_ROOT)/container-tag
 
 img-build-push: img-build
 	docker login
 	docker push ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
+	echo ${IMG} > $(BUILD_ROOT)/container-tag
 
-scan:$(BUILD_ROOT)
+scan: 
 	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
 	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}
