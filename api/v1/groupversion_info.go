@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1 contains API Schema definitions for the plumber v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=plumber.k8s.pf9.io
+// +kubebuilder:object:generate=true
+// +groupName=plumber.k8s.pf9.io
 package v1
 
 import (
