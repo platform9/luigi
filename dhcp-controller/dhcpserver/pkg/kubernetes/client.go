@@ -61,11 +61,7 @@ func newClient(config *rest.Config, schema *runtime.Scheme, timeout time.Duratio
 		return nil, err
 	}
 
-	mapper, err := apiutil.NewDiscoveryRESTMapper(config)
-	if err != nil {
-		return nil, err
-	}
-	c, err := client.New(config, client.Options{Scheme: schema, Mapper: mapper})
+	c, err := client.New(config, client.Options{Scheme: schema})
 	if err != nil {
 		return nil, err
 	}
@@ -115,19 +111,24 @@ func (i *Client) WatchPod() {
 
 func (i *Client) WatchVm() {
 	oldvmlist, err := i.ListVm(context.TODO())
-	oldvmilist, err := i.ListVmi(context.TODO())
-
 	if err != nil {
 		serverLog.Error(err, "Could not list vm")
+	}
+	oldvmilist, err := i.ListVmi(context.TODO())
+	if err != nil {
+		serverLog.Error(err, "Could not list vmi")
 	}
 	ticker := time.NewTicker(10 * time.Minute)
 	for {
 		select {
 		case _ = <-ticker.C:
 			newvmlist, err := i.ListVm(context.TODO())
-			newvmilist, err := i.ListVmi(context.TODO())
 			if err != nil {
 				serverLog.Error(err, "Could not list vm")
+			}
+			newvmilist, err := i.ListVmi(context.TODO())
+			if err != nil {
+				serverLog.Error(err, "Could not list vmi")
 			}
 			if reflect.DeepEqual(oldvmlist, newvmlist) == false {
 				m := make(map[VMKey]bool)
@@ -297,7 +298,7 @@ func (i *Client) ListVmi(ctx context.Context) ([]kubevirtv1.VirtualMachineInstan
 	vmiList := &kubevirtv1.VirtualMachineInstanceList{}
 
 	if err := i.client.List(context.TODO(), vmiList, &client.ListOptions{}); err != nil {
-		return nil, err
+		return []kubevirtv1.VirtualMachineInstance{}, err
 	}
 
 	return vmiList.Items, nil
@@ -307,7 +308,7 @@ func (i *Client) ListVm(ctx context.Context) ([]kubevirtv1.VirtualMachine, error
 	vmList := &kubevirtv1.VirtualMachineList{}
 
 	if err := i.client.List(context.TODO(), vmList, &client.ListOptions{}); err != nil {
-		return nil, err
+		return []kubevirtv1.VirtualMachine{}, err
 	}
 
 	return vmList.Items, nil
