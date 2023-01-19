@@ -25,6 +25,8 @@ type DHCPServerSpec struct {
 	// Details of Networks
 	// +kubebuilder:validation:Required
 	Networks []Network `json:"networks,omitempty"`
+	// Hugepage Size
+	HugepageSize string `json:"hugepageSize,omitempty"`
 }
 
 type Network struct {
@@ -37,8 +39,10 @@ type Network struct {
 	// refers to CIDR of server
 	// +kubebuilder:validation:Required
 	NetworkCIDR CIDR `json:"cidr"`
+	// refers to if network is dpdk
+	IsDPDK bool `json:"isDPDK,omitempty"`
 	// refers to leasetime of IP
-	LeaseDuration string `json:"leaseDuration"`
+	LeaseDuration string `json:"leaseDuration,omitempty"`
 	// refers to vlan
 	VlanID string `json:"vlanId,omitempty"`
 }

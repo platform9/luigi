@@ -32,7 +32,7 @@ import (
 var (
 	serverLog  = ctrl.Log.WithName("server")
 	dnsmasqLog = ctrl.Log.WithName("dnsmasq")
-	leasePath  = "/var/lib/misc/dnsmasq.leases"
+	leasePath  = "/var/lib/dnsmasq/dnsmasq.leases"
 	confFile   = "/etc/dnsmasq.d/dnsmasq.conf"
 	k8sClient  *kubernetes.Client
 	IPRanges   = []IPRange{}
@@ -87,9 +87,10 @@ func applyInterfaceIp() error {
 
 	for idx, address := range addresses {
 		//TODO figure out the interface name instead of hardcoding as per image
-		args := []string{"address", "add", address, "dev", "net" + strconv.Itoa(idx+1)}
+		args := []string{"ip", "address", "add", address, "dev", "eth" + strconv.Itoa(idx+1)}
 
-		cmd := exec.Command("ip", args...)
+		cmd := exec.Command("sudo", args...)
+		serverLog.Info("Applying interface IP: " + address)
 
 		var out bytes.Buffer
 		var stderr bytes.Buffer
@@ -192,7 +193,7 @@ func Start() {
 				serverStop(cmd)
 				err := delLeasefromVMPod(delvm)
 				if err != nil {
-					serverLog.Error(err, "failed to delete lease on vm deletion")
+					serverLog.Error(err, "failed to delete lease on vm/pod deletion")
 				}
 				cmd = serverStart(dnsmasqBinary, args)
 			}

@@ -19,25 +19,36 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	cidr "github.com/apparentlymart/go-cidr/cidr"
 	"github.com/go-logr/logr"
 	log "github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	kubevirtv1 "kubevirt.io/api/core/v1"
+
 	"net"
-	"reflect"
 	"os"
+	"reflect"
+
+	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"strconv"
+	"strings"
+	"time"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
-	"time"
 
 	dhcpv1alpha1 "dhcp-controller/api/v1alpha1"
 )
@@ -84,8 +95,8 @@ func (r *DHCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if len(serverList) > 0 {
 		for _, server := range serverList {
 			log.Infof("server %s", server.Name)
-
-			result, err := r.ensureServer(req, server, r.backendDeployment(server))
+			r.writeKubeconfig()
+			result, err := r.ensureServer(req, server, r.backendVM(server))
 			if result != nil {
 				log.Error(err, "DHCP server Not ready")
 				return *result, err
@@ -102,7 +113,7 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 	configMapData := make(map[string]string, 0)
 	dnsmasqConfData := "port=0\n"
 
-	for _, network := range dhcpserver.Spec.Networks {
+	for idx, network := range dhcpserver.Spec.Networks {
 
 		_, ipvNet, err := net.ParseCIDR(network.NetworkCIDR.CIDRIP)
 		if err != nil {
@@ -124,11 +135,18 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 		if network.VlanID == "" {
 			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s\n", network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseDuration)
 		} else {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=%s,%s,%s,%s,%s\n", network.VlanID, network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseDuration)
+			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-range=set:%s,%s,%s,%s,%s\n", network.VlanID, network.NetworkCIDR.RangeStartIp, network.NetworkCIDR.RangeEndIp, RangeNetMask, network.LeaseDuration)
 		}
 		if network.NetworkCIDR.GwAddress != "" {
-			dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", network.NetworkCIDR.GwAddress)
+			if network.VlanID == "" {
+				dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=3,%s\n", network.NetworkCIDR.GwAddress)
+			} else {
+				dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("dhcp-option=set:%s,3,%s\n", network.VlanID, network.NetworkCIDR.GwAddress)
+
+			}
 		}
+		// Interface to serve
+		dnsmasqConfData = dnsmasqConfData + fmt.Sprintf("interface=eth%d\n", idx+1)
 	}
 	configMapData["dnsmasq.conf"] = dnsmasqConfData
 	configMap := &corev1.ConfigMap{
@@ -143,10 +161,15 @@ func (r *DHCPServerReconciler) genConfigMap(dhcpserver dhcpv1alpha1.DHCPServer) 
 
 func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 	server dhcpv1alpha1.DHCPServer,
-	dep *appsv1.Deployment,
+	vm *unstructured.Unstructured,
 ) (*reconcile.Result, error) {
 
-	found := &appsv1.Deployment{}
+	found := &unstructured.Unstructured{}
+	found.SetGroupVersionKind(runtimeschema.GroupVersionKind{
+		Group:   "kubevirt.io",
+		Kind:    "VirtualMachine",
+		Version: "v1",
+	})
 	err, cm := r.genConfigMap(server)
 	if err != nil {
 		log.Error(err, "Failed to generate ConfigMap")
@@ -154,7 +177,7 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 	}
 
 	oldcm := &corev1.ConfigMap{}
-	err = r.Get(context.TODO(), types.NamespacedName{Name: dep.Name, Namespace: server.Namespace}, oldcm)
+	err = r.Get(context.TODO(), types.NamespacedName{Name: server.Name, Namespace: server.Namespace}, oldcm)
 	if err != nil && errors.IsNotFound(err) {
 		log.Info(" Creating Configmap...")
 		controllerutil.SetControllerReference(&server, cm, r.Scheme)
@@ -173,82 +196,183 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 				return &reconcile.Result{}, err
 			}
 			log.Info("server spec is changed, updating ConfigMap")
-			// Delete the deployment, will be recreated with new configmap
-			err = r.Delete(context.TODO(), dep)
+			// Delete the VM, will be recreated with new configmap
+			err = r.Delete(context.TODO(), vm)
 			if err != nil {
-				log.Error(err, "Failed to delete the deployment or there is none")
+				log.Error(err, "Failed to delete the VM or there is none")
 			}
-			err = r.Get(context.TODO(), types.NamespacedName{Name: dep.Name, Namespace: server.Namespace}, found)
+			err = r.Get(context.TODO(), types.NamespacedName{Name: server.Name, Namespace: server.Namespace}, found)
 			for {
 				if err != nil && errors.IsNotFound(err) {
 					break
 				}
-				err = r.Get(context.TODO(), types.NamespacedName{Name: dep.Name, Namespace: server.Namespace}, found)
+				err = r.Get(context.TODO(), types.NamespacedName{Name: server.Name, Namespace: server.Namespace}, found)
 				time.Sleep(2 * time.Second)
 			}
 		} else {
 			log.Info("server spec is unchanged, not updating ConfigMap")
 		}
 	}
-	// See if deployment already exists and create if it doesn't
+	// See if VM already exists and create if it doesn't
 	err = r.Get(context.TODO(), types.NamespacedName{
-		Name:      dep.Name,
+		Name:      server.Name,
 		Namespace: server.Namespace,
 	}, found)
 	if err != nil && errors.IsNotFound(err) {
 
-		// Create the deployment
-		err = r.Create(context.TODO(), dep)
+		// Create the VM
+		err = r.Create(context.TODO(), vm)
 
 		if err != nil {
-			// Deployment failed
+			// VM failed
 			return &reconcile.Result{}, err
 		} else {
-			// Deployment was successful
+			// VM was successful
 			return nil, nil
 		}
 	} else if err != nil {
-		// Error that isn't due to the deployment not existing
+		// Error that isn't due to the VM not existing
 		return &reconcile.Result{}, err
 	}
 
 	return nil, nil
 }
 
-// backendDeployment is a code for Creating Deployment
-func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *appsv1.Deployment {
+// backendVM is a code for Creating VM
+func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructured.Unstructured {
 	networkNames, interfaceIps := parseNetwork(v.Spec.Networks)
-	size := int32(1)
-	memReq := resource.NewQuantity(64*1024*1024, resource.BinarySI)
-	memLimit := resource.NewQuantity(128*1024*1024, resource.BinarySI)
-	dockerRegistry := getRegistry(envVarDockerRegistry, defaultDockerRegistry)
-	image := dockerRegistry + "platform9/pf9-dnsmasq:v0.1"
-	log.Infof("image with registry %s", image)
+	// size := int32(1)
+	t := true
+	memReq := resource.NewQuantity(1024*1024*1024, resource.BinarySI)
+	memLimit := resource.NewQuantity(1024*1024*1024, resource.BinarySI)
 
-	dep := &appsv1.Deployment{
+	// Make the cloudinit userData
+	tmpl, err := os.ReadFile("cloudinit.tmpl")
+	if err != nil {
+		log.Error(err, "unable to read template")
+	}
+	cloudinit := strings.Replace(string(tmpl), "{{.interfaceip}}", interfaceIps, 1)
+
+	cloudinit_secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-cloudinit",
+			Namespace: "default",
+		},
+		StringData: map[string]string{"userData": cloudinit},
+	}
+	err = r.Delete(context.TODO(), cloudinit_secret)
+	if err != nil {
+		log.Error(err, "Failed to delete the cloudinit secret or there is none")
+	}
+	err = r.Create(context.TODO(), cloudinit_secret)
+	if err != nil {
+		log.Error(err, "Failed to create the cloudinit secret")
+	}
+
+	// Make the cloudinit networkData
+	tmpl, err = os.ReadFile("netcloudinit.tmpl")
+	netcloudinit := "    version: 2\n    ethernets:\n"
+	for idx, interfaceIp := range strings.Split(interfaceIps, ",") {
+		str_tmpl := string(tmpl)
+		str_tmpl = strings.Replace(str_tmpl, "{{.num}}", strconv.Itoa(idx+1), 2)
+		netcloudinit = netcloudinit + strings.Replace(str_tmpl, "{{.ip}}", interfaceIp, 1)
+	}
+
+	netcloudinit_secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-netcloudinit",
+			Namespace: "default",
+		},
+		StringData: map[string]string{"networkData": netcloudinit},
+	}
+	err = r.Delete(context.TODO(), netcloudinit_secret)
+	if err != nil {
+		log.Error(err, "Failed to delete the netcloudinit secret or there is none")
+	}
+	err = r.Create(context.TODO(), netcloudinit_secret)
+	if err != nil {
+		log.Error(err, "Failed to create the netcloudinit secret")
+	}
+
+	// Hugepages
+	hugepageMemory := &kubevirtv1.Memory{}
+	if v.Spec.HugepageSize != "" {
+		hugepageMemory = &kubevirtv1.Memory{
+			Hugepages: &kubevirtv1.Hugepages{
+				PageSize: v.Spec.HugepageSize,
+			},
+		}
+	}
+
+	// The network and interface lists
+	interfaceList := []kubevirtv1.Interface{{
+		Name: "default",
+		InterfaceBindingMethod: kubevirtv1.InterfaceBindingMethod{
+			Masquerade: &kubevirtv1.InterfaceMasquerade{},
+		},
+	}}
+	networkList := []kubevirtv1.Network{{
+		Name: "default",
+		NetworkSource: kubevirtv1.NetworkSource{
+			Pod: &kubevirtv1.PodNetwork{},
+		},
+	}}
+
+	dpdknetworks := make(map[string]bool)
+	for idx, networkName := range strings.Split(networkNames, ",") {
+		interfaceList = append(interfaceList, kubevirtv1.Interface{
+			Name: "interface" + strconv.Itoa(idx),
+			InterfaceBindingMethod: kubevirtv1.InterfaceBindingMethod{
+				Bridge: &kubevirtv1.InterfaceBridge{},
+			},
+		})
+		networkList = append(networkList, kubevirtv1.Network{
+			Name: "interface" + strconv.Itoa(idx),
+			NetworkSource: kubevirtv1.NetworkSource{
+				Multus: &kubevirtv1.MultusNetwork{
+					NetworkName: networkName,
+				},
+			},
+		})
+		if v.Spec.Networks[idx].IsDPDK == true {
+			dpdknetworks["interface"+strconv.Itoa(idx)] = true
+		}
+	}
+
+	vm := &kubevirtv1.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.Name,
 			Namespace: v.Namespace,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &size,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "dnsmasq", "name": v.Name},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      map[string]string{"app": "dnsmasq", "name": v.Name},
-					Annotations: map[string]string{"k8s.v1.cni.cncf.io/networks": networkNames},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Image: image,
-						SecurityContext: &corev1.SecurityContext{
-							Capabilities: &corev1.Capabilities{
-								Add: []corev1.Capability{
-									"NET_ADMIN",
-								}}},
-						Resources: corev1.ResourceRequirements{
+		Spec: kubevirtv1.VirtualMachineSpec{
+			Running: &t,
+			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+				Spec: kubevirtv1.VirtualMachineInstanceSpec{
+					Domain: kubevirtv1.DomainSpec{
+						Memory: hugepageMemory,
+						Devices: kubevirtv1.Devices{
+							Disks: []kubevirtv1.Disk{{
+								Name: "containerdisk",
+								DiskDevice: kubevirtv1.DiskDevice{
+									Disk: &kubevirtv1.DiskTarget{
+										Bus: "virtio",
+									},
+								},
+							}, {
+								Name: "cloudinitdisk",
+								DiskDevice: kubevirtv1.DiskDevice{
+									Disk: &kubevirtv1.DiskTarget{
+										Bus: "virtio",
+									},
+								},
+							}, {
+								Name: "kc-disk",
+							}, {
+								Name: v.Name + "-disk",
+							}},
+							Interfaces: interfaceList,
+						},
+						Resources: kubevirtv1.ResourceRequirements{
 							Limits: corev1.ResourceList{
 								"memory": *memLimit,
 							},
@@ -256,31 +380,41 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 								"memory": *memReq,
 							},
 						},
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						Name:            v.Name,
-						Env: []corev1.EnvVar{
-							{
-								Name:  "BIND_INTERFACE_IP",
-								Value: interfaceIps,
-							},
-						},
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      "dnsmasq-cfg",
-							MountPath: "/etc/dnsmasq.d/",
-						}},
-					}},
-					ServiceAccountName: "dhcpserver-controller-manager",
-					Volumes: []corev1.Volume{{
-						Name: "dnsmasq-cfg",
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
+					},
+					Networks: networkList,
+					Volumes: []kubevirtv1.Volume{{
+						Name: v.Name + "-disk",
+						VolumeSource: kubevirtv1.VolumeSource{
+							ConfigMap: &kubevirtv1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{
 									Name: v.Name,
 								},
-								Items: []corev1.KeyToPath{{
-									Key:  "dnsmasq.conf",
-									Path: "dnsmasq.conf",
-								}},
+							},
+						},
+					}, {
+						Name: "kc-disk",
+						VolumeSource: kubevirtv1.VolumeSource{
+							Secret: &kubevirtv1.SecretVolumeSource{
+								SecretName: "dhcp-controller-kc",
+							},
+						},
+					}, {
+						Name: "containerdisk",
+						VolumeSource: kubevirtv1.VolumeSource{
+							ContainerDisk: &kubevirtv1.ContainerDiskSource{
+								Image: "docker.io/platform9/dhcpserver:v1",
+							},
+						},
+					}, {
+						Name: "cloudinitdisk",
+						VolumeSource: kubevirtv1.VolumeSource{
+							CloudInitNoCloud: &kubevirtv1.CloudInitNoCloudSource{
+								UserDataSecretRef: &corev1.LocalObjectReference{
+									Name: v.Name + "-cloudinit",
+								},
+								NetworkDataSecretRef: &corev1.LocalObjectReference{
+									Name: v.Name + "-netcloudinit",
+								},
 							},
 						},
 					}},
@@ -289,8 +423,38 @@ func (r *DHCPServerReconciler) backendDeployment(v dhcpv1alpha1.DHCPServer) *app
 		},
 	}
 
-	controllerutil.SetControllerReference(&v, dep, r.Scheme)
-	return dep
+	// This section replaces "bridge" interface type with "vhostuser" for DPDK networks. Since this is not a valid type in the KubeVirt client (as its a custom change), It is manually replaced in an unstructured format.
+	// If vhostuser becomes an offical interface in the future in the KubeVirt client, this section can be removed and generated VM spec can be edited to reflect it.
+	// Convert to unstructured
+	unstructuredvm, err := runtime.DefaultUnstructuredConverter.ToUnstructured(vm)
+	if err != nil {
+		log.Error(err, "unable to convert VM spec to unstructured")
+	}
+	unstructuredvm_final := &unstructured.Unstructured{Object: unstructuredvm}
+
+	// Get the nested interface slice
+	interfacelist, _, err := unstructured.NestedSlice(unstructuredvm_final.Object, "spec", "template", "spec", "domain", "devices", "interfaces")
+	if err != nil {
+		log.Error(err, "unable to get interfaces from unstructured VM spec")
+	}
+	// Replace bridge with vhostuser for dpdk interfaces
+	for _, netinterface := range interfacelist {
+		name, _ := netinterface.(map[string]interface{})["name"].(string)
+		if dpdknetworks[name] {
+			delete(netinterface.(map[string]interface{}), "bridge")
+			netinterface.(map[string]interface{})["vhostuser"] = map[string]interface{}{}
+		}
+	}
+	// Replace the old interface slice
+	unstructured.SetNestedSlice(unstructuredvm_final.Object, interfacelist, "spec", "template", "spec", "domain", "devices", "interfaces")
+	unstructuredvm_final.SetGroupVersionKind(runtimeschema.GroupVersionKind{
+		Group:   "kubevirt.io",
+		Kind:    "VirtualMachine",
+		Version: "v1",
+	})
+
+	controllerutil.SetControllerReference(&v, unstructuredvm_final, r.Scheme)
+	return unstructuredvm_final
 }
 
 // getRegistry gets the override registry value or the default one
@@ -310,6 +474,91 @@ func parseNetwork(networks []dhcpv1alpha1.Network) (string, string) {
 		ip = append(ip, network.InterfaceIp)
 	}
 	return strings.Join(name, ","), strings.Join(ip, ",")
+}
+
+// Generate a kubeconfig to be used by the DHCPServer VM
+func (r *DHCPServerReconciler) writeKubeconfig() {
+
+	restconfig, err := rest.InClusterConfig()
+	if err != nil {
+		log.Error(err, "unable to get clusterconfig")
+	}
+
+	cadata, err := os.ReadFile(restconfig.TLSClientConfig.CAFile)
+	if err != nil {
+		log.Error(err, "unable to read cafile")
+	}
+
+	clusters := make(map[string]*clientcmdapi.Cluster)
+	clusters["default-cluster"] = &clientcmdapi.Cluster{
+		Server:                   restconfig.Host,
+		CertificateAuthorityData: cadata,
+	}
+
+	contexts := make(map[string]*clientcmdapi.Context)
+	contexts["default-context"] = &clientcmdapi.Context{
+		Cluster:   "default-cluster",
+		Namespace: "default",
+		AuthInfo:  "default",
+	}
+
+	// Create long lived token
+	token := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "dhcp-controller-controller-manager-token",
+			Namespace:   "dhcp-controller-system",
+			Annotations: map[string]string{"kubernetes.io/service-account.name": "dhcp-controller-controller-manager"},
+		},
+		Type: "kubernetes.io/service-account-token",
+	}
+	err = r.Create(context.TODO(), token)
+	if err != nil {
+		log.Error(err, "Failed to create the token secret or it already exists")
+	}
+
+	dhcpsecrettoken := &corev1.Secret{}
+
+	r.Get(context.TODO(), types.NamespacedName{
+		Name:      "dhcp-controller-controller-manager-token",
+		Namespace: "dhcp-controller-system",
+	}, dhcpsecrettoken)
+
+	authinfos := make(map[string]*clientcmdapi.AuthInfo)
+	authinfos["default"] = &clientcmdapi.AuthInfo{
+		Token: string(dhcpsecrettoken.Data["token"]),
+	}
+
+	clientConfig := clientcmdapi.Config{
+		Kind:           "Config",
+		APIVersion:     "v1",
+		Clusters:       clusters,
+		Contexts:       contexts,
+		CurrentContext: "default-context",
+		AuthInfos:      authinfos,
+	}
+	clientcmd.WriteToFile(clientConfig, "/var/tmp/default.yaml")
+	filebytes, err := os.ReadFile("/var/tmp/default.yaml")
+	if err != nil {
+		log.Error(err, "unable to read generated kubeconfig")
+	}
+
+	// Make secret kubeconfig
+	kc_secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dhcp-controller-kc",
+			Namespace: "default",
+		},
+		StringData: map[string]string{"default.yaml": string(filebytes)},
+	}
+	err = r.Delete(context.TODO(), kc_secret)
+	if err != nil {
+		log.Error(err, "Failed to delete the kubeconfig secret or there is none")
+	}
+	err = r.Create(context.TODO(), kc_secret)
+	if err != nil {
+		log.Error(err, "Failed to create the kubeconfig secret")
+	}
+
 }
 
 // SetupWithManager sets up the controller with the Manager.

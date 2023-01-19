@@ -35,6 +35,9 @@ spec:
           spec:
             description: DHCPServerSpec defines the desired state of DHCPServer
             properties:
+              hugepageSize:
+                description: Hugepage Size
+                type: string
               networks:
                 description: Details of Networks
                 items:
@@ -60,6 +63,9 @@ spec:
                     interfaceIp:
                       description: refers to IP address to bind interface to
                       type: string
+                    isDPDK:
+                      description: refers to if network is dpdk
+                      type: boolean
                     leaseDuration:
                       description: refers to leasetime of IP
                       type: string

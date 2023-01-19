@@ -19,9 +19,9 @@ package main
 import (
 	"flag"
 	"os"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	corev1 "k8s.io/api/core/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +33,7 @@ import (
 
 	dhcpv1alpha1 "dhcp-controller/api/v1alpha1"
 	"dhcp-controller/controllers"
+	kubevirtv1 "kubevirt.io/api/core/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,6 +46,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(dhcpv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(kubevirtv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

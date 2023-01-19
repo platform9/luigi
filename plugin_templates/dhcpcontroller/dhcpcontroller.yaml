@@ -41,6 +41,9 @@ spec:
           spec:
             description: DHCPServerSpec defines the desired state of DHCPServer
             properties:
+              hugepageSize:
+                description: Hugepage Size
+                type: string
               networks:
                 description: Details of Networks
                 items:
@@ -66,6 +69,9 @@ spec:
                     interfaceIp:
                       description: refers to IP address to bind interface to
                       type: string
+                    isDPDK:
+                      description: refers to if network is dpdk
+                      type: boolean
                     leaseDuration:
                       description: refers to leasetime of IP
                       type: string
@@ -141,6 +147,52 @@ metadata:
   creationTimestamp: null
   name: dhcp-controller-manager-role
 rules:
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachineinstances
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
 - apiGroups:
   - apps
   resources:
