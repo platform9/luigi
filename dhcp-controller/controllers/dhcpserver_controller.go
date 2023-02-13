@@ -17,11 +17,17 @@ limitations under the License.
 package controllers
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"math/big"
 
 	cidr "github.com/apparentlymart/go-cidr/cidr"
+	"github.com/dustin/go-humanize"
 	"github.com/go-logr/logr"
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -241,7 +247,6 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 // backendVM is a code for Creating VM
 func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructured.Unstructured {
 	networkNames, interfaceIps := parseNetwork(v.Spec.Networks)
-	// size := int32(1)
 	t := true
 	memReq := resource.NewQuantity(1024*1024*1024, resource.BinarySI)
 	memLimit := resource.NewQuantity(1024*1024*1024, resource.BinarySI)
@@ -295,11 +300,12 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 	}
 
 	// Hugepages
+	interfaceTypes := r.getInterfaceTypes(networkNames, v.Namespace)
 	hugepageMemory := &kubevirtv1.Memory{}
-	if v.Spec.HugepageSize != "" {
+	if isDPDK(interfaceTypes) {
 		hugepageMemory = &kubevirtv1.Memory{
 			Hugepages: &kubevirtv1.Hugepages{
-				PageSize: v.Spec.HugepageSize,
+				PageSize: getHugepageSize(),
 			},
 		}
 	}
@@ -320,11 +326,29 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 
 	dpdknetworks := make(map[string]bool)
 	for idx, networkName := range strings.Split(networkNames, ",") {
-		interfaceList = append(interfaceList, kubevirtv1.Interface{
-			Name: "interface" + strconv.Itoa(idx),
-			InterfaceBindingMethod: kubevirtv1.InterfaceBindingMethod{
+		var interfaceBindingMethod kubevirtv1.InterfaceBindingMethod
+		switch interfaceTypes[networkName] {
+		case "sriov":
+			interfaceBindingMethod = kubevirtv1.InterfaceBindingMethod{
+				SRIOV: &kubevirtv1.InterfaceSRIOV{},
+			}
+		case "ovs":
+			interfaceBindingMethod = kubevirtv1.InterfaceBindingMethod{
 				Bridge: &kubevirtv1.InterfaceBridge{},
-			},
+			}
+		case "userspace":
+			dpdknetworks["interface"+strconv.Itoa(idx)] = true
+			interfaceBindingMethod = kubevirtv1.InterfaceBindingMethod{
+				Bridge: &kubevirtv1.InterfaceBridge{},
+			}
+		default:
+			interfaceBindingMethod = kubevirtv1.InterfaceBindingMethod{
+				Bridge: &kubevirtv1.InterfaceBridge{},
+			}
+		}
+		interfaceList = append(interfaceList, kubevirtv1.Interface{
+			Name:                   "interface" + strconv.Itoa(idx),
+			InterfaceBindingMethod: interfaceBindingMethod,
 		})
 		networkList = append(networkList, kubevirtv1.Network{
 			Name: "interface" + strconv.Itoa(idx),
@@ -334,9 +358,6 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 				},
 			},
 		})
-		if v.Spec.Networks[idx].IsDPDK == true {
-			dpdknetworks["interface"+strconv.Itoa(idx)] = true
-		}
 	}
 
 	vm := &kubevirtv1.VirtualMachine{
@@ -455,6 +476,64 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 
 	controllerutil.SetControllerReference(&v, unstructuredvm_final, r.Scheme)
 	return unstructuredvm_final
+}
+
+func (r *DHCPServerReconciler) getInterfaceTypes(networkNames string, networknamespace string) map[string]string {
+	// Get type of interface by querying the NADs
+	interfaceTypes := make(map[string]string)
+	for _, networkName := range strings.Split(networkNames, ",") {
+		nad := &nettypes.NetworkAttachmentDefinition{}
+		err := r.Get(context.TODO(), types.NamespacedName{Name: networkName, Namespace: networknamespace}, nad)
+		if err != nil {
+			log.Error(err, "unable to get nad "+networkName)
+			return interfaceTypes
+		}
+		nadconfig := map[string]string{}
+		json.Unmarshal([]byte(nad.Spec.Config), &nadconfig)
+		val, ok := nadconfig["type"]
+		if ok {
+			interfaceTypes[networkName] = val
+		}
+	}
+	return interfaceTypes
+}
+
+func isDPDK(interfaceTypes map[string]string) bool {
+	for _, interfacetype := range interfaceTypes {
+		if interfacetype == "userspace" {
+			return true
+		}
+	}
+	return false
+}
+
+func getHugepageSize() string {
+	// Get the hugepage size from meminfo and convert it into bibytes from KB
+	var hugepagesize int64
+	f, err := os.Open("/proc/meminfo")
+	if err != nil {
+		log.Error(err, "unable to open /proc/meminfo")
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		if bytes.HasPrefix(s.Bytes(), []byte(`Hugepagesize:`)) {
+			_, err = fmt.Sscanf(s.Text(), "Hugepagesize:%d", &hugepagesize)
+			if err != nil {
+				log.Error(err, "unable to read Hugepagesize from /proc/info")
+			}
+			break
+		}
+	}
+	if err = s.Err(); err != nil {
+		log.Error(err, "scanner error")
+	}
+	// Converting size in KB to bibytes annotation. For example 1.0 GiB -> 1Gi
+	r := humanize.BigIBytes(big.NewInt(hugepagesize * 1024))
+	r = strings.Replace(r, ".0 ", "", 1)
+	r = strings.Replace(r, "B", "", 1)
+	log.Infof("Hugepages: %+v", r)
+	return r
 }
 
 // getRegistry gets the override registry value or the default one

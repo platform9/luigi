@@ -4,7 +4,9 @@ go 1.18
 
 require (
 	github.com/apparentlymart/go-cidr v1.1.0
+	github.com/dustin/go-humanize v1.0.0
 	github.com/go-logr/logr v1.2.3
+	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
 	github.com/sirupsen/logrus v1.9.0
