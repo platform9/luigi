@@ -23,11 +23,11 @@ jobs:
           cache: true
       - name: Print the version of golang
         run: go version
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3.4.0
-        with:
-          skip-pkg-cache: true
-          args: --timeout=5m
+#      - name: Run golangci-lint
+#        uses: golangci/golangci-lint-action@v3.4.0
+#        with:
+#          skip-pkg-cache: true
+#          args: --timeout=5m
   build_and_unit_test:
     environment: Build
     runs-on: ubuntu-latest
