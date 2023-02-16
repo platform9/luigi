@@ -48,6 +48,14 @@ type Ovs struct {
 	OVSImage        string `json:"ovsImage,omitempty"`
 	CNIImage        string `json:"cniImage,omitempty"`
 	MarkerImage     string `json:"markerImage,omitempty"`
+	DPDK            *Dpdk  `json:"dpdk,omitempty"`
+}
+
+type Dpdk struct {
+	LcoreMask	string `json:"lcoreMask,omitempty"`
+	SocketMem       string `json:"socketMem,omitempty"`
+	PmdCpuMask      string `json:"pmdCpuMask,omitempty"`
+	HugepageMemory  string `json:"hugepageMemory,omitempty"`
 }
 
 type NodeFeatureDiscovery struct {

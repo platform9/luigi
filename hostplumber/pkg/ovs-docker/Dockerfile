@@ -1,10 +1,6 @@
-# openvswitch-2.12.0-r3:
-# A production quality, multilayer virtual switch
-
-FROM alpine:3.12
+FROM alpine:3.16
 
 RUN apk add --no-cache bash
-RUN apk add --no-cache openvswitch
 RUN apk add --no-cache supervisor
 
 RUN mkdir -p /var/log/supervisor
@@ -12,5 +8,37 @@ RUN mkdir -p /var/log/supervisor
 COPY supervisord.conf /etc/
 COPY ovs.conf /etc/supervisor/conf.d/
 
-CMD ["/usr/bin/supervisord"]
+RUN apk add --no-cache make gcc linux-headers bsd-compat-headers binutils coreutils diffutils && \
+    apk add --no-cache gettext bash grep sed texinfo perl util-linux vim build-base libexecinfo libexecinfo-dev && \
+    apk add --no-cache abuild bc cmake ncurses-dev ca-certificates wget && \
+    apk add numactl-dev alpine-sdk bsd-compat-headers libexecinfo-dev py3-pip py3-elftools && \
+    pip3 install meson ninja && \
+    wget http://dpdk.org/browse/dpdk-stable/snapshot/dpdk-stable-21.11.3.zip && \
+    unzip dpdk-stable-21.11.3.zip 
 
+WORKDIR dpdk-stable-21.11.3
+RUN meson build && \
+    ninja -C build && \
+    ninja -C build install
+
+WORKDIR /
+RUN apk add --no-cache autoconf automake libtool && \
+    wget https://www.openvswitch.org/releases/openvswitch-2.17.5.tar.gz && \
+    gunzip openvswitch-2.17.5.tar.gz && \
+    tar -xf openvswitch-2.17.5.tar 
+
+WORKDIR openvswitch-2.17.5 
+RUN ./configure  --localstatedir=/var --sysconfdir=/etc --with-dpdk=static  && \
+    make && \
+    make install
+
+WORKDIR /
+RUN apk add pciutils
+ADD start-ovs.sh /usr/local/bin/start-ovs.sh
+RUN echo dpdk-init=false > /etc/openvswitch/ovs.conf
+RUN chmod 777 /usr/local/bin/start-ovs.sh
+
+CMD if $EnableDpdk == true ; then echo dpdk-init=true \
+    $'\n'dpdk-hugepage-dir=/dev/hugepages$'\n'dpdk-socket-mem="$SocketMem" \
+    $'\n'dpdk-lcore-mask="$LcoreMask"$'\n'pmd-cpu-mask="$PmdCpuMask"$'\n'  > /etc/openvswitch/ovs.conf ; fi && \
+    /usr/bin/supervisord

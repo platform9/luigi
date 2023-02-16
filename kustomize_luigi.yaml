@@ -82,6 +82,17 @@ spec:
                         type: string
                       ovsImage:
                         type: string
+                      dpdk:
+                        properties:
+                          lcoreMask:
+                            type: string
+                          socketMem:
+                            type: string
+                          pmdCpuMask:
+                            type: string
+                          hugepageMemory:
+                            type: string
+                        type: object
                     type: object
                   sriov:
                     properties:

@@ -54,9 +54,9 @@ const (
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6-pmk-6"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2571007"
 	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-2571186"
-	OvsImage                = "docker.io/platform9/openvswitch:v2.12.0"
-	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.26.2"
-	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.26.2"
+	OvsImage                = "docker.io/platform9/openvswitch:v2.17.5"
+	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.28.0"
+	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.28.0"
 	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.4.1"
 	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v1.0"
 	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:latest"
@@ -479,6 +479,13 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir, registry string) error {
 	} else {
 		config["MarkerImage"] = ReplaceContainerRegistry(OvsMarkerImage, registry)
 	}
+
+	if ovsConfig.DPDK != nil {
+                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" {
+                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory are required parameters to enable Dpdk")
+                }
+                config["DPDK"] = ovsConfig.DPDK
+        }
 
 	// Apply the OVS DaemonSet
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-daemons.yaml"))
