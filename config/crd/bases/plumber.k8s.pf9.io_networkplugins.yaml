@@ -81,6 +81,17 @@ spec:
                     properties:
                       cniImage:
                         type: string
+                      dpdk:
+                        properties:
+                          hugepageMemory:
+                            type: string
+                          lcoreMask:
+                            type: string
+                          pmdCpuMask:
+                            type: string
+                          socketMem:
+                            type: string
+                        type: object
                       imagePullPolicy:
                         type: string
                       markerImage:
