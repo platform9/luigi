@@ -46,7 +46,6 @@ jobs:
         run: make test
       - name: Build
         run: make build
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./cover.out
+      - name: Go Coverage
+        uses: gwatts/go-coverage-action@v1.3.0
+
