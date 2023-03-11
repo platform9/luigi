@@ -25,8 +25,34 @@ FROM alpine:3.16
 WORKDIR /
 
 RUN apk add --no-cache bash
-RUN apk add --no-cache openvswitch
+RUN apk add --no-cache ethtool
+RUN apk add --no-cache pciutils
 
+RUN apk add --no-cache make gcc linux-headers bsd-compat-headers binutils coreutils diffutils && \
+    apk add --no-cache gettext bash grep sed texinfo perl util-linux vim build-base libexecinfo libexecinfo-dev && \
+    apk add --no-cache abuild bc cmake ncurses-dev ca-certificates wget && \
+    apk add numactl-dev alpine-sdk bsd-compat-headers libexecinfo-dev py3-pip py3-elftools && \
+    pip3 install meson ninja && \
+    wget http://dpdk.org/browse/dpdk-stable/snapshot/dpdk-stable-21.11.3.zip && \
+    unzip dpdk-stable-21.11.3.zip 
+
+WORKDIR dpdk-stable-21.11.3
+RUN meson build && \
+    ninja -C build && \
+    ninja -C build install
+
+WORKDIR /
+RUN apk add --no-cache autoconf automake libtool && \
+    wget https://www.openvswitch.org/releases/openvswitch-2.17.5.tar.gz && \
+    gunzip openvswitch-2.17.5.tar.gz && \
+    tar -xf openvswitch-2.17.5.tar 
+
+WORKDIR openvswitch-2.17.5 
+RUN ./configure  --localstatedir=/var --sysconfdir=/etc --with-dpdk=static  && \
+    make && \
+    make install
+
+WORKDIR /
 COPY --from=builder /workspace/manager .
 #USER 65532:65532
 

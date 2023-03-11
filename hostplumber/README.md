@@ -182,7 +182,7 @@ spec:
 A list of interfaces is specified, for eno1 and eno2. A vlan interface on 999, and 1000-1002 is created on each, respectively.
 
 # ovsConfig:
-This can be used to create OVS bridges and attach interfaces to them. This does NOT deploy OpenVSwitch or install the ovs-vsctl CLI tools for you. Nor does it install the OVS CNI plugin for k8s. To install them, please use the Luigi NetworkPlugins operator, or install these manually.
+This can be used to create OVS/DPDK bridges, bonds and attach interfaces to them. This does NOT deploy OpenVSwitch or install the ovs-vsctl CLI tools for you. Nor does it install the OVS CNI plugin for k8s. To install them, please use the Luigi NetworkPlugins operator, or install these manually.
 
 ```
 apiVersion: plumber.k8s.pf9.io/v1
@@ -202,9 +202,30 @@ spec:
   ovsConfig:
   - bridgeName: ovs-br01
     nodeInterface: eno2.1000
+  - bridgeName: "dpdk-br01"
+    nodeInterface: "eno2"
+    dpdk: true
+  - bridgeName: "ovs-bond01"
+    nodeInterface: "eno1,eno2"
+    dpdk: false
+    params:
+      mtuRequest: 9192
+  - bridgeName: "dpdk-bond01"
+    nodeInterface: "enp1s0f0,enp1s0f1"
+    dpdk: true
+    params:
+      mtuRequest: 9000
+      bondMode: "balance-tcp"
+      lacp: "active"
 ```
 
-This will create the OVS bridge with name "ovs-br01", and attach the interface eno2.1000 to it. Please note that eno2.1000 must already exist - the exception is when using HostPlumber like above, to have it created in the same CRD.
+This will create, 
+ - The OVS bridge with name "ovs-br01", and attach the interface eno2.1000 to it.
+ - The OVS-DPDK  bridge with name “dpdk-br01". and attach the interface eno2 to it.
+ - The OVS bridge with name “ovs-bond01” and add a bond to it using interfaces eno1 and eno2
+ - The OVS-DPDK  bridge with name dpdk-bond01 and add a dpdk bond to it using interfaces enp1s0f0 and enp1s0f0. Also enable LACP, set bondMode/mtuRequest to specified values. 
+
+Please note that nodeInterfaces specified here must already exist - the exception is when using HostPlumber like above, to have it created in the same CRD.
 
 The nodeInterface: may be any physical NIC
 
