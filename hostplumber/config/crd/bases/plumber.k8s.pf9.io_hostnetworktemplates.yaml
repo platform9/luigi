@@ -81,8 +81,19 @@ spec:
                   properties:
                     bridgeName:
                       type: string
+                    dpdk:
+                      type: boolean
                     nodeInterface:
                       type: string
+                    params:
+                      properties:
+                        bondMode:
+                          type: string
+                        lacp:
+                          type: string
+                        mtuRequest:
+                          type: integer
+                      type: object
                   type: object
                 type: array
               sriovConfig:

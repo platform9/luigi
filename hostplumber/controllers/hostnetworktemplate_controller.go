@@ -18,8 +18,10 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -318,78 +320,392 @@ func applyOvsConfig(ovsConfigList []*plumberv1.OvsConfig) error {
 	for _, ovsConfig := range ovsConfigList {
 		nodeInterface := (*ovsConfig).NodeInterface
 		bridgeName := (*ovsConfig).BridgeName
-		log.Info("Physical interface name: ", "physnet", nodeInterface)
-		log.Info("Bridge interface name: ", "ovsbr", bridgeName)
-		cmd := exec.Command("ovs-vsctl", "br-exists", bridgeName)
-		output, err := cmd.CombinedOutput()
-		add_port_to_br := false
-		if err != nil {
-			// if err.Error() == "exit status 2"
-			exitError, ok := err.(*exec.ExitError)
-			log.Info("Bridge missing", "ok", ok, "out", output, "err", exitError)
-			if ok {
-				exec.Command("ovs-vsctl", "add-br", bridgeName).Run()
-				add_port_to_br = true
-			}
-		} else {
-			cmd := exec.Command("ovs-vsctl", "list-ports", bridgeName)
-			output, err := cmd.Output()
-			if err != nil {
+		dpdk := (*ovsConfig).Dpdk
+		var BondMode, Lacp string
+                var MtuRequest int
+		if (*ovsConfig).Params != nil {
+                        MtuRequest = (*ovsConfig).Params.MtuRequest
+                        BondMode = (*ovsConfig).Params.BondMode
+                        Lacp = (*ovsConfig).Params.Lacp
+                }
+
+		var nic1, nic2 string
+		interfaces := strings.Split(nodeInterface, ",")
+		length := len(interfaces)
+		if length > 2 {
+			err := errors.New("More than 2 interfaces specified for OVS bridge")
+			log.Error(err, "bridgeName", "need 1 for bridge", "or 2 for bond")
+			return nil
+		}
+
+		if length == 1 && dpdk == false {
+			if err := createOvsBridge(nodeInterface, bridgeName); err != nil {
+				log.Error(err, "Failed to create", "OVS bridge", bridgeName)
 				return err
-			}
-			exists := contains(output, nodeInterface)
-			if exists {
-				log.Info("Bridge already has a port for this node interface")
 			} else {
-				add_port_to_br = true
+				log.Info("Successfully created", "OVS bridge", bridgeName)
 			}
 		}
-		// Check if port already belongs to another bridge, remove it first if so
-		if add_port_to_br {
-			cmd := exec.Command("ovs-vsctl", "port-to-br", nodeInterface)
-			output, err := cmd.Output()
-			if err == nil {
-				br := strings.TrimSuffix(string(output), "\n")
-				log.Info("Interface already attached to another bridge", "ovsbr", br)
-				cmd := exec.Command("ovs-vsctl", "del-port", br, nodeInterface)
-				if err := cmd.Run(); err != nil {
-					log.Error(err, "Failed to remove interface from current bridge")
+		if length == 1 && dpdk == true {
+			if err := createDpdkBridge(nodeInterface, bridgeName, MtuRequest); err != nil {
+				log.Error(err, "Failed to create", "OVS-DPDK bridge", bridgeName)
+				return err
+			} else {
+				log.Info("Successfully created", "OVS-DPDK bridge", bridgeName)
+			}
+		}
+
+		if length == 2 {
+                        nic1 = interfaces[0]
+                        nic2 = interfaces[1]
+                }
+		if length == 2 && dpdk == false {
+			if err := createOvsBond(nic1, nic2, bridgeName, MtuRequest, BondMode, Lacp); err != nil {
+				log.Error(err, "Failed to create", "OVS bond for", bridgeName)
+				return err
+			} else {
+				log.Info("Successfully created", "OVS bond for", bridgeName)
+			}
+		}
+
+		if length == 2 && dpdk == true {
+			if err := createOvsDpdkBond(nic1, nic2, bridgeName, MtuRequest, BondMode, Lacp); err != nil {
+				log.Error(err, "Failed to create", "OVS-DPDK bond for", bridgeName)
+				return err
+			} else {
+				log.Info("Successfully created", "OVS-DPDK bond for", bridgeName)
+			}
+		}
+	}
+	return nil
+}
+
+func createOvsBridge(nodeInterface string, bridgeName string) error {
+	log.Info("Physical interface name: ", "physnet", nodeInterface)
+	log.Info("Bridge interface name: ", "ovsbr", bridgeName)
+	cmd := exec.Command("ovs-vsctl", "br-exists", bridgeName)
+	output, err := cmd.CombinedOutput()
+	add_port_to_br := false
+	if err != nil {
+		// if err.Error() == "exit status 2"
+		exitError, ok := err.(*exec.ExitError)
+		log.Info("Bridge missing", "ok", ok, "out", output, "err", exitError)
+		if ok {
+			exec.Command("ovs-vsctl", "add-br", bridgeName).Run()
+			add_port_to_br = true
+		}
+	} else {
+		cmd := exec.Command("ovs-vsctl", "list-ports", bridgeName)
+		output, err := cmd.Output()
+		if err != nil {
+			return err
+		}
+		exists := contains(output, nodeInterface)
+		if exists {
+			log.Info("Bridge already has a port for this node interface")
+		} else {
+			add_port_to_br = true
+		}
+	}
+	// Check if port already belongs to another bridge, remove it first if so
+	if add_port_to_br {
+		cmd := exec.Command("ovs-vsctl", "port-to-br", nodeInterface)
+		output, err := cmd.Output()
+		if err == nil {
+			br := strings.TrimSuffix(string(output), "\n")
+			log.Info("Interface already attached to another bridge", "ovsbr", br)
+			cmd := exec.Command("ovs-vsctl", "del-port", br, nodeInterface)
+			if err := cmd.Run(); err != nil {
+				log.Error(err, "Failed to remove interface from current bridge")
+				return err
+			}
+		}
+		cmd = exec.Command("ovs-vsctl", "add-port", bridgeName, nodeInterface)
+		if err := cmd.Run(); err != nil {
+			log.Error(err, "Failed to add interface to specified bridge")
+			return err
+		}
+		log.Info("Added node interface to ovs bridge", "ovsbr", bridgeName)
+
+		// Move interface IPs (if any) to the corresponding OVS bridge
+		ipv4Addrs, err := iputils.GetIpv4Cidr(nodeInterface)
+		move_ips := false
+		if err != nil {
+			log.Error(err, "Error getting IPv4 address for interface", "ifName", nodeInterface)
+		} else if len(*ipv4Addrs) == 0 {
+			log.Info("No IPv4 address for interface", "ifName", nodeInterface)
+		} else {
+			log.Info("IPv4 address(es) for interface", "ifName", nodeInterface, "ip", *ipv4Addrs)
+			for _, addr := range *ipv4Addrs {
+				log.Info("Removing interface IP", "ifName", nodeInterface, "ip", addr)
+				if err := iputils.DelIpv4Cidr(nodeInterface, addr); err != nil {
+					log.Error(err, "Failed to flush IP", "ifName", nodeInterface, "ip", addr)
 					return err
 				}
 			}
-			// Move interface IPs (if any) to the corresponding OVS bridge
-			ipv4Addrs, err := iputils.GetIpv4Cidr(nodeInterface)
-			move_ips := false
-			if err != nil {
-				log.Error(err, "Error getting IPv4 address for interface", "ifName", nodeInterface)
-			} else if len(*ipv4Addrs) == 0 {
-				log.Info("No IPv4 address for interface", "ifName", nodeInterface)
-			} else {
-				log.Info("IPv4 address(es) for interface", "ifName", nodeInterface, "ip", *ipv4Addrs)
-				for _, addr := range *ipv4Addrs {
-					log.Info("Removing interface IP", "ifName", nodeInterface, "ip", addr)
-					if err := iputils.DelIpv4Cidr(nodeInterface, addr); err != nil {
-						log.Error(err, "Failed to flush IP", "ifName", nodeInterface, "ip", addr)
-						return err
-					}
+			move_ips = true
+		}
+		if move_ips {
+			for _, addr := range *ipv4Addrs {
+				log.Info("Attempting to assign IP to bridge", "ovsbr", bridgeName, "ip", addr)
+				if err := iputils.SetIpv4Cidr(bridgeName, addr); err != nil {
+					log.Info("Failed to assign IP to bridge", "ovsbr", bridgeName, "ip", addr)
+					return err
 				}
-				move_ips = true
 			}
+		}
+	}
+	return nil
+}
 
-			cmd = exec.Command("ovs-vsctl", "add-port", bridgeName, nodeInterface)
-			if err := cmd.Run(); err != nil {
-				log.Error(err, "Failed to add interface to specified bridge")
+func createDpdkBridge(nodeInterface string, bridgeName string, mtuRequest int) error {
+	log.Info("Physical interface name: ", "physnet", nodeInterface)
+	log.Info("Bridge interface name: ", "ovsbr", bridgeName)
+	portName := "dpdk-" + bridgeName
+	cmd := exec.Command("ovs-vsctl", "br-exists", bridgeName)
+	output, err := cmd.CombinedOutput()
+	add_port_to_br := false
+	if err != nil {
+		// if err.Error() == "exit status 2"
+		exitError, ok := err.(*exec.ExitError)
+		log.Info("Bridge missing", "ok", ok, "out", output, "err", exitError)
+		if ok {
+			brCmd := "ovs-vsctl add-br " + bridgeName + " -- set bridge " + bridgeName + " datapath_type=netdev"
+			cmd = exec.Command("bash", "-c", brCmd)
+			_, err = cmd.CombinedOutput()
+			if err != nil {
 				return err
 			}
-			log.Info("Added node interface to ovs bridge", "ovsbr", bridgeName)
-			if move_ips {
-				for _, addr := range *ipv4Addrs {
-					log.Info("Attempting to assign IP to bridge", "ovsbr", bridgeName, "ip", addr)
-					if err := iputils.SetIpv4Cidr(bridgeName, addr); err != nil {
-						log.Info("Failed to assign IP to bridge", "ovsbr", bridgeName, "ip", addr)
-						return err
-					}
-				}
+			log.Info("Created : ", "ovsbr", bridgeName)
+			add_port_to_br = true
+		}
+	} else {
+		cmd := exec.Command("ovs-vsctl", "list-ports", bridgeName)
+		output, err := cmd.Output()
+		if err != nil {
+			return err
+		}
+		exists := strings.Contains(strings.TrimSuffix(string(output), "\n"), portName)
+		if exists {
+			log.Info("Bridge", bridgeName, "already has a port for this node interface")
+		} else {
+			add_port_to_br = true
+		}
+	}
+	// Check if port already belongs to another bridge, remove it first if so
+	if add_port_to_br {
+		//get the PCI address for the NIC’s and bind vfio-pci driver:
+		pciAddr, err := findPciAddr(nodeInterface)
+		if err != nil {
+			return err
+		}
+		log.Info("Pci Address of", nodeInterface, pciAddr)
+		bindCmd := "dpdk-devbind.py --bind=vfio-pci " + pciAddr
+		cmd = exec.Command("bash", "-c", bindCmd)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Error(err, "Error binding", "interface", nodeInterface)
+			return err
+		}
+		addportCmd := "ovs-vsctl add-port " + bridgeName + " " + portName + " -- set Interface " + portName + " type=dpdk options:dpdk-devargs=" + pciAddr
+		cmd = exec.Command("bash", "-c", addportCmd)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Error(err, "Failed to add interface to", "bridge", bridgeName)
+			return err
+		}
+		var setIfaceCmd string
+		if mtuRequest != 0 {
+			setIfaceCmd = "ovs-vsctl set Interface " + portName + " mtu_request=" + strconv.Itoa(mtuRequest)
+			cmd = exec.Command("bash", "-c", setIfaceCmd)
+			_, err = cmd.CombinedOutput()
+			if err != nil {
+				log.Error(err, "Could not set ", "mtu_request=", mtuRequest)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func createOvsBond(nic1 string, nic2 string, bridgeName string, mtuRequest int, bondMode string, lacp string) error {
+	log.Info("Physical interface1 name: ", "physnet", nic1)
+	log.Info("Physical interface2 name: ", "physnet", nic2)
+	log.Info("Bridge interface name: ", "ovsbr", bridgeName)
+	bondName := "bond-" + bridgeName
+	cmd := exec.Command("ovs-vsctl", "br-exists", bridgeName)
+	output, err := cmd.CombinedOutput()
+	add_bond_to_br := false
+	if err != nil {
+		// if err.Error() == "exit status 2"
+		exitError, ok := err.(*exec.ExitError)
+		log.Info("Bridge missing", "ok", ok, "out", output, "err", exitError)
+		if ok {
+			cmd = exec.Command("ovs-vsctl", "add-br", bridgeName)
+			_, err = cmd.CombinedOutput()
+			if err != nil {
+				return err
+			}
+			log.Info("Created : ", "ovsbr", bridgeName)
+			add_bond_to_br = true
+		}
+	} else {
+		cmd = exec.Command("ovs-vsctl", "list-ports", bridgeName)
+		output, err = cmd.Output()
+		if err != nil {
+			return err
+		}
+		exists := strings.Contains(strings.TrimSuffix(string(output), "\n"), bondName)
+		cmd = exec.Command("ovs-vsctl", "list-ifaces", bridgeName)
+		output, err = cmd.Output()
+		if err != nil {
+			return err
+		}
+		if exists && strings.Contains(strings.TrimSuffix(string(output), "\n"), nic1) && strings.Contains(strings.TrimSuffix(string(output), "\n"), nic2) {
+			log.Info("Bridge", bridgeName, "already has a bond added to it")
+		} else {
+			add_bond_to_br = true
+		}
+
+	}
+	if add_bond_to_br {
+		var setPortCmd, setIfaceCmd string
+		bondCmd := "ovs-vsctl add-bond " + bridgeName + " " + bondName + " " + nic1 + " " + nic2
+		cmd = exec.Command("bash", "-c", bondCmd)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Error(err, "Error adding ", "OVS bond to bridge", bridgeName)
+			return err
+		}
+		if mtuRequest != 0 {
+			setIfaceCmd = "ovs-vsctl set Interface " + bridgeName + " mtu_request=" + strconv.Itoa(mtuRequest)
+			cmd = exec.Command("bash", "-c", setIfaceCmd)
+			_, err = cmd.CombinedOutput()
+			if err != nil {
+				log.Error(err, "Could not set ", "mtu_request=", mtuRequest)
+				return err
+			}
+		}
+		if bondMode != "" {
+			setPortCmd = "ovs-vsctl set port bond-" + bridgeName + " bond_mode=" + bondMode
+			cmd = exec.Command("bash", "-c", setPortCmd)
+			_, err = cmd.CombinedOutput()
+			if err != nil {
+				log.Error(err, "Could not set ", "bond_mode=", bondMode)
+				return err
+			}
+		}
+		if lacp != "" {
+			setPortCmd = "ovs-vsctl set port bond-" + bridgeName + " lacp=" + lacp
+			cmd = exec.Command("bash", "-c", setPortCmd)
+			_, err = cmd.CombinedOutput()
+			if err != nil {
+				log.Error(err, "Could not set lacp")
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func createOvsDpdkBond(nic1 string, nic2 string, bridgeName string, mtuRequest int, bondMode string, lacp string) error {
+	log.Info("Physical interface1 name: ", "physnet", nic1)
+	log.Info("Physical interface2 name: ", "physnet", nic2)
+	log.Info("Bridge interface name: ", "ovsbr", bridgeName)
+	bondName := "dpdkbond-" + bridgeName
+	cmd := exec.Command("ovs-vsctl", "br-exists", bridgeName)
+	output, err := cmd.CombinedOutput()
+	add_bond_to_br := false
+	if err != nil {
+		// if err.Error() == "exit status 2"
+		exitError, ok := err.(*exec.ExitError)
+		log.Info("Bridge missing", "ok", ok, "out", output, "err", exitError)
+		if ok {
+			brCmd := "ovs-vsctl add-br " + bridgeName + " -- set bridge " + bridgeName + " datapath_type=netdev"
+			cmd = exec.Command("bash", "-c", brCmd)
+			_, err = cmd.CombinedOutput()
+			if err != nil {
+				return err
+			}
+			log.Info("Created : ", "ovsbr", bridgeName)
+			add_bond_to_br = true
+		}
+	} else {
+		cmd := exec.Command("ovs-vsctl", "list-ports", bridgeName)
+		output, err := cmd.Output()
+		if err != nil {
+			return err
+		}
+		exists := strings.Contains(strings.TrimSuffix(string(output), "\n"), bondName)
+		if exists {
+			log.Info("Bridge", bridgeName, "already has a bond added to it")
+		} else {
+			add_bond_to_br = true
+		}
+	}
+
+	if add_bond_to_br {
+		pciNic1, err := findPciAddr(nic1)
+		if err != nil {
+			log.Error(err, "Could not find PCI address of ", "Interface", nic1)
+			return err
+		}
+		pciNic2, err := findPciAddr(nic2)
+		if err != nil {
+			log.Error(err, "Could not find PCI address of ", "Interface", nic2)
+			return err
+		}
+
+		log.Info("Pci Address of", nic1, pciNic1)
+		bindCmd := "dpdk-devbind.py --bind=vfio-pci " + pciNic1
+		cmd = exec.Command("bash", "-c", bindCmd)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Error(err, "Error binding", "interface", nic1)
+			return err
+		}
+		log.Info("Pci Address of", nic2, pciNic2)
+		bindCmd = "dpdk-devbind.py --bind=vfio-pci " + pciNic2
+		cmd = exec.Command("bash", "-c", bindCmd)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Error(err, "Error binding", "interface", nic2)
+			return err
+		}
+
+		var bondCmd, setIfaceCmd, setPortCmd string
+		bondCmd = "ovs-vsctl add-bond " + bridgeName + " " + bondName + " " + bridgeName + "-dpdk0 " + bridgeName + "-dpdk1" + " -- set Interface " + bridgeName + "-dpdk0 type=dpdk options:dpdk-devargs=" + pciNic1 + " -- set Interface " + bridgeName + "-dpdk1 type=dpdk options:dpdk-devargs=" + pciNic2
+		cmd = exec.Command("bash", "-c", bondCmd)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Error(err, "Error adding ", "DPDK bond to bridge", bridgeName)
+			return err
+		}
+		if mtuRequest != 0 {
+			setIfaceCmd = "ovs-vsctl set Interface " + bridgeName + "  mtu_request=" + strconv.Itoa(mtuRequest)
+			cmd = exec.Command("bash", "-c", setIfaceCmd)
+			_, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Error(err, "Could not set ", "mtu_request=", mtuRequest)
+				return err
+			}
+		}
+		if bondMode != "" {
+			setPortCmd = "ovs-vsctl set port dpdkbond-" + bridgeName + " bond_mode=" + bondMode
+			cmd = exec.Command("bash", "-c", setPortCmd)
+			_, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Error(err, "Could not set ", "bond_mode=", bondMode)
+				return err
+			}
+		}
+		if lacp != "" {
+			setPortCmd = "ovs-vsctl set port dpdkbond-" + bridgeName + " lacp=" + lacp
+			cmd = exec.Command("bash", "-c", setPortCmd)
+			_, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Error(err, "Could not set lacp")
+				return err
 			}
 		}
 	}
@@ -492,4 +808,15 @@ func removeString(slice []string, s string) (result []string) {
 		result = append(result, item)
 	}
 	return
+}
+
+func findPciAddr(nodeInterface string) (string, error) {
+	cmd := "ethtool -i " + nodeInterface + "| grep bus-info | awk '{print $2}'"
+	out, err := exec.Command("bash", "-c", cmd).Output()
+	if err != nil {
+		log.Error(err, "Error finding PCI address of", "interface", nodeInterface)
+		return "", err
+	}
+	pci := strings.TrimSuffix(string(out), "\n")
+	return pci, nil
 }
