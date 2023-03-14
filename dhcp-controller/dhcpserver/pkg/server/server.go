@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"time"
@@ -81,32 +80,6 @@ func parseConfig() error {
 	return nil
 }
 
-func applyInterfaceIp() error {
-
-	addresses := strings.Split(os.Getenv("BIND_INTERFACE_IP"), ",")
-
-	for idx, address := range addresses {
-		//TODO figure out the interface name instead of hardcoding as per image
-		args := []string{"ip", "address", "add", address, "dev", "eth" + strconv.Itoa(idx+1)}
-
-		cmd := exec.Command("sudo", args...)
-		serverLog.Info("Applying interface IP: " + address)
-
-		var out bytes.Buffer
-		var stderr bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &stderr
-
-		err := cmd.Run()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-
-}
-
 func delLeasefromVMPod(refs []string) error {
 	f, err := os.Open(leasePath)
 	if err != nil {
@@ -164,7 +137,6 @@ func Start() {
 		panic(err)
 	}
 
-	applyInterfaceIp()
 	parseConfig()
 
 	args := []string{

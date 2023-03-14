@@ -6,6 +6,5 @@
     - "mkdir /etc/dnsmasq.d/"
     - "mount /dev/sdb /etc/dnsmasq.d/"
     - "export KUBECONFIG=/mnt/kubeconfig/default.yaml"
-    - "export BIND_INTERFACE_IP={{.interfaceip}}"
     - "iptables -A POSTROUTING -t mangle -p udp --dport bootpc -j CHECKSUM --checksum-fill"
     - "./home/fedora/manager"
