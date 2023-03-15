@@ -299,6 +299,23 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 		log.Error(err, "Failed to create the netcloudinit secret")
 	}
 
+	// Make the vm password secret
+	vmi_pwd_secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name + "-pwd",
+			Namespace: v.Namespace,
+		},
+		StringData: map[string]string{"root": "root"},
+	}
+	err = r.Delete(context.TODO(), vmi_pwd_secret)
+	if err != nil {
+		log.Error(err, "Failed to delete the vm password secret or there is none")
+	}
+	err = r.Create(context.TODO(), vmi_pwd_secret)
+	if err != nil {
+		log.Error(err, "Failed to create the vm password secret")
+	}
+
 	// Hugepages
 	interfaceTypes := r.getInterfaceTypes(networkNames, v.Namespace)
 	hugepageMemory := &kubevirtv1.Memory{}
@@ -369,6 +386,18 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 			Running: &t,
 			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
 				Spec: kubevirtv1.VirtualMachineInstanceSpec{
+					AccessCredentials: []kubevirtv1.AccessCredential{{
+						UserPassword: &kubevirtv1.UserPasswordAccessCredential{
+							Source: kubevirtv1.UserPasswordAccessCredentialSource{
+								Secret: &kubevirtv1.AccessCredentialSecretSource{
+									SecretName: v.Name + "-pwd",
+								},
+							},
+							PropagationMethod: kubevirtv1.UserPasswordAccessCredentialPropagationMethod{
+								QemuGuestAgent: &kubevirtv1.QemuGuestAgentUserPasswordAccessCredentialPropagation{},
+							},
+						},
+					}},
 					Domain: kubevirtv1.DomainSpec{
 						Memory: hugepageMemory,
 						Devices: kubevirtv1.Devices{

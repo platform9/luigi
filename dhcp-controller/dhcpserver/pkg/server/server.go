@@ -142,6 +142,7 @@ func Start() {
 	args := []string{
 		"dnsmasq",
 		"--no-daemon",
+		"--log-facility=/var/log/dnsmasq.log",
 		"--conf-dir=/etc/dnsmasq.d/",
 	}
 
