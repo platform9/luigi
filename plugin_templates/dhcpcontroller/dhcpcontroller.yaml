@@ -142,6 +142,17 @@ metadata:
   name: dhcp-controller-manager-role
 rules:
 - apiGroups:
+  - pool.kubevirt.io
+  resources:
+  - virtualmachinepools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - k8s.cni.cncf.io
   resources:
   - network-attachment-definitions

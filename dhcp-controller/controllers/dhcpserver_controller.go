@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	kubevirtv1 "kubevirt.io/api/core/v1"
+	poolv1alpha1 "kubevirt.io/api/pool/v1alpha1"
 
 	"net"
 	"os"
@@ -172,9 +173,9 @@ func (r *DHCPServerReconciler) ensureServer(request reconcile.Request,
 
 	found := &unstructured.Unstructured{}
 	found.SetGroupVersionKind(runtimeschema.GroupVersionKind{
-		Group:   "kubevirt.io",
-		Kind:    "VirtualMachine",
-		Version: "v1",
+		Group:   "pool.kubevirt.io",   //"kubevirt.io",
+		Kind:    "VirtualMachinePool", //"VirtualMachine",
+		Version: "v1alpha1",           //"v1",
 	})
 	err, cm := r.genConfigMap(server)
 	if err != nil {
@@ -473,17 +474,37 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 		},
 	}
 
+	replicas := int32(2)
+	vmpool := &poolv1alpha1.VirtualMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v.Name,
+			Namespace: v.Namespace,
+		},
+		Spec: poolv1alpha1.VirtualMachinePoolSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"select": v.Name},
+			},
+			VirtualMachineTemplate: &poolv1alpha1.VirtualMachineTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"select": v.Name},
+				},
+				Spec: vm.Spec,
+			},
+		},
+	}
+
 	// This section replaces "bridge" interface type with "vhostuser" for DPDK networks. Since this is not a valid type in the KubeVirt client (as its a custom change), It is manually replaced in an unstructured format.
 	// If vhostuser becomes an offical interface in the future in the KubeVirt client, this section can be removed and generated VM spec can be edited to reflect it.
 	// Convert to unstructured
-	unstructuredvm, err := runtime.DefaultUnstructuredConverter.ToUnstructured(vm)
+	unstructuredvm, err := runtime.DefaultUnstructuredConverter.ToUnstructured(vmpool)
 	if err != nil {
 		log.Error(err, "unable to convert VM spec to unstructured")
 	}
 	unstructuredvm_final := &unstructured.Unstructured{Object: unstructuredvm}
 
 	// Get the nested interface slice
-	interfacelist, _, err := unstructured.NestedSlice(unstructuredvm_final.Object, "spec", "template", "spec", "domain", "devices", "interfaces")
+	interfacelist, _, err := unstructured.NestedSlice(unstructuredvm_final.Object, "spec", "virtualMachineTemplate", "spec", "template", "spec", "domain", "devices", "interfaces")
 	if err != nil {
 		log.Error(err, "unable to get interfaces from unstructured VM spec")
 	}
@@ -496,11 +517,11 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 		}
 	}
 	// Replace the old interface slice
-	unstructured.SetNestedSlice(unstructuredvm_final.Object, interfacelist, "spec", "template", "spec", "domain", "devices", "interfaces")
+	unstructured.SetNestedSlice(unstructuredvm_final.Object, interfacelist, "spec", "virtualMachineTemplate", "spec", "template", "spec", "domain", "devices", "interfaces")
 	unstructuredvm_final.SetGroupVersionKind(runtimeschema.GroupVersionKind{
-		Group:   "kubevirt.io",
-		Kind:    "VirtualMachine",
-		Version: "v1",
+		Group:   "pool.kubevirt.io",   //"kubevirt.io",
+		Kind:    "VirtualMachinePool", //"VirtualMachine",
+		Version: "v1alpha1",           //"v1",
 	})
 
 	controllerutil.SetControllerReference(&v, unstructuredvm_final, r.Scheme)
