@@ -1,0 +1,47 @@
+package vmutils
+
+import (
+	"github.com/platform9/luigi/yoshi/pkg/cni"
+	"github.com/platform9/luigi/yoshi/pkg/utils/constants"
+	kubevirtv1 "kubevirt.io/api/core/v1"
+)
+
+func GetVMNetworkAnnotation(vm *kubevirtv1.VirtualMachine) string {
+	if vm.Annotations == nil {
+		return ""
+	}
+	net, ok := vm.Annotations[constants.Pf9NetworkAnnotation]
+	if !ok {
+		return ""
+	}
+	return net
+}
+
+func VMHasFixedIP(vm *kubevirtv1.VirtualMachine) bool {
+	if vm.Spec.Template.ObjectMeta.Annotations == nil {
+		return false
+	}
+
+	ip, ok := vm.Spec.Template.ObjectMeta.Annotations[cni.CalicoFixedIpAnnotation]
+	if !ok || ip == "" {
+		return false
+	}
+	return true
+}
+
+func SetVMFixedIP(vm *kubevirtv1.VirtualMachine, fixedIP string) {
+	if vm.Spec.Template.ObjectMeta.Annotations == nil {
+		vm.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	}
+
+	ipAnnotation := "[\"" + fixedIP + "\"]"
+	vm.Spec.Template.ObjectMeta.Annotations[cni.CalicoFixedIpAnnotation] = ipAnnotation
+}
+
+func SetVMIServiceName(vm *kubevirtv1.VirtualMachine) {
+	if vm.Spec.Template.ObjectMeta.Labels == nil {
+		vm.Spec.Template.ObjectMeta.Labels = make(map[string]string)
+	}
+	// Label the VM so controller can create a service later for Public IP
+	vm.Spec.Template.ObjectMeta.Labels[constants.Pf9VMIServiceLabel] = vm.GetName()
+}

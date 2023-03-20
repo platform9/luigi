@@ -12,12 +12,12 @@ spec:
       vfDriver: i40evf
       mtu: 1500
   interfaceConfig:
-    - name: eno2
+    - name: eno50
       vlan:
         - id: 1000
         - id: 1001
         - id: 1002
   ovsConfig:
-  - bridgeName: ovs-br01
-    nodeInterface: eno2.1000
+  - bridgeName: br-vlan
+    nodeInterface: ens6f0
 

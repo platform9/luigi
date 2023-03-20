@@ -1,0 +1,13 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: NetworkWizard
+metadata:
+  labels:
+    app.kubernetes.io/name: networkwizard
+    app.kubernetes.io/instance: networkwizard-sample
+    app.kubernetes.io/part-of: yoshi
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: yoshi
+  name: newarjunpool
+spec:
+  plugin: "calico"
+  cidr: "10.133.0.0/16"

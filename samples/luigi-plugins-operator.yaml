@@ -348,7 +348,7 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: localhost:5100/kubebuilder/kube-rbac-proxy:v0.11.0
+        image: docker.io/kubebuilder/kube-rbac-proxy:v0.11.0
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -367,7 +367,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: localhost:5100/platform9/luigi-plugins:v0.4.1
+        image: docker.io/platform9/luigi-plugins:v0.4.2
         livenessProbe:
           httpGet:
             path: /healthz
