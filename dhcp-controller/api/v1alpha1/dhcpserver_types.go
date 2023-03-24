@@ -38,7 +38,7 @@ type Network struct {
 	// +kubebuilder:validation:Required
 	NetworkCIDR CIDR `json:"cidr"`
 	// refers to leasetime of IP
-	LeaseDuration string `json:"leaseDuration"`
+	LeaseDuration string `json:"leaseDuration,omitempty"`
 	// refers to vlan
 	VlanID string `json:"vlanId,omitempty"`
 }
