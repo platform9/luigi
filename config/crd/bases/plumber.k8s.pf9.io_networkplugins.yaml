@@ -43,6 +43,12 @@ spec:
                         type: string
                       imagePullPolicy:
                         type: string
+                      kubemacpoolRangeEnd:
+                        type: string
+                      kubemacpoolRangeStart:
+                        type: string
+                      kubemacpoolnamespace:
+                        type: string
                     type: object
                   hostPlumber:
                     properties:

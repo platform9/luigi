@@ -48,7 +48,8 @@ import (
 )
 
 const (
-	DefaultNamespace        = "default"
+	DefaultNamespace        = "luigi-system"
+	KubemacpoolNamespace    = "dhcp-controller-system"
 	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2573338"
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6-pmk-6"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2571007"
@@ -57,7 +58,10 @@ const (
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.26.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.26.2"
 	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.4.1"
-	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v0.1"
+	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v1.0"
+	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:latest"
+	KubemacpoolRangeStart   = "02:55:43:00:00:00"
+	KubemacpoolRangeEnd     = "02:55:43:FF:FF:FF"
 	KubeRbacProxyImage      = "gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0"
 	NfdImage                = "docker.io/platform9/node-feature-discovery:v0.11.3-pmk-2575337"
 	TemplateDir             = "/etc/plugin_templates/"
@@ -245,7 +249,26 @@ func (dhcpControllerConfig *DhcpControllerT) WriteConfigToTemplate(outputDir, re
 		config["DhcpControllerImage"] = ReplaceContainerRegistry(DhcpControllerImage, registry)
 	}
 
+	if dhcpControllerConfig.KubemacpoolNamespace != "" {
+		config["KubemacpoolNamespace"] = dhcpControllerConfig.KubemacpoolNamespace
+	} else {
+		config["KubemacpoolNamespace"] = KubemacpoolNamespace
+	}
+
+	if dhcpControllerConfig.KubemacpoolRangeStart != "" {
+		config["KubemacpoolRangeStart"] = dhcpControllerConfig.KubemacpoolRangeStart
+	} else {
+		config["KubemacpoolRangeStart"] = KubemacpoolRangeStart
+	}
+
+	if dhcpControllerConfig.KubemacpoolRangeEnd != "" {
+		config["KubemacpoolRangeEnd"] = dhcpControllerConfig.KubemacpoolRangeEnd
+	} else {
+		config["KubemacpoolRangeEnd"] = KubemacpoolRangeEnd
+	}
+
 	config["KubeRbacProxyImage"] = ReplaceContainerRegistry(KubeRbacProxyImage, registry)
+	config["KubemacpoolImage"] = ReplaceContainerRegistry(KubemacpoolImage, registry)
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "dhcpcontroller", "dhcpcontroller.yaml"))
 	if err != nil {

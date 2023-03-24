@@ -85,8 +85,11 @@ type Sriov struct {
 }
 
 type DhcpController struct {
-	ImagePullPolicy     string `json:"imagePullPolicy,omitempty"`
-	DhcpControllerImage string `json:"DHCPControllerImage,omitempty"`
+	KubemacpoolNamespace  string `json:"kubemacpoolnamespace,omitempty"`
+	ImagePullPolicy       string `json:"imagePullPolicy,omitempty"`
+	DhcpControllerImage   string `json:"DHCPControllerImage,omitempty"`
+	KubemacpoolRangeStart string `json:"kubemacpoolRangeStart,omitempty"`
+	KubemacpoolRangeEnd   string `json:"kubemacpoolRangeEnd,omitempty"`
 }
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins
