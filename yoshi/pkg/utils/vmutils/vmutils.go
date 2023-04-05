@@ -1,6 +1,8 @@
 package vmutils
 
 import (
+	"fmt"
+
 	"github.com/platform9/luigi/yoshi/pkg/cni"
 	"github.com/platform9/luigi/yoshi/pkg/utils/constants"
 	kubevirtv1 "kubevirt.io/api/core/v1"
@@ -42,6 +44,24 @@ func SetVMIServiceName(vm *kubevirtv1.VirtualMachine) {
 	if vm.Spec.Template.ObjectMeta.Labels == nil {
 		vm.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 	}
-	// Label the VM so controller can create a service later for Public IP
-	vm.Spec.Template.ObjectMeta.Labels[constants.Pf9VMIServiceLabel] = vm.GetName()
+	// Label the VMI so controller can create a service later for Public IP
+	// The label must be on VMI, not VM
+	vm.Spec.Template.ObjectMeta.Labels[constants.Pf9VMIServiceLabel] = GetVmRef(vm)
+}
+
+func GetVMPublicIP(vm *kubevirtv1.VirtualMachine) string {
+	if vm.Annotations == nil {
+		return ""
+	}
+
+	ip, ok := vm.Annotations[constants.Pf9PublicIPAnnotation]
+	if !ok {
+		return ""
+	}
+
+	return ip
+}
+
+func GetVmRef(vm *kubevirtv1.VirtualMachine) string {
+	return fmt.Sprintf("%s.%s", vm.GetName(), vm.GetNamespace())
 }

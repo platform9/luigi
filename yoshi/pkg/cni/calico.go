@@ -48,7 +48,7 @@ func (calico *CalicoProvider) CreateNetwork(ctx context.Context, network *plumbe
 
 	ippool := calicov3.NewIPPool()
 	ippool.Name = network.Name
-	ippool.Spec.CIDR = network.Spec.CIDR
+	ippool.Spec.CIDR = *network.Spec.CIDR
 	ippool.Spec.BlockSize = DefaultCalicoBlockSize
 	ippool.Spec.NATOutgoing = DefaultNatOutgoing
 	ippool.Spec.IPIPMode = DefaultIpIpMode

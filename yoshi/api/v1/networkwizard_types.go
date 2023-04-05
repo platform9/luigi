@@ -29,9 +29,9 @@ type NetworkWizardSpec struct {
 	Plugin string `json:"plugin,omitempty"`
 
 	// CIDR notation for the network plugin to provision
-	CIDR       string `json:"cidr,omitempty"`
-	RangeStart net.IP `json:"range_start,omitempty"`
-	RangeEnd   net.IP `json:"range_end,omitempty"`
+	CIDR       *string `json:"cidr,omitempty"`
+	RangeStart net.IP  `json:"range_start,omitempty"`
+	RangeEnd   net.IP  `json:"range_end,omitempty"`
 
 	// BGPConfiguration - valid only for "public" type networks
 	BGPConfig *BGPConfig `json:"bgpConfig,omitempty"`
@@ -42,14 +42,14 @@ type BGPConfig struct {
 	RemotePeers []string `json:"peers,omitempty"`
 
 	// ASN of peer router
-	RemoteASN *int `json:"remoteASN,omitempty"`
+	RemoteASN *uint32 `json:"remoteASN,omitempty"`
 
 	// ASN to use for the cluster's BGP advertisements
-	MyASN *int `json:"myASN,omitempty"`
+	MyASN *uint32 `json:"myASN,omitempty"`
 }
 
 func (n NetworkWizard) ParseCIDR() (net.IP, *net.IPNet, error) {
-	return net.ParseCIDR(n.Spec.CIDR)
+	return net.ParseCIDR(*n.Spec.CIDR)
 }
 
 // NetworkWizardStatus defines the observed state of NetworkWizard

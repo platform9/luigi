@@ -40,6 +40,7 @@ spec:
                 properties:
                   myASN:
                     description: ASN to use for the cluster's BGP advertisements
+                    format: int32
                     type: integer
                   peers:
                     description: Comma separated list of physical routers to peer
@@ -49,6 +50,7 @@ spec:
                     type: array
                   remoteASN:
                     description: ASN of peer router
+                    format: int32
                     type: integer
                 type: object
               cidr:
