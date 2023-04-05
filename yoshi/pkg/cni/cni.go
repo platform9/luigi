@@ -21,15 +21,12 @@ type CNIOpts struct {
 	Log    logr.Logger
 }
 
-type PublicNetProvider interface {
-	CreatePublic() error
-	DeletePublic(string) error
-}
-
 func NewCNIProvider(ctx context.Context, plugin string, opts *CNIOpts) (CNIProvider, error) {
 	switch plugin {
 	case "calico":
 		return NewCalicoProvider(ctx, opts), nil
+	case "public":
+		return NewPublicProvider(ctx, opts), nil
 	case "ovs":
 		return nil, fmt.Errorf("Plugin not implemented yet")
 	default:

@@ -8,7 +8,9 @@ import (
 	"github.com/platform9/luigi/yoshi/pkg/utils/constants"
 	"github.com/platform9/luigi/yoshi/pkg/utils/iputils"
 	"github.com/platform9/luigi/yoshi/pkg/utils/vmutils"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/api/core/v1"
@@ -29,6 +31,7 @@ type VMReqWrapper struct {
 	Client      client.Client
 	needsUpdate bool
 	vm          *kubevirtv1.VirtualMachine
+	vmRef       string
 	networks    []*plumberv1.NetworkWizard
 }
 
@@ -42,6 +45,7 @@ func NewVMReqWrapper(log logr.Logger, client client.Client) *VMReqWrapper {
 
 func (req *VMReqWrapper) WithVM(vm *kubevirtv1.VirtualMachine) *VMReqWrapper {
 	req.vm = vm
+	req.vmRef = vmutils.GetVmRef(vm)
 	return req
 }
 
@@ -57,7 +61,7 @@ func (req *VMReqWrapper) WithNetworks(networks ...*plumberv1.NetworkWizard) *VMR
 
 func (r *VMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("virtualmachine", req.NamespacedName)
-	log.Info("Inside VM controller!!")
+	log.Info("Reconciling VM")
 
 	vm := &kubevirtv1.VirtualMachine{}
 	if err := r.Client.Get(ctx, req.NamespacedName, vm); err != nil {
@@ -98,13 +102,9 @@ func (r *VMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 }
 
 func (r *VMReconciler) ReconcileVM(ctx context.Context, req *VMReqWrapper) (ctrl.Result, error) {
-	if !controllerutil.ContainsFinalizer(req.vm, constants.VMFinalizerName) {
-		controllerutil.AddFinalizer(req.vm, constants.VMFinalizerName)
-		req.Log.Info("Adding finalizer and updating")
-		if err := r.Client.Update(ctx, req.vm); err != nil {
-			r.Log.Error(err, "unable to update VM with finalizer")
-			return ctrl.Result{Requeue: true}, err
-		}
+
+	if err := r.ensureServiceForVM(ctx, req); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	if res, err := r.ReconcileFixedIP(ctx, req); !res.IsZero() || err != nil {
@@ -131,6 +131,11 @@ func (r *VMReconciler) UpdateCRs(ctx context.Context, req *VMReqWrapper) (ctrl.R
 
 func (r *VMReconciler) UpdateVM(ctx context.Context, req *VMReqWrapper) (ctrl.Result, error) {
 	req.Log.Info("UpdateVM")
+	if !controllerutil.ContainsFinalizer(req.vm, constants.VMFinalizerName) {
+		controllerutil.AddFinalizer(req.vm, constants.VMFinalizerName)
+		req.Log.Info("Adding finalizer and updating")
+	}
+
 	running := true
 	req.vm.Spec.Running = &running
 	if err := r.Client.Update(ctx, req.vm); err != nil {
@@ -178,7 +183,7 @@ func (r *VMReconciler) ReconcileFixedIP(ctx context.Context, req *VMReqWrapper) 
 
 	req = req.WithNetworks(network)
 
-	cidr := network.Spec.CIDR
+	cidr := *network.Spec.CIDR
 	allocations := network.Status.IPAllocations
 	if allocations == nil {
 		allocations = make(map[string]string)
@@ -203,6 +208,11 @@ func (r *VMReconciler) ReconcileFixedIP(ctx context.Context, req *VMReqWrapper) 
 
 func (r *VMReconciler) ReconcileDeleteVM(ctx context.Context, req *VMReqWrapper) error {
 	req.Log.Info("Deleting VM...")
+
+	if err := r.deleteServiceForVM(ctx, req); err != nil {
+		return err
+	}
+
 	networks, err := r.GetNetworksForVM(ctx, req)
 	if err != nil {
 		req.Log.Error(err, "Failed to get networks for VM")
@@ -268,6 +278,66 @@ func (r *VMReconciler) DeleteIPAllocationsForVM(ctx context.Context, req *VMReqW
 	return nil
 }
 
+func (r *VMReconciler) ensureServiceForVM(ctx context.Context, req *VMReqWrapper) error {
+	objMeta := metav1.ObjectMeta{Name: req.vm.Name, Namespace: req.vm.Namespace}
+	service := &corev1.Service{ObjectMeta: objMeta}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
+		if service.Spec.Selector == nil {
+			service.Spec.Selector = make(map[string]string)
+		}
+
+		service.Spec.Selector[constants.Pf9VMIServiceLabel] = req.vmRef
+
+		// Set default ports if none present
+		if service.Spec.Ports == nil {
+			ports := []corev1.ServicePort{
+				{
+					Name:     "ssh",
+					Port:     22,
+					Protocol: "TCP",
+				},
+				{
+					Name:     "http",
+					Port:     80,
+					Protocol: "TCP",
+				},
+				{
+					Name:     "https",
+					Port:     443,
+					Protocol: "TCP",
+				},
+			}
+			service.Spec.Ports = ports
+		}
+
+		publicIP := vmutils.GetVMPublicIP(req.vm)
+		service.Spec.ExternalIPs = []string{publicIP}
+
+		return nil
+	})
+	if err != nil {
+		req.Log.Error(err, "Failed to create Service for VM", "vm", req.vmRef)
+		return err
+	}
+	return nil
+}
+
+func (r *VMReconciler) deleteServiceForVM(ctx context.Context, req *VMReqWrapper) error {
+	service := &corev1.Service{}
+	service.ObjectMeta = metav1.ObjectMeta{Name: req.vm.GetName(), Namespace: req.vm.GetNamespace()}
+	if err := r.Client.Delete(ctx, service); err != nil {
+		if apierrors.IsNotFound(err) {
+			req.Log.Info("Service not found for VM, nothing to delete", "service", service.GetName())
+			return nil
+		}
+		req.Log.Error(err, "Failed to delete Service for VM", "service", service.GetName())
+		return err
+	}
+
+	return nil
+}
+
 func (r *VMReconciler) handleError(err error) (ctrl.Result, error) {
 	if apierrors.IsConflict(err) {
 		r.Log.Info("Conflict updating resource:", "err", err)
@@ -278,20 +348,6 @@ func (r *VMReconciler) handleError(err error) (ctrl.Result, error) {
 	}
 	r.Log.Error(err, "unable to update resource")
 	return ctrl.Result{}, err
-}
-
-func updateCR[T *plumberv1.NetworkWizard | *kubevirtv1.VirtualMachine](ctx context.Context, r client.Client, o T) (ctrl.Result, error) {
-	if err := r.Update(ctx, any(o).(client.Object)); err != nil {
-		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		if apierrors.IsNotFound(err) {
-
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
