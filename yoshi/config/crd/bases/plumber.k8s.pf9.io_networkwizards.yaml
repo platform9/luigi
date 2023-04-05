@@ -36,19 +36,28 @@ spec:
             description: NetworkWizardSpec defines the desired state of NetworkWizard
             properties:
               bgpConfig:
+                description: BGPConfiguration - valid only for "public" type networks
                 properties:
                   myASN:
+                    description: ASN to use for the cluster's BGP advertisements
                     type: integer
                   peers:
+                    description: Comma separated list of physical routers to peer
+                      with
                     items:
                       type: string
                     type: array
                   remoteASN:
+                    description: ASN of peer router
                     type: integer
                 type: object
               cidr:
+                description: CIDR notation for the network plugin to provision
                 type: string
               plugin:
+                description: 'Plugin specifies the type of network/CNI to create in
+                  the backend Valid values for now: "calico" and "public", more as
+                  we add Multus networks'
                 type: string
               range_end:
                 description: "An IP is a single IP address, a slice of bytes. Functions
@@ -75,10 +84,14 @@ spec:
               allocations:
                 additionalProperties:
                   type: string
+                description: 'Stores Fixed IP Allocations for a given VM: <fixed IP>
+                  :< VM Name>'
                 type: object
               created:
+                description: Bool indicating if the network was created by CNI plugin
                 type: boolean
               reason:
+                description: Error message indicating CNI errors
                 type: string
             type: object
         type: object

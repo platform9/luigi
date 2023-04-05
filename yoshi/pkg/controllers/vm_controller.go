@@ -178,7 +178,7 @@ func (r *VMReconciler) ReconcileFixedIP(ctx context.Context, req *VMReqWrapper) 
 
 	req = req.WithNetworks(network)
 
-	cidr := network.Spec.Cidr
+	cidr := network.Spec.CIDR
 	allocations := network.Status.IPAllocations
 	if allocations == nil {
 		allocations = make(map[string]string)

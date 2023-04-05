@@ -57,11 +57,29 @@ spec:
           spec:
             description: NetworkWizardSpec defines the desired state of NetworkWizard
             properties:
+              bgpConfig:
+                description: BGPConfiguration - valid only for "public" type networks
+                properties:
+                  myASN:
+                    description: ASN to use for the cluster's BGP advertisements
+                    type: integer
+                  peers:
+                    description: Comma separated list of physical routers to peer
+                      with
+                    items:
+                      type: string
+                    type: array
+                  remoteASN:
+                    description: ASN of peer router
+                    type: integer
+                type: object
               cidr:
+                description: CIDR notation for the network plugin to provision
                 type: string
               plugin:
-                description: Foo is an example field of NetworkWizard. Edit networkwizard_types.go
-                  to remove/update
+                description: 'Plugin specifies the type of network/CNI to create in
+                  the backend Valid values for now: "calico" and "public", more as
+                  we add Multus networks'
                 type: string
               range_end:
                 description: "An IP is a single IP address, a slice of bytes. Functions
@@ -88,9 +106,15 @@ spec:
               allocations:
                 additionalProperties:
                   type: string
+                description: 'Stores Fixed IP Allocations for a given VM: <fixed IP>
+                  :< VM Name>'
                 type: object
               created:
+                description: Bool indicating if the network was created by CNI plugin
                 type: boolean
+              reason:
+                description: Error message indicating CNI errors
+                type: string
             type: object
         type: object
     served: true
@@ -162,6 +186,12 @@ metadata:
   creationTimestamp: null
   name: yoshi-manager-role
 rules:
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - '*'
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
@@ -505,46 +535,6 @@ webhooks:
     service:
       name: yoshi-webhook-service
       namespace: yoshi-system
-      path: /mutate-plumber-k8s-pf9-io-v1-networkwizard
-  failurePolicy: Fail
-  name: mnetworkwizard.kb.io
-  rules:
-  - apiGroups:
-    - plumber.k8s.pf9.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - networkwizards
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: yoshi-webhook-service
-      namespace: yoshi-system
-      path: /mutate-v1-pod
-  failurePolicy: Fail
-  name: mpod.kb.io
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - pods
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: yoshi-webhook-service
-      namespace: yoshi-system
       path: /mutate-v1-vm
   failurePolicy: Fail
   name: mvm.kb.io
@@ -558,24 +548,4 @@ webhooks:
     - UPDATE
     resources:
     - virtualmachines
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: yoshi-webhook-service
-      namespace: yoshi-system
-      path: /mutate-v1-vmi
-  failurePolicy: Fail
-  name: mvmi.kb.io
-  rules:
-  - apiGroups:
-    - kubevirt.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - virtualmachineinstances
   sideEffects: None
