@@ -11,26 +11,6 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-plumber-k8s-pf9-io-v1-networkwizard
-  failurePolicy: Fail
-  name: mnetworkwizard.kb.io
-  rules:
-  - apiGroups:
-    - plumber.k8s.pf9.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - networkwizards
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
       path: /mutate-v1-vm
   failurePolicy: Fail
   name: mvm.kb.io

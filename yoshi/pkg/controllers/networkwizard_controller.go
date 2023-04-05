@@ -47,7 +47,7 @@ type NetReqWrapper struct {
 	Client      client.Client
 	needsUpdate bool
 	network     *plumberv1.NetworkWizard
-	cni         cni.CniProvider
+	cni         cni.CNIProvider
 }
 
 func NewNetReqWrapper(log logr.Logger, client client.Client) *NetReqWrapper {
@@ -66,7 +66,7 @@ func (req *NetReqWrapper) WithNetwork(network *plumberv1.NetworkWizard) *NetReqW
 	return req
 }
 
-func (req *NetReqWrapper) WithCniProvider(provider cni.CniProvider) *NetReqWrapper {
+func (req *NetReqWrapper) WithCNIProvider(provider cni.CNIProvider) *NetReqWrapper {
 	req.cni = provider
 	return req
 }
@@ -78,7 +78,7 @@ func (req *NetReqWrapper) WithCniProvider(provider cni.CniProvider) *NetReqWrapp
 
 func (r *NetworkWizardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("network", req.NamespacedName)
-	log.Info("Network controller top")
+	log.Info("Reconciling network")
 	network := &plumberv1.NetworkWizard{}
 	if err := r.Client.Get(ctx, req.NamespacedName, network); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -89,16 +89,13 @@ func (r *NetworkWizardReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	reqWrapper := NewNetReqWrapper(log, r.Client).WithNetwork(network)
 
-	switch network.Spec.Plugin {
-	case constants.CalicoPlugin:
-		reqWrapper = reqWrapper.WithCniProvider(cni.NewCalicoProvider(r.Client))
-	case constants.OvsPlugin:
-		err := fmt.Errorf("Plugin %s not implemented yet", constants.OvsPlugin)
-		return ctrl.Result{}, err
-	default:
-		err := fmt.Errorf("Undefined plugin: %s", network.Spec.Plugin)
+	cni, err := cni.NewCNIProvider(ctx, network.Spec.Plugin, &cni.CNIOpts{Client: r.Client, Log: log})
+	if err != nil {
+		log.Error(err, "Faled to get CNI Provider")
 		return ctrl.Result{}, err
 	}
+
+	reqWrapper = reqWrapper.WithCNIProvider(cni)
 
 	if !network.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(network, constants.NetworkFinalizerName) {
@@ -119,7 +116,7 @@ func (r *NetworkWizardReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *NetworkWizardReconciler) ReconcileNetwork(ctx context.Context, req *NetReqWrapper) (ctrl.Result, error) {
 	if req.network.Status.Created == true {
 		req.Log.Info("Network.Status is created", "status", req.network.Status)
-		if err := req.cni.VerifyNetwork(req.network.Name); err == nil {
+		if err := req.cni.VerifyNetwork(ctx, req.network.Name); err == nil {
 			req.Log.Info("Network is already created")
 			return ctrl.Result{}, nil
 		}
@@ -135,7 +132,7 @@ func (r *NetworkWizardReconciler) ReconcileNetwork(ctx context.Context, req *Net
 		}
 	}
 
-	if err := req.cni.CreateNetwork(req.network); err != nil {
+	if err := req.cni.CreateNetwork(ctx, req.network); err != nil {
 		r.Log.Error(err, "Error creating network", "network", req.network.Spec)
 		req.network.Status.Created = false
 		req.network.Status.Reason = err.Error()
@@ -144,13 +141,12 @@ func (r *NetworkWizardReconciler) ReconcileNetwork(ctx context.Context, req *Net
 		r.Log.Info("Success creating network")
 	}
 
-	r.Log.Info("UpdatING network status", "Status", req.network.Status)
 	if err := r.Status().Update(ctx, req.network); err != nil {
 		r.Log.Error(err, "unable to update NetworkWizard status")
 		return ctrl.Result{}, err
 	}
 
-	r.Log.Info("UpdatED network status", "Status", req.network.Status)
+	r.Log.Info("Updated network status", "Status", req.network.Status)
 
 	return ctrl.Result{}, nil
 }
@@ -169,7 +165,7 @@ func (r *NetworkWizardReconciler) ReconcileDelete(ctx context.Context, req *NetR
 	}
 
 	r.Log.Info("Deleting network %s", "network", req.network.Name)
-	if err := req.cni.DeleteNetwork(req.network.Name); err != nil {
+	if err := req.cni.DeleteNetwork(ctx, req.network.Name); err != nil {
 		r.Log.Error(err, "Plugin failed to delete network resource")
 		return err
 	}

@@ -1,21 +1,24 @@
 package cni
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	plumberv1 "github.com/platform9/luigi/yoshi/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type CniProvider interface {
+type CNIProvider interface {
 	IsSupported() bool
-	CreateNetwork(*plumberv1.NetworkWizard) error
-	DeleteNetwork(string) error
-	VerifyNetwork(string) error
+	CreateNetwork(context.Context, *plumberv1.NetworkWizard) error
+	DeleteNetwork(context.Context, string) error
+	VerifyNetwork(context.Context, string) error
 }
 
-type CniOpts interface {
-	SetOpts()
+type CNIOpts struct {
+	Client client.Client
+	Log    logr.Logger
 }
 
 type PublicNetProvider interface {
@@ -23,10 +26,10 @@ type PublicNetProvider interface {
 	DeletePublic(string) error
 }
 
-func NewCniProvider(client client.Client, plugin string, opts *CniOpts) (CniProvider, error) {
+func NewCNIProvider(ctx context.Context, plugin string, opts *CNIOpts) (CNIProvider, error) {
 	switch plugin {
 	case "calico":
-		return NewCalicoProvider(client), nil
+		return NewCalicoProvider(ctx, opts), nil
 	case "ovs":
 		return nil, fmt.Errorf("Plugin not implemented yet")
 	default:
