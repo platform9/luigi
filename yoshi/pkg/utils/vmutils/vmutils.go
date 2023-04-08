@@ -62,6 +62,26 @@ func GetVMPublicIP(vm *kubevirtv1.VirtualMachine) string {
 	return ip
 }
 
+func VMHasStaticMAC(vm *kubevirtv1.VirtualMachine) bool {
+	if vm.Spec.Template.ObjectMeta.Annotations == nil {
+		return false
+	}
+
+	MAC, ok := vm.Spec.Template.ObjectMeta.Annotations[cni.CalicoMACAnnotation]
+	if !ok || MAC == "" {
+		return false
+	}
+	return true
+}
+
+func SetVMStaticMAC(vm *kubevirtv1.VirtualMachine, MAC string) {
+	if vm.Spec.Template.ObjectMeta.Annotations == nil {
+		vm.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	}
+
+	vm.Spec.Template.ObjectMeta.Annotations[cni.CalicoMACAnnotation] = MAC
+}
+
 func GetVmRef(vm *kubevirtv1.VirtualMachine) string {
 	return fmt.Sprintf("%s.%s", vm.GetName(), vm.GetNamespace())
 }
