@@ -18,6 +18,7 @@ const (
 	DefaultIpIpMode         = "Never"
 	DefaultVXLANMode        = "Always"
 	CalicoFixedIpAnnotation = "cni.projectcalico.org/ipAddrs"
+	CalicoMACAnnotation     = "cni.projectcalico.org/hwAddr"
 )
 
 type CalicoProvider struct {

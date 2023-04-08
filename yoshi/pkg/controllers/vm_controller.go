@@ -111,6 +111,11 @@ func (r *VMReconciler) ReconcileVM(ctx context.Context, req *VMReqWrapper) (ctrl
 		return res, err
 	}
 
+	if !vmutils.VMHasStaticMAC(req.vm) {
+		MAC, _ := iputils.GenerateRandomMAC()
+		vmutils.SetVMStaticMAC(req.vm, MAC)
+	}
+
 	// TODO: Add VM Profiles/flavors
 
 	return ctrl.Result{}, nil
