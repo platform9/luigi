@@ -95,6 +95,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	dctx := controllers.NewDeployCtx(ctrl.Log.WithName("DeployDependencies"), mgr.GetClient())
+	if err := dctx.DeployDependencies(); err != nil {
+		setupLog.Error(err, "unable to deploy dependecies")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.NetworkWizardReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

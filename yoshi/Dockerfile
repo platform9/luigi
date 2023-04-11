@@ -15,6 +15,7 @@ RUN go mod download
 COPY main.go main.go
 COPY api/ api/
 COPY pkg/ pkg/
+COPY dependencies /etc/plugin_templates
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
@@ -23,11 +24,11 @@ COPY pkg/ pkg/
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:3.16
+RUN apk add --no-cache bash
+RUN apk add --no-cache vim
 WORKDIR /
 COPY --from=builder /workspace/manager .
-USER 65532:65532
+COPY --from=builder /etc/plugin_templates /etc/plugin_templates
 
 ENTRYPOINT ["/manager"]
