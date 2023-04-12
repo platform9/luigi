@@ -14,9 +14,13 @@ import (
 
 const (
 	GlobalBGPConfigName = "default"
+	DefaultPeer1        = "169.254.255.1"
+	DefaultPeer2        = "169.254.255.2"
 )
 
 const MaxASNNumber uint32 = 65535
+const DefaultMyASN uint32 = 64512
+const DefaultRemoteASN uint32 = 64514
 
 type PublicProvider struct {
 	log        logr.Logger
@@ -63,16 +67,18 @@ func validateBGPConfig(network *plumberv1.NetworkWizard) error {
 		return fmt.Errorf("No BGP Peers provided for public network")
 	}
 
-	if network.Spec.BGPConfig.RemoteASN == nil || *network.Spec.BGPConfig.RemoteASN < 0 || *network.Spec.BGPConfig.RemoteASN > MaxASNNumber {
+	if network.Spec.BGPConfig.RemoteASN != nil && (*network.Spec.BGPConfig.RemoteASN < 0 || *network.Spec.BGPConfig.RemoteASN > MaxASNNumber) {
 		return fmt.Errorf("Invalid or unspecified remote ASN. Must be integer 0-65535")
 	}
 
-	if network.Spec.BGPConfig.MyASN == nil || *network.Spec.BGPConfig.MyASN < 0 || *network.Spec.BGPConfig.MyASN > MaxASNNumber {
+	if network.Spec.BGPConfig.MyASN != nil && (*network.Spec.BGPConfig.MyASN < 0 || *network.Spec.BGPConfig.MyASN > MaxASNNumber) {
 		return fmt.Errorf("Invalid or unspecified local ASN. Must be integer 0-65535")
 	}
 
-	if network.Spec.BGPConfig.RemoteASN == network.Spec.BGPConfig.MyASN {
-		return fmt.Errorf("Remote ASN cannot match local ASN")
+	if network.Spec.BGPConfig.MyASN != nil && network.Spec.BGPConfig.RemoteASN != nil {
+		if network.Spec.BGPConfig.RemoteASN == network.Spec.BGPConfig.MyASN {
+			return fmt.Errorf("Remote ASN cannot match local ASN")
+		}
 	}
 
 	return nil
@@ -117,13 +123,19 @@ func (public *PublicProvider) CreateOrUpdateBGPConfig(ctx context.Context, netwo
 // Creates a cluster-wide BGP Peer, with all nodes peering
 func (public *PublicProvider) CreateOrUpdateBGPPeer(ctx context.Context, network *plumberv1.NetworkWizard) error {
 	for _, peer := range network.Spec.BGPConfig.RemotePeers {
+		public.log.Info("Setting up peer", "peer", peer)
 		bgpPeer := calicov3.NewBGPPeer()
 		// The name of BGPPeer resource is same as the IP
-		bgpPeer.Name = peer
+		bgpPeer.Name = *peer.PeerIP
 
 		op, err := controllerutil.CreateOrUpdate(ctx, public.client, bgpPeer, func() error {
-			bgpPeer.Spec.PeerIP = peer
+			bgpPeer.Spec.PeerIP = *peer.PeerIP
 			bgpPeer.Spec.ASNumber = numorstring.ASNumber(*network.Spec.BGPConfig.RemoteASN)
+
+			if peer.ReachableBy != nil {
+				public.log.Info("Peer has reachableBy:", "reachableBy", *peer.ReachableBy)
+				bgpPeer.Spec.ReachableBy = *peer.ReachableBy
+			}
 
 			return nil
 		})

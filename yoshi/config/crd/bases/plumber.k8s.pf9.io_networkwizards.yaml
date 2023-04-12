@@ -43,10 +43,18 @@ spec:
                     format: int32
                     type: integer
                   peers:
-                    description: Comma separated list of physical routers to peer
-                      with
+                    description: Physical routers to peer with
                     items:
-                      type: string
+                      properties:
+                        peerIP:
+                          type: string
+                        reachableBy:
+                          description: Adds a static route that may be needed to connect
+                            to a peer.
+                          type: string
+                      required:
+                      - peerIP
+                      type: object
                     type: array
                   remoteASN:
                     description: ASN of peer router

@@ -95,12 +95,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	dctx := controllers.NewDeployCtx(ctrl.Log.WithName("DeployDependencies"), mgr.GetClient())
-	if err := dctx.DeployDependencies(); err != nil {
-		setupLog.Error(err, "unable to deploy dependecies")
-		os.Exit(1)
-	}
-
 	if err = (&controllers.NetworkWizardReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -131,9 +125,16 @@ func main() {
 
 	mgr.GetWebhookServer().Register("/mutate-v1-vm", &webhook.Admission{Handler: &controllers.VMAnnotator{Client: mgr.GetClient()}})
 
+	dctx := controllers.NewDeployCtx(ctrl.Log.WithName("DeployDependencies"), mgr.GetClient())
+	if err := dctx.DeployDependencies(); err != nil {
+		setupLog.Error(err, "unable to deploy dependecies")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+
 }

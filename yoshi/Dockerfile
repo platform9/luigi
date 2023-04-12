@@ -30,5 +30,6 @@ RUN apk add --no-cache vim
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY --from=builder /etc/plugin_templates /etc/plugin_templates
+USER 65532:65532
 
 ENTRYPOINT ["/manager"]
