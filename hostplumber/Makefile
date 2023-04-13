@@ -26,7 +26,7 @@ $(BUILD_DIR):
 
 $(BUILD_ROOT):
 	mkdir -p $@
-	mkdir -p $@/luigi
+	mkdir -p $@/hostplumber
 
 all: manager
 
@@ -105,7 +105,7 @@ pre-reqs:
 img-test:
 	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.17.7-bullseye  bash -c "make test"
 
-img-build: img-test $(BUILD_DIR)
+img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
