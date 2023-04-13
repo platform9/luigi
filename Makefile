@@ -103,7 +103,7 @@ pre-reqs:
 img-test:
 	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.7-bullseye  bash -c "make test"
 
-img-build: img-test $(BUILD_DIR)
+img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
