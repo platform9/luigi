@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	plumberv1 "github.com/platform9/luigi/yoshi/api/v1"
+	"github.com/platform9/luigi/yoshi/pkg/cni"
 	"github.com/platform9/luigi/yoshi/pkg/utils/constants"
 	"github.com/platform9/luigi/yoshi/pkg/utils/iputils"
 	"github.com/platform9/luigi/yoshi/pkg/utils/vmutils"
@@ -102,6 +103,10 @@ func (r *VMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 }
 
 func (r *VMReconciler) ReconcileVM(ctx context.Context, req *VMReqWrapper) (ctrl.Result, error) {
+
+	if err := r.ReconcilePublicIPBGP(ctx, req); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	if err := r.ensureServiceForVM(ctx, req); err != nil {
 		return ctrl.Result{}, err
@@ -214,6 +219,10 @@ func (r *VMReconciler) ReconcileFixedIP(ctx context.Context, req *VMReqWrapper) 
 func (r *VMReconciler) ReconcileDeleteVM(ctx context.Context, req *VMReqWrapper) error {
 	req.Log.Info("Deleting VM...")
 
+	if err := r.deletePublicIPForVM(ctx, req); err != nil {
+		return err
+	}
+
 	if err := r.deleteServiceForVM(ctx, req); err != nil {
 		return err
 	}
@@ -283,7 +292,58 @@ func (r *VMReconciler) DeleteIPAllocationsForVM(ctx context.Context, req *VMReqW
 	return nil
 }
 
+func (r *VMReconciler) ReconcilePublicIPBGP(ctx context.Context, req *VMReqWrapper) error {
+	opts := cni.CNIOpts{Client: r.Client, Log: req.Log}
+	publicProvider := cni.NewPublicProvider(ctx, &opts)
+
+	publicIP := vmutils.GetVMPublicIP(req.vm)
+	if publicIP == "" {
+		req.Log.Info("VM has no Public IP")
+
+		// Check Service for VM to determine if it previously had an IP
+		// We could store allocations in Public NetworkWizard, but since it's already in the Service
+		// avoid storing redundant data in two different places
+		nsm := types.NamespacedName{Name: req.vm.Name, Namespace: req.vm.Namespace}
+		service := &corev1.Service{}
+		if err := r.Client.Get(ctx, nsm, service); err != nil {
+			req.Log.Error(err, "No Service for VM, likely new VM creation")
+			return nil
+		}
+
+		// VM should only have 1 public IP
+		if service.Spec.ExternalIPs != nil {
+			oldPublicIP := service.Spec.ExternalIPs[0]
+			if oldPublicIP != "" {
+				if err := publicProvider.DelBGPPublicIP(ctx, oldPublicIP); err != nil {
+					req.Log.Error(err, "failed to remove public IP from BGPConfig", "publicIP", publicIP)
+					return err
+				}
+				req.Log.Info("Removed old Public IP", "IP", oldPublicIP)
+			}
+
+			service.Spec.ExternalIPs = nil
+			if err := r.Client.Update(ctx, service); err != nil {
+				req.Log.Error(err, "failed to remove externalIP from service")
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	err := publicProvider.AddBGPPublicIP(ctx, publicIP)
+	if err != nil {
+		req.Log.Error(err, "failed to update publicIP", publicIP)
+		return err
+	}
+
+	req.Log.Info("Added public IP", "publicIP", publicIP)
+
+	return nil
+}
+
 func (r *VMReconciler) ensureServiceForVM(ctx context.Context, req *VMReqWrapper) error {
+	publicIP := vmutils.GetVMPublicIP(req.vm)
 	objMeta := metav1.ObjectMeta{Name: req.vm.Name, Namespace: req.vm.Namespace}
 	service := &corev1.Service{ObjectMeta: objMeta}
 
@@ -316,8 +376,9 @@ func (r *VMReconciler) ensureServiceForVM(ctx context.Context, req *VMReqWrapper
 			service.Spec.Ports = ports
 		}
 
-		publicIP := vmutils.GetVMPublicIP(req.vm)
-		service.Spec.ExternalIPs = []string{publicIP}
+		if publicIP != "" {
+			service.Spec.ExternalIPs = []string{publicIP}
+		}
 
 		return nil
 	})
@@ -337,6 +398,25 @@ func (r *VMReconciler) deleteServiceForVM(ctx context.Context, req *VMReqWrapper
 			return nil
 		}
 		req.Log.Error(err, "Failed to delete Service for VM", "service", service.GetName())
+		return err
+	}
+
+	return nil
+}
+
+func (r *VMReconciler) deletePublicIPForVM(ctx context.Context, req *VMReqWrapper) error {
+	publicIP := vmutils.GetVMPublicIP(req.vm)
+	if publicIP == "" {
+		req.Log.Info("VM has no Public IP")
+		return nil
+	}
+
+	req.Log.Info("Deleting public IP from BGPConfig for VM", "IP", publicIP)
+	opts := cni.CNIOpts{Client: r.Client, Log: req.Log}
+	publicProvider := cni.NewPublicProvider(ctx, &opts)
+	err := publicProvider.DelBGPPublicIP(ctx, publicIP)
+	if err != nil {
+		req.Log.Error(err, "failed to remove publicIP", publicIP)
 		return err
 	}
 
