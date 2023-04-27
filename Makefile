@@ -87,7 +87,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.5 ;\
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.5 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
@@ -101,7 +101,7 @@ pre-reqs:
 	export PATH=$PATH:/usr/local/kubebuilder/bin
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.7-bullseye  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.13-bullseye  bash -c "make test"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
