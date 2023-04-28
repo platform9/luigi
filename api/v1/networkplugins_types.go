@@ -56,6 +56,7 @@ type Dpdk struct {
 	SocketMem       string `json:"socketMem"`
 	PmdCpuMask      string `json:"pmdCpuMask"`
 	HugepageMemory  string `json:"hugepageMemory"`
+	HugepageSize    string `json:"hugepageSize"`
 }
 
 type NodeFeatureDiscovery struct {

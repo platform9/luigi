@@ -85,6 +85,8 @@ spec:
                         properties:
                           hugepageMemory:
                             type: string
+                          hugepageSize:
+                            type: string
                           lcoreMask:
                             type: string
                           pmdCpuMask:
@@ -93,6 +95,7 @@ spec:
                             type: string
                         required:
                         - hugepageMemory
+                        - hugepageSize
                         - lcoreMask
                         - pmdCpuMask
                         - socketMem
