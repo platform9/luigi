@@ -481,9 +481,12 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir, registry string) error {
 	}
 
 	if ovsConfig.DPDK != nil {
-                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" {
-                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory are required parameters to enable Dpdk")
+                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" || ovsConfig.DPDK.HugepageSize == "" {
+                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory and HugepageSize are required parameters to enable Dpdk")
                 }
+		if ovsConfig.DPDK.HugepageSize != "2Mi" && ovsConfig.DPDK.HugepageSize != "1Gi" {
+			return fmt.Errorf("HugepageSize must be one of the allowed huge page sizes: 2Mi and 1Gi")
+		}
                 config["DPDK"] = ovsConfig.DPDK
         }
 

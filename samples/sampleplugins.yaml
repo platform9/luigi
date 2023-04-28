@@ -23,3 +23,4 @@ spec:
         socketMem: "1024,2048" #Comma separated list of memory to pre-allocate from hugepages on specific sockets.
         pmdCpuMask: "0x4" #must be hex value
         hugepageMemory: "3Gi" #the amount of memory for hugepages (no. of hugepages*hugepagesize)
+        hugepageSize: "1Gi" #huge page size. There are two common huge page sizes: 2Mi and 1Gi
