@@ -91,6 +91,11 @@ spec:
                             type: string
                           socketMem:
                             type: string
+                        required:
+                        - hugepageMemory
+                        - lcoreMask
+                        - pmdCpuMask
+                        - socketMem
                         type: object
                       imagePullPolicy:
                         type: string
