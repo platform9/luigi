@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	plumberv1 "github.com/platform9/luigi/yoshi/api/v1"
@@ -193,6 +194,11 @@ func (r *VMReconciler) ReconcileFixedIP(ctx context.Context, req *VMReqWrapper) 
 
 	req = req.WithNetworks(network)
 
+	if network.Spec.Plugin == "public" {
+		req.Log.Info("VM cannot get IP on Public network")
+		return ctrl.Result{}, nil
+	}
+
 	cidr := *network.Spec.CIDR
 	allocations := network.Status.IPAllocations
 	if allocations == nil {
@@ -344,6 +350,7 @@ func (r *VMReconciler) ReconcilePublicIPBGP(ctx context.Context, req *VMReqWrapp
 
 func (r *VMReconciler) ensureServiceForVM(ctx context.Context, req *VMReqWrapper) error {
 	publicIP := vmutils.GetVMPublicIP(req.vm)
+	publicIPNoMask := strings.Split(publicIP, "/")
 	objMeta := metav1.ObjectMeta{Name: req.vm.Name, Namespace: req.vm.Namespace}
 	service := &corev1.Service{ObjectMeta: objMeta}
 
@@ -376,8 +383,8 @@ func (r *VMReconciler) ensureServiceForVM(ctx context.Context, req *VMReqWrapper
 			service.Spec.Ports = ports
 		}
 
-		if publicIP != "" {
-			service.Spec.ExternalIPs = []string{publicIP}
+		if publicIPNoMask != nil && publicIPNoMask[0] != "" {
+			service.Spec.ExternalIPs = []string{publicIPNoMask[0]}
 		}
 
 		return nil

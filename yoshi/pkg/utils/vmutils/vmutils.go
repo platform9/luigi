@@ -2,6 +2,7 @@ package vmutils
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/platform9/luigi/yoshi/pkg/cni"
 	"github.com/platform9/luigi/yoshi/pkg/utils/constants"
@@ -59,7 +60,8 @@ func GetVMPublicIP(vm *kubevirtv1.VirtualMachine) string {
 		return ""
 	}
 
-	return ip
+	ipNoMask := strings.Split(ip, "/")
+	return ipNoMask[0]
 }
 
 func VMHasStaticMAC(vm *kubevirtv1.VirtualMachine) bool {
