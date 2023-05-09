@@ -193,6 +193,11 @@ func (r *VMReconciler) ReconcileFixedIP(ctx context.Context, req *VMReqWrapper) 
 
 	req = req.WithNetworks(network)
 
+	if network.Spec.Plugin == "public" {
+		req.Log.Info("VM cannot get IP on Public network")
+		return ctrl.Result{}, nil
+	}
+
 	cidr := *network.Spec.CIDR
 	allocations := network.Status.IPAllocations
 	if allocations == nil {

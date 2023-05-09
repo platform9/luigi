@@ -3,6 +3,7 @@ package cni
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	plumberv1 "github.com/platform9/luigi/yoshi/api/v1"
@@ -122,7 +123,8 @@ func (public *PublicProvider) AddBGPPublicIP(ctx context.Context, publicIP strin
 		return err
 	}
 
-	publicIPCIDR := publicIP + "/32"
+	ipNoMask := strings.Split(publicIP, "/")
+	publicIPCIDR := ipNoMask[0] + "/32"
 	externalIP := calicov3.ServiceExternalIPBlock{CIDR: publicIPCIDR}
 
 	if bgpConfig.Spec.ServiceExternalIPs == nil {
@@ -137,7 +139,7 @@ func (public *PublicProvider) AddBGPPublicIP(ctx context.Context, publicIP strin
 	public.log.Info("New BGP external IPs", "externalIPs", bgpConfig.Spec.ServiceExternalIPs)
 
 	if err := public.client.Update(ctx, bgpConfig); err != nil {
-		public.log.Error(err, "Failed to update BGPConfig", bgpConfig)
+		public.log.Error(err, "Failed to update BGPConfig", "bgpConfig.Spec", bgpConfig.Spec)
 		return err
 	}
 
