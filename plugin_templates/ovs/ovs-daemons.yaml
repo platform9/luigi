@@ -85,7 +85,7 @@ spec:
                   mountPropagation: HostToContainer
               resources:
                 limits:
-                  hugepages-{{ .DPDK.HugepageSize }}: "{{ .DPDK.HugepageMemory }}"
+                  hugepages-{{ .HugepageSize }}: "{{ .DPDK.HugepageMemory }}"
                   memory: "{{ .DPDK.HugepageMemory }}"
                 requests:
                   memory: "{{ .DPDK.HugepageMemory }}"
@@ -122,7 +122,7 @@ spec:
                   path: /var/lib/vhost_sockets
             - name: hugepagevolume
               emptyDir:
-                medium: HugePages-"{{ .DPDK.HugepageSize }}"
+                medium: HugePages-"{{ .HugepageSize }}"
 {{- end }}
 ---
 kind: ClusterRole
