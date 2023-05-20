@@ -92,8 +92,6 @@ spec:
                             type: string
                           hugepageMemory:
                             type: string
-                          hugepageSize:
-                            type: string
                         type: object
                     type: object
                   sriov:
