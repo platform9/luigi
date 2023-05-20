@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 
@@ -24,13 +25,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/go-logr/logr"
+	"github.com/dustin/go-humanize"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,6 +73,7 @@ const (
 	DeleteDir               = TemplateDir + "delete/"
 	NetworkPluginsConfigMap = "pf9-networkplugins-config"
 	IpReconcilerSchedule    = "*/5 * * * *"
+	HugepageSize		= "2Mi"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -481,12 +486,10 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir, registry string) error {
 	}
 
 	if ovsConfig.DPDK != nil {
-                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" || ovsConfig.DPDK.HugepageSize == "" {
-                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory and HugepageSize are required parameters to enable Dpdk")
+                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" {
+                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory are required parameters to enable Dpdk")
                 }
-		if ovsConfig.DPDK.HugepageSize != "2Mi" && ovsConfig.DPDK.HugepageSize != "1Gi" {
-			return fmt.Errorf("HugepageSize must be one of the allowed huge page sizes: 2Mi and 1Gi")
-		}
+		config["HugepageSize"] = GetHugepageSize()
                 config["DPDK"] = ovsConfig.DPDK
         }
 
@@ -919,4 +922,33 @@ func (r *NetworkPluginsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&plumberv1.NetworkPlugins{}).
 		Complete(r)
+}
+
+func GetHugepageSize() string {
+	// Get the hugepage size from meminfo and convert it into bibytes from KB
+	var hugepagesize int64
+	f, err := os.Open("/proc/meminfo")
+	if err != nil {
+		fmt.Printf("unable to open /proc/meminfo:%s\n", err)
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		if bytes.HasPrefix(s.Bytes(), []byte(`Hugepagesize:`)) {
+			_, err = fmt.Sscanf(s.Text(), "Hugepagesize:%d", &hugepagesize)
+			if err != nil {
+				fmt.Printf("unable to read Hugepagesize from /proc/info: %s\n", err)
+			}
+			break
+		}
+	}
+	if err = s.Err(); err != nil {
+		fmt.Printf("scanner error: %s\n", err)
+	}
+	// Converting size in KB to bibytes annotation. For example 1.0 GiB -> 1Gi
+	r := humanize.BigIBytes(big.NewInt(hugepagesize * 1024))
+	r = strings.Replace(r, ".0 ", "", 1)
+	r = strings.Replace(r, "B", "", 1)
+	fmt.Printf("Hugepages: %+v", r)
+	return r
 }
