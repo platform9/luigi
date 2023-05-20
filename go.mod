@@ -3,6 +3,7 @@ module github.com/platform9/luigi
 go 1.17
 
 require (
+	github.com/dustin/go-humanize v1.0.0
 	github.com/go-logr/logr v1.2.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
