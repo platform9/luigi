@@ -31,6 +31,7 @@ import (
 	"text/template"
 
 	"github.com/go-logr/logr"
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,6 +70,8 @@ const (
 	DeleteDir               = TemplateDir + "delete/"
 	NetworkPluginsConfigMap = "pf9-networkplugins-config"
 	IpReconcilerSchedule    = "*/5 * * * *"
+
+	PluginMultus = "multus"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -139,6 +142,14 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 	}
+	clientList := &nettypes.NetworkAttachmentDefinitionList{}
+	err = r.Client.List(ctx, clientList, &client.ListOptions{})
+	if err != nil {
+		log.Error(err, "Error fetching NetworkAttachmentDefinitions")
+		// return ctrl.Result{}, err
+	}
+	reqInfo.Log.Info("NetworkAttachmentDefinitions  1", "count", len(clientList.Items))
+	reqInfo.Log.Info("NetworkAttachmentDefinitions :", clientList.Items, "<>")
 
 	pluginsFinalizerName := "teardownPlugins"
 
@@ -481,14 +492,14 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir, registry string) error {
 	}
 
 	if ovsConfig.DPDK != nil {
-                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" || ovsConfig.DPDK.HugepageSize == "" {
-                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory and HugepageSize are required parameters to enable Dpdk")
-                }
+		if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" || ovsConfig.DPDK.HugepageSize == "" {
+			return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory and HugepageSize are required parameters to enable Dpdk")
+		}
 		if ovsConfig.DPDK.HugepageSize != "2Mi" && ovsConfig.DPDK.HugepageSize != "1Gi" {
 			return fmt.Errorf("HugepageSize must be one of the allowed huge page sizes: 2Mi and 1Gi")
 		}
-                config["DPDK"] = ovsConfig.DPDK
-        }
+		config["DPDK"] = ovsConfig.DPDK
+	}
 
 	// Apply the OVS DaemonSet
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-daemons.yaml"))
@@ -914,9 +925,40 @@ func containsString(slice []string, s string) bool {
 	return false
 }
 
+// Helper functions to check and remove string from slice of strings.
+func removeStringFromList(slice []string, target string) []string {
+	var result []string
+	for _, str := range slice {
+		if str != target {
+			result = append(result, str)
+		}
+	}
+	return result
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetworkPluginsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&plumberv1.NetworkPlugins{}).
 		Complete(r)
+}
+
+// This function will filter plugins that should not be uninstalled
+func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, plugins []string) ([]string, error) {
+
+	// Check if NetworkAttachmentDefinition exists
+	// If they do stop uninstalltion of multus
+	nadList := &nettypes.NetworkAttachmentDefinitionList{}
+	err := r.Client.List(ctx, nadList, &client.ListOptions{})
+	if err != nil {
+		r.Log.Error(err, "Error listing NetworkAttachmentDefinitions")
+		return plugins, err
+	}
+	if len(nadList.Items) != 0 {
+		// removing multus form missing plugins list
+		plugins = removeStringFromList(plugins, PluginMultus)
+		r.Log.Info("NetworkAttachmentDefinitions exist on cluster,  Multus will not be uninstalled.")
+	}
+
+	return plugins, nil
 }
