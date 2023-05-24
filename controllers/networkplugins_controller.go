@@ -33,8 +33,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/go-logr/logr"
 	"github.com/dustin/go-humanize"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +73,7 @@ const (
 	DeleteDir               = TemplateDir + "delete/"
 	NetworkPluginsConfigMap = "pf9-networkplugins-config"
 	IpReconcilerSchedule    = "*/5 * * * *"
-	HugepageSize		= "2Mi"
+	HugepageSize            = "2Mi"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -486,12 +486,12 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir, registry string) error {
 	}
 
 	if ovsConfig.DPDK != nil {
-                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" {
-                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory are required parameters to enable Dpdk")
-                }
+		if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" {
+			return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory are required parameters to enable Dpdk")
+		}
 		config["HugepageSize"] = GetHugepageSize()
-                config["DPDK"] = ovsConfig.DPDK
-        }
+		config["DPDK"] = ovsConfig.DPDK
+	}
 
 	// Apply the OVS DaemonSet
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-daemons.yaml"))

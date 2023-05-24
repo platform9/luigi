@@ -61,7 +61,7 @@ type SriovConfig struct {
 type OvsConfig struct {
 	NodeInterface string  `json:"nodeInterface,omitempty"`
 	BridgeName    string  `json:"bridgeName,omitempty"`
-	Dpdk          bool    `json:"dpdk"`
+	Dpdk          bool    `json:"dpdk,omitempty"`
 	Params        *Params `json:"params,omitempty"`
 }
 
