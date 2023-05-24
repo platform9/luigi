@@ -52,10 +52,10 @@ type Ovs struct {
 }
 
 type Dpdk struct {
-	LcoreMask	string `json:"lcoreMask"`
-	SocketMem       string `json:"socketMem"`
-	PmdCpuMask      string `json:"pmdCpuMask"`
-	HugepageMemory  string `json:"hugepageMemory"`
+	LcoreMask      string `json:"lcoreMask"`
+	SocketMem      string `json:"socketMem"`
+	PmdCpuMask     string `json:"pmdCpuMask"`
+	HugepageMemory string `json:"hugepageMemory"`
 }
 
 type NodeFeatureDiscovery struct {
