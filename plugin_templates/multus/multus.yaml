@@ -161,6 +161,8 @@ spec:
         tier: node
         app: multus
         name: multus
+    finalizers:
+     - networkattachmentdefinitions.k8s.cni.cncf.io
     spec:
       hostNetwork: true
       tolerations:

@@ -145,6 +145,9 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	pluginsFinalizerName := "teardownPlugins"
 
+	log.Info(fmt.Sprintf("<> networkPluginsReq {%v} ", networkPluginsReq))
+	log.Info(fmt.Sprintf("<-> networkPluginsReq.Spec.Plugins.Multus {%v} ", networkPluginsReq.Spec.Plugins.Multus))
+
 	if networkPluginsReq.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !containsString(networkPluginsReq.GetFinalizers(), pluginsFinalizerName) {
 			controllerutil.AddFinalizer(&networkPluginsReq, pluginsFinalizerName)
