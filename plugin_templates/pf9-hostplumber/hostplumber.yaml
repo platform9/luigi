@@ -183,7 +183,7 @@ spec:
     listKind: HostNetworkTemplateList
     plural: hostnetworktemplates
     singular: hostnetworktemplate
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:

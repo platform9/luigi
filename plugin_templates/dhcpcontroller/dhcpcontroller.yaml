@@ -19,7 +19,7 @@ spec:
     listKind: DHCPServerList
     plural: dhcpservers
     singular: dhcpserver
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
@@ -494,7 +494,7 @@ spec:
     listKind: IPAllocationList
     plural: ipallocations
     singular: ipallocation
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:

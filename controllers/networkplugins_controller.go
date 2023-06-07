@@ -121,6 +121,15 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	_ = log.FromContext(ctx)
 	log := r.Log.WithValues("networkplugins", req.NamespacedName)
 
+	var networkPluginsReqList = plumberv1.NetworkPluginsList{}
+	if err := r.List(ctx, &networkPluginsReqList); err != nil {
+		log.Error(err, "unable to fetch NetworkPlugins List")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	if len(networkPluginsReqList.Items) > 1 {
+		return ctrl.Result{}, fmt.Errorf("only one NetworkPlugin resource is allowed, Count: %v", len(networkPluginsReqList.Items))
+	}
+
 	var networkPluginsReq = plumberv1.NetworkPlugins{}
 	if err := r.Get(ctx, req.NamespacedName, &networkPluginsReq); err != nil {
 		log.Error(err, "unable to fetch NetworkPlugins")

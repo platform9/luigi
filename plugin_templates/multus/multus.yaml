@@ -5,7 +5,7 @@ metadata:
   name: network-attachment-definitions.k8s.cni.cncf.io
 spec:
   group: k8s.cni.cncf.io
-  scope: Namespaced
+  scope: Cluster
   names:
     plural: network-attachment-definitions
     singular: network-attachment-definition

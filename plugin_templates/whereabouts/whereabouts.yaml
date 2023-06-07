@@ -123,7 +123,7 @@ spec:
     listKind: IPPoolList
     plural: ippools
     singular: ippool
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
@@ -194,7 +194,7 @@ spec:
     listKind: OverlappingRangeIPReservationList
     plural: overlappingrangeipreservations
     singular: overlappingrangeipreservation
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
