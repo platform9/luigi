@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"sort"
 
 	"encoding/json"
 	"fmt"
@@ -127,7 +128,12 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	if len(networkPluginsReqList.Items) > 1 {
-		return ctrl.Result{}, fmt.Errorf("only one NetworkPlugin resource is allowed, Count: %v", len(networkPluginsReqList.Items))
+		err := fmt.Errorf("only one NetworkPlugin resource is allowed")
+		log.Error(err, fmt.Sprintf("NetworkPlugins resource exists %v", len(networkPluginsReqList.Items)))
+		if err = r.deleteNetworkPlugins(ctx, req); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, fmt.Errorf("removed newly create networkPlugins")
 	}
 
 	var networkPluginsReq = plumberv1.NetworkPlugins{}
@@ -960,4 +966,36 @@ func GetHugepageSize() string {
 	r = strings.Replace(r, "B", "", 1)
 	fmt.Printf("Hugepages: %+v", r)
 	return r
+}
+
+// deleteNetworkPlugins deletes all NetworkPlugins except the one being deleted.
+func (r *NetworkPluginsReconciler) deleteNetworkPlugins(ctx context.Context, req ctrl.Request) error {
+	var networkPluginsReqList = plumberv1.NetworkPluginsList{}
+	if err := r.List(ctx, &networkPluginsReqList); err != nil {
+		r.Log.Error(err, "unable to fetch NetworkPlugins List")
+		return client.IgnoreNotFound(err)
+	}
+
+	// Check if there are more than one NetworkPlugins
+	if len(networkPluginsReqList.Items) <= 1 {
+		return nil
+	}
+
+	networkPluginsList := networkPluginsReqList.Items
+	// Sort the NetworkPlugins by creation timestamp
+	sort.Slice(networkPluginsList, func(i, j int) bool {
+		return networkPluginsList[i].CreationTimestamp.Time.Before(networkPluginsList[j].CreationTimestamp.Time)
+	})
+	r.Log.Info(fmt.Sprintf("networkPlugins object already exist in namespce %v, deleteing others", networkPluginsList[0].Namespace))
+
+	for _, networkPlugins := range networkPluginsList[1:] {
+		err := r.Delete(ctx, &networkPlugins)
+		if err != nil {
+			r.Log.Error(err, "unable to delete NetworkPlugins", "NetworkPlugins", networkPlugins)
+			return err
+		}
+		r.Log.Info("Deleted NetworkPlugins", "NetworkPlugins", networkPlugins)
+	}
+
+	return nil
 }
