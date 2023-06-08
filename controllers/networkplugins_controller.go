@@ -71,7 +71,7 @@ const (
 	NetworkPluginsConfigMap = "pf9-networkplugins-config"
 	IpReconcilerSchedule    = "*/5 * * * *"
 
-	PluginMultus = "multus"
+	PluginMultus = "multus.yaml"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -183,7 +183,7 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, "Error applying templates!")
 		return ctrl.Result{}, err
 	}
-	log.Info("Filtering plugin delete list", "fileListMissing", fileListMissing)
+	log.Info("Filtering plugin delete list", ,fileListMissing)
 	fileListMissing, err = r.filterUninstallPlugins(ctx, fileListMissing)
 	if err != nil {
 		return ctrl.Result{}, err
