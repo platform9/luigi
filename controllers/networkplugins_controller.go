@@ -183,7 +183,7 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, "Error applying templates!")
 		return ctrl.Result{}, err
 	}
-	log.Info("Filtering  plugin delete list", fileListMissing)
+	log.Info("Filtering plugin delete list", "fileListMissing", fileListMissing)
 	fileListMissing, err = r.filterUninstallPlugins(ctx, fileListMissing)
 	if err != nil {
 		return ctrl.Result{}, err
