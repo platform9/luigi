@@ -183,8 +183,9 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, "Error applying templates!")
 		return ctrl.Result{}, err
 	}
+
 	log.Info("Filtering plugin delete list", "fileListMissing", fileListMissing)
-	fileListMissing, err = r.filterUninstallPlugins(ctx, fileListMissing)
+	fileListMissing, err = r.filterUninstallPlugins(ctx, req, fileListMissing)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -940,22 +941,109 @@ func (r *NetworkPluginsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// This function will filter plugins that should not be uninstalled
-func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, plugins []string) ([]string, error) {
-
-	// Check if NetworkAttachmentDefinition exists
-	// If they do stop uninstalltion of multus
+// This function checks if NetworkAttachmentDefinition exists
+func (r *NetworkPluginsReconciler) networkAttachmentDefinitionExists(ctx context.Context) (bool, error) {
 	nadList := &nettypes.NetworkAttachmentDefinitionList{}
 	err := r.Client.List(ctx, nadList, &client.ListOptions{})
 	if err != nil {
 		r.Log.Error(err, "Error listing NetworkAttachmentDefinitions")
-		return plugins, err
+		return false, err
 	}
-	if len(nadList.Items) != 0 {
-		// removing multus form missing plugins list
+	return len(nadList.Items) != 0, nil
+}
+
+// This function fetches the NetworkPlugins object
+func (r *NetworkPluginsReconciler) fetchNetworkPlugins(ctx context.Context, req ctrl.Request) (*plumberv1.NetworkPlugins, error) {
+	networkPlugins := &plumberv1.NetworkPlugins{}
+	if err := r.Get(ctx, req.NamespacedName, networkPlugins); err != nil {
+		r.Log.Error(err, "unable to fetch NetworkPlugins")
+		return nil, err
+	}
+	return networkPlugins, nil
+}
+
+// This function updates the NetworkPlugins object
+func (r *NetworkPluginsReconciler) updateNetworkPlugins(ctx context.Context, networkPlugins *plumberv1.NetworkPlugins) error {
+	if err := r.Update(ctx, networkPlugins); err != nil {
+		return err
+	}
+	return nil
+}
+
+// This function filters plugins that should not be uninstalled
+func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, req ctrl.Request, plugins []string) ([]string, error) {
+	nadExists, err := r.networkAttachmentDefinitionExists(ctx)
+	if err != nil {
+		r.Log.Info("Error while checking if NetworkAttachmentDefinitions exist on cluster")
+		return nil, err
+	}
+
+	if nadExists {
 		plugins = removeStringFromList(plugins, PluginMultus)
 		r.Log.Info("NetworkAttachmentDefinitions exist on cluster, Multus will not be uninstalled. new fileListMissing List", "plugins", plugins)
+
+		networkPlugins, err := r.fetchNetworkPlugins(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		annotations := networkPlugins.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
+
+		if annotations != "" {
+			oldNetworkPlugins := plumberv1.NetworkPlugins{}
+			err = json.Unmarshal([]byte(annotations), &networkPlugins)
+			if err != nil {
+				r.Log.Error(err, "Error unmarshaling annotations")
+				return nil, err
+			}
+
+			networkPlugins.Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
+		}
+
+		// this will keep multus in networkPlugins list
+		if err := r.updateNetworkPlugins(ctx, networkPlugins); err != nil {
+			r.Log.Error(err, "Error updating NetworkPlugins")
+			return nil, err
+		}
 	}
 
 	return plugins, nil
 }
+
+// // This function will filter plugins that should not be uninstalled
+// func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, req ctrl.Request, plugins []string) ([]string, error) {
+
+// 	// Check if NetworkAttachmentDefinition exists
+// 	// If they do stop uninstalltion of multus
+// 	nadList := &nettypes.NetworkAttachmentDefinitionList{}
+// 	err := r.Client.List(ctx, nadList, &client.ListOptions{})
+// 	if err != nil {
+// 		r.Log.Error(err, "Error listing NetworkAttachmentDefinitions")
+// 		return nil, err
+// 	}
+// 	if len(nadList.Items) != 0 {
+// 		// removing multus form missing plugins list
+// 		plugins = removeStringFromList(plugins, PluginMultus)
+// 		r.Log.Info("NetworkAttachmentDefinitions exist on cluster, Multus will not be uninstalled. new fileListMissing List", "plugins", plugins)
+
+// 		var networkPlugins = plumberv1.NetworkPlugins{}
+// 		if err := r.Get(ctx, req.NamespacedName, &networkPlugins); err != nil {
+// 			r.Log.Error(err, "unable to fetch NetworkPlugins")
+// 			return nil, err
+// 		}
+
+// 		annotations := networkPlugins.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
+// 		oldNetworkPlugins := plumberv1.NetworkPlugins{}
+// 		err := json.Unmarshal([]byte(annotations), &networkPlugins)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		networkPlugins.Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
+// 		if err := r.Update(ctx, &networkPlugins); err != nil {
+// 			return nil, err
+// 		}
+
+// 	}
+
+// 	return plugins, nil
+// }
