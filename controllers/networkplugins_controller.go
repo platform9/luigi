@@ -954,7 +954,7 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, p
 	if len(nadList.Items) != 0 {
 		// removing multus form missing plugins list
 		plugins = removeStringFromList(plugins, PluginMultus)
-		r.Log.Info("NetworkAttachmentDefinitions exist on cluster,  Multus will not be uninstalled.")
+		r.Log.Info("NetworkAttachmentDefinitions exist on cluster, Multus will not be uninstalled. new fileListMissing List", "plugins", plugins)
 	}
 
 	return plugins, nil
