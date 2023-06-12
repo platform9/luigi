@@ -982,12 +982,14 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 		plugins = removeStringFromList(plugins, PluginMultus)
 		r.Log.Info("NetworkAttachmentDefinitions exist on cluster, Multus will not be uninstalled. new fileListMissing List", "plugins", plugins)
 
+		r.Log.Info("fetchNetworkPlugins")
 		networkPlugins, err := r.fetchNetworkPlugins(ctx, req)
 		if err != nil {
 			return nil, err
 		}
 
 		annotations := networkPlugins.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
+		r.Log.Info("networkPlugins", "annotations", annotations)
 
 		if annotations != "" {
 			oldNetworkPlugins := plumberv1.NetworkPlugins{}
@@ -999,6 +1001,8 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 
 			networkPlugins.Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
 		}
+
+		r.Log.Info("Updating network plugin")
 
 		// this will keep multus in networkPlugins list
 		if err := r.updateNetworkPlugins(ctx, networkPlugins); err != nil {
