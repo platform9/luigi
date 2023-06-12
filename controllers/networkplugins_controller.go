@@ -999,7 +999,9 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 				return nil, err
 			}
 
-			networkPlugins.Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
+			if oldNetworkPlugins.Spec.Plugins != nil && oldNetworkPlugins.Spec.Plugins.Multus != nil {
+				(*networkPlugins).Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
+			}
 		}
 
 		r.Log.Info("Updating network plugin")
