@@ -962,14 +962,6 @@ func (r *NetworkPluginsReconciler) fetchNetworkPlugins(ctx context.Context, req 
 	return networkPlugins, nil
 }
 
-// This function updates the NetworkPlugins object
-func (r *NetworkPluginsReconciler) updateNetworkPlugins(ctx context.Context, networkPlugins *plumberv1.NetworkPlugins) error {
-	if err := r.Update(ctx, networkPlugins); err != nil {
-		return err
-	}
-	return nil
-}
-
 // This function filters plugins that should not be uninstalled
 func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, req ctrl.Request, plugins []string) ([]string, error) {
 
@@ -1017,9 +1009,8 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 
 		r.Log.Info("Updating network plugin")
 
-		// this will keep multus in networkPlugins list
-		if err := r.updateNetworkPlugins(ctx, networkPlugins); err != nil {
-			r.Log.Error(err, "Error updating NetworkPlugins")
+		if err := r.Client.Update(ctx, networkPlugins); err != nil {
+			r.Log.Error(err, "Error updateing network plugins")
 			return nil, err
 		}
 	}
