@@ -972,6 +972,17 @@ func (r *NetworkPluginsReconciler) updateNetworkPlugins(ctx context.Context, net
 
 // This function filters plugins that should not be uninstalled
 func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, req ctrl.Request, plugins []string) ([]string, error) {
+
+	if len(plugins) == 0 {
+		return plugins, nil
+	}
+
+	if !containsString(plugins, PluginMultus) {
+		return plugins, nil
+	}
+
+	// Check if NetworkAttachmentDefinition exists
+	// If they do stop uninstalltion of multus
 	nadExists, err := r.networkAttachmentDefinitionExists(ctx)
 	if err != nil {
 		r.Log.Info("Error while checking if NetworkAttachmentDefinitions exist on cluster")
@@ -1015,41 +1026,3 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 
 	return plugins, nil
 }
-
-// // This function will filter plugins that should not be uninstalled
-// func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, req ctrl.Request, plugins []string) ([]string, error) {
-
-// 	// Check if NetworkAttachmentDefinition exists
-// 	// If they do stop uninstalltion of multus
-// 	nadList := &nettypes.NetworkAttachmentDefinitionList{}
-// 	err := r.Client.List(ctx, nadList, &client.ListOptions{})
-// 	if err != nil {
-// 		r.Log.Error(err, "Error listing NetworkAttachmentDefinitions")
-// 		return nil, err
-// 	}
-// 	if len(nadList.Items) != 0 {
-// 		// removing multus form missing plugins list
-// 		plugins = removeStringFromList(plugins, PluginMultus)
-// 		r.Log.Info("NetworkAttachmentDefinitions exist on cluster, Multus will not be uninstalled. new fileListMissing List", "plugins", plugins)
-
-// 		var networkPlugins = plumberv1.NetworkPlugins{}
-// 		if err := r.Get(ctx, req.NamespacedName, &networkPlugins); err != nil {
-// 			r.Log.Error(err, "unable to fetch NetworkPlugins")
-// 			return nil, err
-// 		}
-
-// 		annotations := networkPlugins.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
-// 		oldNetworkPlugins := plumberv1.NetworkPlugins{}
-// 		err := json.Unmarshal([]byte(annotations), &networkPlugins)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		networkPlugins.Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
-// 		if err := r.Update(ctx, &networkPlugins); err != nil {
-// 			return nil, err
-// 		}
-
-// 	}
-
-// 	return plugins, nil
-// }
