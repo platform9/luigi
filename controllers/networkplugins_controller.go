@@ -1003,6 +1003,9 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 			}
 
 			if oldNetworkPlugins.Spec.Plugins != nil && oldNetworkPlugins.Spec.Plugins.Multus != nil {
+				if networkPlugins.Spec.Plugins == nil {
+					networkPlugins.Spec.Plugins = &plumberv1.Plugins{}
+				}
 				(*networkPlugins).Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
 			}
 			r.Log.Info(fmt.Sprintf("oldNetworkPlugins: %v ", oldNetworkPlugins))
