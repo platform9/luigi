@@ -964,8 +964,8 @@ func (r *NetworkPluginsReconciler) fetchNetworkPlugins(ctx context.Context, req 
 
 // This function filters plugins that should not be uninstalled
 func (r *NetworkPluginsReconciler) filterUninstallPlugins(
-	ctx context.Context, networkPlugins *plumberv1.NetworkPlugins,
-	req ctrl.Request, plugins []string,
+	ctx context.Context, req ctrl.Request,
+	networkPlugins plumberv1.NetworkPlugins, plugins []string,
 ) (
 	[]string, error,
 ) {
@@ -1005,7 +1005,7 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(
 			}
 
 			if oldNetworkPlugins.Spec.Plugins != nil && oldNetworkPlugins.Spec.Plugins.Multus != nil {
-				(*networkPlugins).Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
+				networkPlugins.Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
 			}
 			r.Log.Info(fmt.Sprintf("oldNetworkPlugins: %v ", oldNetworkPlugins))
 			r.Log.Info(fmt.Sprintf("oldNetworkPlugins-p: %v ", oldNetworkPlugins.Spec.Plugins))
@@ -1018,17 +1018,17 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(
 		r.Log.Info("networkPlugins", "networkPlugins", networkPlugins)
 		r.Log.Info("networkPlugins <plug-4>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
 
-		if err := r.Update(ctx, networkPlugins); err != nil {
+		if err := r.Update(ctx, &networkPlugins); err != nil {
 			r.Log.Error(err, "Error updateing network plugins")
 			return nil, err
 
 		}
 		r.Log.Info("fetchNetworkPlugins again")
-		networkPlugins, err = r.fetchNetworkPlugins(ctx, req)
+		np, err := r.fetchNetworkPlugins(ctx, req)
 		if err != nil {
 			return nil, err
 		}
-		r.Log.Info("networkPlugins", "networkPlugins", networkPlugins)
+		r.Log.Info("np", "np", np)
 
 	}
 
