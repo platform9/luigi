@@ -143,6 +143,10 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	annotations := networkPluginsReq.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
+
+	log.Info("RECON", "networkPluginsReq.annotations", annotations)
+
 	pluginsFinalizerName := "teardownPlugins"
 
 	if networkPluginsReq.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -992,7 +996,7 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 		}
 
 		annotations := networkPlugins.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
-		r.Log.Info("networkPlugins", "annotations", annotations)
+		r.Log.Info("networkPlugins <plug-0>", "old_annotations", annotations)
 		r.Log.Info("networkPlugins <plug-1>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
 
 		if annotations != "" {
@@ -1005,7 +1009,9 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 
 			if oldNetworkPlugins.Spec.Plugins != nil && oldNetworkPlugins.Spec.Plugins.Multus != nil {
 				if networkPlugins.Spec.Plugins == nil {
+					r.Log.Info("networkPlugins <plug-2>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
 					(*networkPlugins).Spec.Plugins = &plumberv1.Plugins{}
+					r.Log.Info("networkPlugins <plug-3>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
 				}
 				(*networkPlugins).Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
 			}
@@ -1018,7 +1024,7 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 		r.Log.Info("Updating network plugin")
 
 		r.Log.Info("networkPlugins", "networkPlugins", networkPlugins)
-		r.Log.Info("networkPlugins <plug-1>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
+		r.Log.Info("networkPlugins <plug-4>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
 
 		if err := r.Update(ctx, networkPlugins); err != nil {
 			r.Log.Error(err, "Error updateing network plugins")
