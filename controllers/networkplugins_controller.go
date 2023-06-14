@@ -1005,14 +1005,17 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 			if oldNetworkPlugins.Spec.Plugins != nil && oldNetworkPlugins.Spec.Plugins.Multus != nil {
 				(*networkPlugins).Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
 			}
+			r.Log.Info(fmt.Sprintf("oldNetworkPlugins: %v ", oldNetworkPlugins))
+
+			r.Log.Info(fmt.Sprintf("networkPlugins: %v ", networkPlugins))
 		}
 
-		r.Log.Info("Updating network plugin")
+		// r.Log.Info("Updating network plugin")
 
-		if err := r.Client.Update(ctx, networkPlugins); err != nil {
-			r.Log.Error(err, "Error updateing network plugins")
-			return nil, err
-		}
+		// if err := r.Client.Update(ctx, networkPlugins); err != nil {
+		// 	r.Log.Error(err, "Error updateing network plugins")
+		// 	return nil, err
+		// }
 	}
 
 	return plugins, nil
