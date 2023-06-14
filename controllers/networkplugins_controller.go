@@ -143,10 +143,6 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	annotations := networkPluginsReq.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
-
-	log.Info("RECON", "networkPluginsReq.annotations", annotations)
-
 	pluginsFinalizerName := "teardownPlugins"
 
 	if networkPluginsReq.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -189,7 +185,7 @@ func (r *NetworkPluginsReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	log.Info("Filtering plugin delete list", "fileListMissing", fileListMissing)
-	fileListMissing, err = r.filterUninstallPlugins(ctx, req, fileListMissing)
+	fileListMissing, err = r.filterUninstallPlugins(ctx, req, networkPluginsReq, fileListMissing)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -967,7 +963,12 @@ func (r *NetworkPluginsReconciler) fetchNetworkPlugins(ctx context.Context, req 
 }
 
 // This function filters plugins that should not be uninstalled
-func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, req ctrl.Request, plugins []string) ([]string, error) {
+func (r *NetworkPluginsReconciler) filterUninstallPlugins(
+	ctx context.Context, networkPlugins *plumberv1.NetworkPlugins,
+	req ctrl.Request, plugins []string,
+) (
+	[]string, error,
+) {
 
 	if len(plugins) == 0 {
 		return plugins, nil
@@ -990,10 +991,6 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 		r.Log.Info("NetworkAttachmentDefinitions exist on cluster, Multus will not be uninstalled. new fileListMissing List", "plugins", plugins)
 
 		r.Log.Info("fetchNetworkPlugins")
-		networkPlugins, err := r.fetchNetworkPlugins(ctx, req)
-		if err != nil {
-			return nil, err
-		}
 
 		annotations := networkPlugins.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
 		r.Log.Info("networkPlugins <plug-0>", "old_annotations", annotations)
@@ -1008,11 +1005,6 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 			}
 
 			if oldNetworkPlugins.Spec.Plugins != nil && oldNetworkPlugins.Spec.Plugins.Multus != nil {
-				if networkPlugins.Spec.Plugins == nil {
-					r.Log.Info("networkPlugins <plug-2>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
-					(*networkPlugins).Spec.Plugins = &plumberv1.Plugins{}
-					r.Log.Info("networkPlugins <plug-3>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
-				}
 				(*networkPlugins).Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
 			}
 			r.Log.Info(fmt.Sprintf("oldNetworkPlugins: %v ", oldNetworkPlugins))
