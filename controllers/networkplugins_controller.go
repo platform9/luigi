@@ -993,6 +993,7 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 
 		annotations := networkPlugins.ObjectMeta.Annotations["kubectl.kubernetes.io/last-applied-configuration"]
 		r.Log.Info("networkPlugins", "annotations", annotations)
+		r.Log.Info("networkPlugins <plug-1>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
 
 		if annotations != "" {
 			oldNetworkPlugins := plumberv1.NetworkPlugins{}
@@ -1009,6 +1010,7 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 				(*networkPlugins).Spec.Plugins.Multus = oldNetworkPlugins.Spec.Plugins.Multus
 			}
 			r.Log.Info(fmt.Sprintf("oldNetworkPlugins: %v ", oldNetworkPlugins))
+			r.Log.Info(fmt.Sprintf("oldNetworkPlugins-p: %v ", oldNetworkPlugins.Spec.Plugins))
 
 			r.Log.Info(fmt.Sprintf("networkPlugins: %v ", networkPlugins))
 		}
@@ -1016,6 +1018,7 @@ func (r *NetworkPluginsReconciler) filterUninstallPlugins(ctx context.Context, r
 		r.Log.Info("Updating network plugin")
 
 		r.Log.Info("networkPlugins", "networkPlugins", networkPlugins)
+		r.Log.Info("networkPlugins <plug-1>", "networkPlugins.pl", networkPlugins.Spec.Plugins)
 
 		if err := r.Update(ctx, networkPlugins); err != nil {
 			r.Log.Error(err, "Error updateing network plugins")
