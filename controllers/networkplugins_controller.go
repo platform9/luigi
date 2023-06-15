@@ -57,7 +57,7 @@ const (
 	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2573338"
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6-pmk-6"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2571007"
-	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-2571186"
+	SriovDpImage            = "ghcr.io/k8snetworkplumbingwg/sriov-network-device-plugin:v3.5.1"
 	OvsImage                = "docker.io/platform9/openvswitch:v2.17.5"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.28.0"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.28.0"
