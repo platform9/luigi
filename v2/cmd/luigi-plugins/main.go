@@ -26,7 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	plumberv1 "github.com/platform9/luigi/api/v1"
+	plumberv1 "github.com/platform9/luigi/apis/plumber/v1"
 	"github.com/platform9/luigi/controllers"
 	// +kubebuilder:scaffold:imports
 )

@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	plumberv1 "github.com/platform9/luigi/api/v1"
+	plumberv1 "github.com/platform9/luigi/apis/plumber/v1"
 	// +kubebuilder:scaffold:imports
 )
 

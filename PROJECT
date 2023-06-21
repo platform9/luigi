@@ -12,6 +12,6 @@ resources:
   domain: k8s.pf9.io
   group: plumber
   kind: NetworkPlugins
-  path: github.com/platform9/luigi/api/v1
+  path: github.com/platform9/luigi/apis/plumber/v1
   version: v1
 version: "3"
