@@ -82,6 +82,11 @@ spec:
                   - networkName
                   type: object
                 type: array
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: Node Selector for the DHCPServer VM
+                type: object
             type: object
           status:
             description: DHCPServerStatus defines the observed state of DHCPServer
