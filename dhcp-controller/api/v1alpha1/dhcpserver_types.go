@@ -22,6 +22,8 @@ import (
 
 // DHCPServerSpec defines the desired state of DHCPServer
 type DHCPServerSpec struct {
+	// Node Selector for the DHCPServer VM
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// Details of Networks
 	// +kubebuilder:validation:Required
 	Networks []Network `json:"networks,omitempty"`
