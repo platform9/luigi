@@ -108,7 +108,7 @@ type NetworkPluginsStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-
+//+kubebuilder:resource:scope=cluster
 // NetworkPlugins is the Schema for the networkplugins API
 type NetworkPlugins struct {
 	metav1.TypeMeta   `json:",inline"`
