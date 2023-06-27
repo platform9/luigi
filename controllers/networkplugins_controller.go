@@ -48,7 +48,7 @@ import (
 const (
 	DefaultNamespace        = "default"
 	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2644970"
-	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.4.11"
+	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.4.12"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2633072"
 	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-2640320"
 	OvsImage                = "docker.io/platform9/openvswitch:v2.12.0"
