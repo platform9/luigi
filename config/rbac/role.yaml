@@ -6,6 +6,12 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
   - plumber.k8s.pf9.io
   resources:
   - networkplugins

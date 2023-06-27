@@ -91,6 +91,7 @@ func main() {
 
 	if err = (&controller.NetworkPluginsReconciler{
 		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controller").WithName("NetworkPlugins"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkPlugins")
