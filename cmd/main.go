@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	plumberv1 "github.com/platform9/luigi/api/v1"
 	"github.com/platform9/luigi/internal/controller"
 	//+kubebuilder:scaffold:imports
@@ -43,7 +44,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
+	utilruntime.Must(nettypes.AddToScheme(scheme))
 	utilruntime.Must(plumberv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }

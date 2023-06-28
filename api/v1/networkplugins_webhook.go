@@ -17,9 +17,17 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+	"fmt"
+	"log"
+
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -58,6 +66,26 @@ func (r *NetworkPlugins) ValidateCreate() error {
 func (r *NetworkPlugins) ValidateUpdate(old runtime.Object) error {
 	networkpluginslog.Info("validate update", "name", r.Name)
 
+	client, err := getKubernetesClient()
+	if err != nil {
+		networkpluginslog.Error(err, "error creating kubernetes client")
+		return err
+	}
+
+	networkpluginslog.Info("Fecthign Nad List")
+	ctx := context.Background()
+	var networkPluginsList = NetworkPluginsList{}
+	if err := client.List(ctx, &networkPluginsList); err != nil {
+		networkpluginslog.Info("Error fetching nad list")
+		return err
+	}
+
+	networkpluginslog.Info("Checking multus")
+
+	if err := r.multusUninstallCheck(client, networkPluginsList); err != nil {
+		return err
+	}
+
 	// TODO(user): fill in your validation logic upon object update.
 	return nil
 }
@@ -68,4 +96,65 @@ func (r *NetworkPlugins) ValidateDelete() error {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
+}
+
+func (r *NetworkPlugins) multusUninstallCheck(client client.Client, networkPluginsList NetworkPluginsList) error {
+
+	multusExist := false
+	for _, networkPlugins := range networkPluginsList.Items {
+		if networkPlugins.Spec.Plugins.Multus != nil {
+			multusExist = true
+		}
+	}
+
+	if multusExist && r.Spec.Plugins.Multus == nil {
+
+		nadExist, err := r.networkAttachmentDefinitionExists(client)
+		if err != nil {
+			log.Printf("error checking for NetworkAttachmentDefinition: %v", err)
+			return err
+		}
+		if nadExist {
+			return fmt.Errorf("NetworkAttachmentDefinition exists on cluster multus cannot be removed without deleting the NetworkAttachmentDefinition first")
+		}
+
+	}
+
+	return nil
+}
+
+func getKubernetesClient() (client.Client, error) {
+	// Get the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	scheme := runtime.NewScheme()
+	// Get the REST client from the client config
+	restClient, err := client.New(config, client.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return restClient, nil
+}
+
+// This function checks if NetworkAttachmentDefinition exists
+func (r *NetworkPlugins) networkAttachmentDefinitionExists(client client.Client) (bool, error) {
+	nadList := &nettypes.NetworkAttachmentDefinitionList{}
+	err := client.List(context.TODO(), nadList)
+	if k8sErrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	for _, nad := range nadList.Items {
+		networkpluginslog.Info("networkAttachmentDefinition exists", "name", nad.Name, "namespace", nad.Namespace)
+
+	}
+	return len(nadList.Items) != 0, nil
 }
