@@ -1,0 +1,31 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: HostNetworkTemplate
+metadata:
+  name: hostconfig-kernel-enp3
+spec:
+  # Add fields here
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: "true"
+    #testlabelA: "123"
+  interfaceConfig:
+    - name: enp3s0f1
+      # MTU can be set either here OR in sriovConfig. Affects PF + any VFs under it
+      mtu: 1500
+      #ipv4:
+        # IP addr config does not make sense for multiple hosts
+        # ONLY use if using nodeSelectors to target a specific host
+        # Addresses reflect final desired state - anything not present will be deleted
+        #address: 
+          #- 192.168.195.7/24
+          #- 192.168.196.8/24
+      #ipv6:
+        #address:
+          #- fc00:1::3/112
+  sriovConfig:
+    - pfName: enp3s0f1
+      numVfs: 6
+      vfDriver: ixgbevf
+      #mtu: 9000
+    - pfName: enp3s0f0
+      numVfs: 2
+      vfDriver: ixgbevf

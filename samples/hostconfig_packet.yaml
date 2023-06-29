@@ -1,0 +1,38 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: HostNetworkTemplate
+metadata:
+  name: hostconfig-kernel-eno2
+spec:
+  # Add fields here
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: "true"
+  sriovConfig:
+    - pfName: eno2
+      numVfs: 8
+      vfDriver: i40evf
+      mtu: 1500
+  interfaceConfig:
+    - name: eno50
+      vlan:
+        - id: 1000
+        - id: 1001
+        - id: 1002
+  ovsConfig:
+  - bridgeName: br-vlan
+    nodeInterface: ens6f0
+    dpdk: false
+  - bridgeName: "dpdk-br01"
+    nodeInterface: "eno2"
+    dpdk: true
+  - bridgeName: "ovs-bond01"
+    nodeInterface: "eno1,eno2"
+    dpdk: false
+    params:
+      mtuRequest: 9192
+  - bridgeName: "dpdk-bond01"
+    nodeInterface: "enp1s0f0,enp1s0f1"
+    dpdk: true
+    params:
+      mtuRequest: 9000
+      bondMode: "balance-tcp"
+      lacp: "active"

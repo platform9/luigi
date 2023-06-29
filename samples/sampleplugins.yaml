@@ -1,0 +1,25 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: NetworkPlugins
+metadata:
+  name: networkplugins-sample11
+spec:
+  # Add fields here
+  #privateRegistryBase: "localhost:5100"
+  plugins:
+    hostPlumber: {}
+    nodeFeatureDiscovery: {}
+    multus: {}
+    whereabouts:
+      ipReconcilerSchedule: "*/100 * * * *"
+      #ipReconcilerNodeSelector:
+         #foo: bar
+    # SRIOV actually consists of two plugins - the CNI, and the device-plugin
+    # VFs need to be created before deploying SRIOV - manually or use hostplumber
+    #sriov: {}
+    dhcpController: {}
+    ovs: 
+      dpdk:
+        lcoreMask: "0x2" #must be hex value
+        socketMem: "1024,2048" #Comma separated list of memory to pre-allocate from hugepages on specific sockets.
+        pmdCpuMask: "0x4" #must be hex value
+        hugepageMemory: "3Gi" #the amount of memory for hugepages (no. of hugepages*hugepagesize)

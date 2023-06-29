@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sriovdp-config
+  namespace: default
+data:
+  config.json: |
+    {
+        "resourceList": [
+            {
+                "resourceName": "intel_sriov_kernel1",
+                "selectors": {
+                    "drivers": ["i40evf"],
+                    "pfNames": ["eno2#0-8"]
+                }
+            }
+        ]
+    }
+ 
