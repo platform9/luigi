@@ -1,6 +1,8 @@
-
+SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+# IMG ?= controller:latest
+VER_LABEL=$(shell ./get-label.bash)
+IMG ?= platform9/luigi-plugins:$(VER_LABEL)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.26.1
 
@@ -11,7 +13,20 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+SRCROOT = $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/)
+BUILD_DIR :=$(SRCROOT)/bin
+BUILD_ROOT = $(SRCROOT)/build
+OS=$(shell go env GOOS)
+ARCH=$(shell go env GOARCH)
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+$(BUILD_ROOT):
+	mkdir -p $@
+	mkdir -p $@/luigi
 # Setting SHELL to bash allows bash commands to be executed by recipes.
+# This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
@@ -155,3 +170,19 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+img-test:
+	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.7-bullseye  bash -c "make test"
+
+img-build: $(BUILD_DIR) img-test 
+	docker build --network host . -t ${IMG}
+	echo ${IMG} > $(BUILD_DIR)/container-tag
+
+img-build-push: img-build
+	docker login
+	docker push ${IMG}
+	echo ${IMG} > $(BUILD_DIR)/container-tag
+
+scan: $(BUILD_ROOT)
+	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
+	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}
