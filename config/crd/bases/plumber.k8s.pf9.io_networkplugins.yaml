@@ -1,0 +1,148 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: networkplugins.plumber.k8s.pf9.io
+spec:
+  group: plumber.k8s.pf9.io
+  names:
+    kind: NetworkPlugins
+    listKind: NetworkPluginsList
+    plural: networkplugins
+    singular: networkplugins
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: NetworkPlugins is the Schema for the networkplugins API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NetworkPluginsSpec defines the desired state of NetworkPlugins
+            properties:
+              plugins:
+                properties:
+                  dhcpController:
+                    properties:
+                      DHCPControllerImage:
+                        type: string
+                      imagePullPolicy:
+                        type: string
+                      kubemacpoolRangeEnd:
+                        type: string
+                      kubemacpoolRangeStart:
+                        type: string
+                      kubemacpoolnamespace:
+                        type: string
+                    type: object
+                  hostPlumber:
+                    properties:
+                      hostPlumberImage:
+                        type: string
+                      imagePullPolicy:
+                        type: string
+                      namespace:
+                        type: string
+                    type: object
+                  multus:
+                    properties:
+                      imagePullPolicy:
+                        type: string
+                      multusImage:
+                        type: string
+                      namespace:
+                        type: string
+                    type: object
+                  nodeFeatureDiscovery:
+                    properties:
+                      imagePullPolicy:
+                        type: string
+                      namespace:
+                        type: string
+                      nfdImage:
+                        type: string
+                    type: object
+                  ovs:
+                    properties:
+                      cniImage:
+                        type: string
+                      dpdk:
+                        properties:
+                          hugepageMemory:
+                            type: string
+                          lcoreMask:
+                            type: string
+                          pmdCpuMask:
+                            type: string
+                          socketMem:
+                            type: string
+                        required:
+                        - hugepageMemory
+                        - lcoreMask
+                        - pmdCpuMask
+                        - socketMem
+                        type: object
+                      imagePullPolicy:
+                        type: string
+                      markerImage:
+                        type: string
+                      namespace:
+                        type: string
+                      ovsImage:
+                        type: string
+                    type: object
+                  sriov:
+                    properties:
+                      imagePullPolicy:
+                        type: string
+                      namespace:
+                        type: string
+                      sriovCniImage:
+                        type: string
+                      sriovConfigMap:
+                        type: string
+                      sriovDpImage:
+                        type: string
+                    type: object
+                  whereabouts:
+                    properties:
+                      imagePullPolicy:
+                        type: string
+                      ipReconcilerNodeSelector:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      ipReconcilerSchedule:
+                        type: string
+                      namespace:
+                        type: string
+                      whereaboutsImage:
+                        type: string
+                    type: object
+                type: object
+              privateRegistryBase:
+                type: string
+            type: object
+          status:
+            description: NetworkPluginsStatus defines the observed state of NetworkPlugins
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
