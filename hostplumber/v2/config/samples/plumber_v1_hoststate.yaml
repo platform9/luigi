@@ -1,0 +1,7 @@
+apiVersion: plumber.k8s.pf9.io/v1
+kind: HostState
+metadata:
+  name: hoststate-sample
+spec:
+  # Add fields here
+  foo: bar

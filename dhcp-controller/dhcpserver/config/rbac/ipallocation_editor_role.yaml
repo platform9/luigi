@@ -1,0 +1,24 @@
+# permissions for end users to edit ipallocations.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ipallocation-editor-role
+rules:
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ipallocations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ipallocations/status
+  verbs:
+  - get

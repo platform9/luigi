@@ -1,0 +1,7 @@
+domain: k8s.pf9.io
+repo: github.com/platform9/luigi
+resources:
+- group: plumber
+  kind: NetworkPlugins
+  version: v1
+version: "2"

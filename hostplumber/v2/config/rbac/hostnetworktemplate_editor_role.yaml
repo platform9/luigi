@@ -1,0 +1,24 @@
+# permissions for end users to edit hostconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hostnetworktemplate-editor-role
+rules:
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - hostnetworktemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - hostnetworktemplates/status
+  verbs:
+  - get
