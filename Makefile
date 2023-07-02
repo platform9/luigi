@@ -173,12 +173,15 @@ $(ENVTEST): $(LOCALBIN)
 
 
 pre-reqs:
+	go env
+	go mod tidy
 	curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_2.3.1_$(OS)_$(ARCH).tar.gz | tar -xz -C /tmp/
 	mv /tmp/kubebuilder_2.3.1_$(OS)_$(ARCH) /usr/local/kubebuilder
 	export PATH=$PATH:/usr/local/kubebuilder/bin
 
+PLATFORM = linux/amd64
 img-test:
-	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.19.10-bullseye  bash -c "make test --trace"
+	docker run --rm --platform=$(PLATFORM) -v $(SRCROOT):/luigi -w /luigi golang:1.19.10-bullseye  bash -c "make test --trace"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
