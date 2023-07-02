@@ -161,7 +161,7 @@ $(KUSTOMIZE): $(LOCALBIN)
 	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) --output install_kustomize.sh && bash install_kustomize.sh $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); rm install_kustomize.sh; }
 
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
+controller-gen: pre-reqs $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
@@ -171,8 +171,14 @@ envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
+
+pre-reqs:
+	curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_2.3.1_$(OS)_$(ARCH).tar.gz | tar -xz -C /tmp/
+	mv /tmp/kubebuilder_2.3.1_$(OS)_$(ARCH) /usr/local/kubebuilder
+	export PATH=$PATH:/usr/local/kubebuilder/bin
+
 img-test:
-	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.19  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.19.10-bullseye  bash -c "make test --trace"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
