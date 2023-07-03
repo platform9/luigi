@@ -181,7 +181,7 @@ pre-reqs:
 
 PLATFORM = linux/amd64
 img-test:
-	docker run --rm --platform=$(PLATFORM) -v $(SRCROOT):/luigi -w /luigi golang:1.19.10-bullseye  bash -c "make test --trace"
+	docker run --rm --platform=$(PLATFORM) -v $(SRCROOT):/luigi -w /luigi golang:1.19.10-bullseye  bash -c "git config --global --add safe.directory /luigi && make test --trace"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
