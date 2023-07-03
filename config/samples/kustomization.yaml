@@ -1,4 +1,0 @@
-## Append samples of your project ##
-resources:
-- plumber_v1_networkplugins.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples
