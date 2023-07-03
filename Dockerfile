@@ -14,6 +14,8 @@ RUN go mod download
 # Copy the go source
 COPY cmd/main.go cmd/main.go
 COPY api/ api/
+COPY pkg/apply/ pkg/apply/
+COPY plugin_templates /etc/plugin_templates
 COPY internal/controller/ internal/controller/
 
 # Build
@@ -25,9 +27,11 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:3.16
+RUN apk add --no-cache bash
 WORKDIR /
 COPY --from=builder /workspace/manager .
-USER 65532:65532
+COPY --from=builder /etc/plugin_templates /etc/plugin_templates
+#USER 65532:65532
 
 ENTRYPOINT ["/manager"]

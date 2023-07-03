@@ -28,8 +28,76 @@ type NetworkPluginsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of NetworkPlugins. Edit networkplugins_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Plugins  *Plugins `json:"plugins,omitempty"`
+	Registry string   `json:"privateRegistryBase,omitempty"`
+}
+
+type Plugins struct {
+	Multus               *Multus               `json:"multus,omitempty"`
+	Whereabouts          *Whereabouts          `json:"whereabouts,omitempty"`
+	Sriov                *Sriov                `json:"sriov,omitempty"`
+	HostPlumber          *HostPlumber          `json:"hostPlumber,omitempty"`
+	NodeFeatureDiscovery *NodeFeatureDiscovery `json:"nodeFeatureDiscovery,omitempty"`
+	OVS                  *Ovs                  `json:"ovs,omitempty"`
+	DhcpController       *DhcpController       `json:"dhcpController,omitempty"`
+}
+
+type Ovs struct {
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	OVSImage        string `json:"ovsImage,omitempty"`
+	CNIImage        string `json:"cniImage,omitempty"`
+	MarkerImage     string `json:"markerImage,omitempty"`
+	DPDK            *Dpdk  `json:"dpdk,omitempty"`
+}
+
+type Dpdk struct {
+	LcoreMask      string `json:"lcoreMask"`
+	SocketMem      string `json:"socketMem"`
+	PmdCpuMask     string `json:"pmdCpuMask"`
+	HugepageMemory string `json:"hugepageMemory"`
+}
+
+type NodeFeatureDiscovery struct {
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	NfdImage        string `json:"nfdImage,omitempty"`
+}
+
+type HostPlumber struct {
+	Namespace        string `json:"namespace,omitempty"`
+	ImagePullPolicy  string `json:"imagePullPolicy,omitempty"`
+	HostPlumberImage string `json:"hostPlumberImage,omitempty"`
+}
+
+type Whereabouts struct {
+	Namespace                string            `json:"namespace,omitempty"`
+	ImagePullPolicy          string            `json:"imagePullPolicy,omitempty"`
+	WhereaboutsImage         string            `json:"whereaboutsImage,omitempty"`
+	IpReconcilerSchedule     string            `json:"ipReconcilerSchedule,omitempty"`
+	IpReconcilerNodeSelector map[string]string `json:"ipReconcilerNodeSelector,omitempty"`
+}
+
+type Multus struct {
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	MultusImage     string `json:"multusImage,omitempty"`
+}
+
+type Sriov struct {
+	Namespace       string `json:"namespace,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	SriovCniImage   string `json:"sriovCniImage,omitempty"`
+	SriovDpImage    string `json:"sriovDpImage,omitempty"`
+	SriovConfigMap  string `json:"sriovConfigMap,omitempty"`
+}
+
+type DhcpController struct {
+	KubemacpoolNamespace  string `json:"kubemacpoolnamespace,omitempty"`
+	ImagePullPolicy       string `json:"imagePullPolicy,omitempty"`
+	DhcpControllerImage   string `json:"DHCPControllerImage,omitempty"`
+	KubemacpoolRangeStart string `json:"kubemacpoolRangeStart,omitempty"`
+	KubemacpoolRangeEnd   string `json:"kubemacpoolRangeEnd,omitempty"`
 }
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins
