@@ -48,13 +48,13 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 		}
 	}
 
-	if multusExist && networkPluginsReq.Spec.Plugins.Multus == nil {
+	if multusExist && (networkPluginsReq.Spec.Plugins == nil || networkPluginsReq.Spec.Plugins.Multus == nil) {
 		nadExist, err := a.networkAttachmentDefinitionExists(a.Client)
 		if err != nil {
 			log.Error(err, "Error checking for NetworkAttachmentDefinition")
 			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error while fetching network attachment definition: %v", err))
 		}
-		if nadExist && networkPluginsReq.Spec.Plugins.Multus == nil {
+		if nadExist {
 			return admission.Denied("NetworkAttachmentDefinition exists on cluster. multus cannot be removed without deleting the NetworkAttachmentDefinition first")
 		}
 	}
