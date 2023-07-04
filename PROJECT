@@ -1,7 +1,6 @@
 domain: k8s.pf9.io
 layout:
 - go.kubebuilder.io/v3
-multigroup: true
 projectName: luigi
 repo: github.com/platform9/luigi
 resources:

@@ -381,13 +381,14 @@ spec:
           requests:
             cpu: 5m
             memory: 64Mi
+
       - args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
         command:
         - /manager
-        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-weebhook-multus-pmk-2737652
+        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-weebhook-multus-pmk-2737743
         livenessProbe:
           httpGet:
             path: /healthz
@@ -410,8 +411,17 @@ spec:
             memory: 64Mi
         securityContext:
           allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
       serviceAccountName: luigi-controller-manager
       terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
 ---
 ---
 apiVersion: v1
@@ -449,8 +459,8 @@ metadata:
   namespace: luigi-system
 spec:
   dnsNames:
-  - luigi-webhook-service.luigi-system.svc
-  - luigi-webhook-service.luigi-system.svc.cluster.local
+  - webhook-service.luigi-system.svc
+  - webhook-service.luigi-system.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: luigi-selfsigned-issuer
@@ -467,6 +477,8 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: luigi-system/luigi-serving-cert
   creationTimestamp: null
   name: mutating-webhook-configuration
 webhooks:
@@ -475,7 +487,7 @@ webhooks:
   clientConfig:
     service:
       name: webhook-service
-      namespace: system
+      namespace: luigi-system
       path: /mutate-v1-networkplugins
   failurePolicy: Fail
   name: np.plumber.io
