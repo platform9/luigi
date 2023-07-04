@@ -28,17 +28,17 @@ type NetworkPluginsValidator struct {
 func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 
 	log := logf.FromContext(ctx)
-	np := &plumberv1.NetworkPlugins{}
-	err := a.decoder.Decode(req, np)
+	networkPluginsReq := &plumberv1.NetworkPlugins{}
+	err := a.decoder.Decode(req, networkPluginsReq)
 	if err != nil {
-		log.Error(err, "Error listing NetworkPlugins")
+		log.Error(err, "Error decoding NetworkPlugins")
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	var networkPluginsList = &plumberv1.NetworkPluginsList{}
 	if err := a.Client.List(ctx, networkPluginsList); err != nil {
-		log.Error(err, "Error listing NetworkPlugins")
-		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error listing NetworkPlugins: %w", err))
+		log.Error(err, "Error listing NetworkPluginsList")
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error listing NetworkPluginsList: %w", err))
 	}
 
 	multusExist := false
@@ -48,26 +48,26 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 		}
 	}
 
-	if multusExist && np.Spec.Plugins.Multus == nil {
+	if multusExist && networkPluginsReq.Spec.Plugins.Multus == nil {
 		nadExist, err := a.networkAttachmentDefinitionExists(a.Client)
 		if err != nil {
 			log.Error(err, "Error checking for NetworkAttachmentDefinition")
 			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error while fetching network attachment definition: %v", err))
 		}
-		if nadExist && np.Spec.Plugins.Multus == nil {
+		if nadExist && networkPluginsReq.Spec.Plugins.Multus == nil {
 			return admission.Denied("NetworkAttachmentDefinition exists on cluster. multus cannot be removed without deleting the NetworkAttachmentDefinition first")
 		}
 	}
 
-	return ReturnPatchedNetworkPlugins(np, req)
+	return ReturnPatchedNetworkPlugins(networkPluginsReq, req)
 }
 
-func ReturnPatchedNetworkPlugins(np *plumberv1.NetworkPlugins, req admission.Request) admission.Response {
-	marshaledNP, err := json.Marshal(np)
+func ReturnPatchedNetworkPlugins(networkPluginsReq *plumberv1.NetworkPlugins, req admission.Request) admission.Response {
+	marshaledNetworkPlugins, err := json.Marshal(networkPluginsReq)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledNP)
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledNetworkPlugins)
 }
 
 // This function checks if NetworkAttachmentDefinition exists
