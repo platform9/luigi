@@ -24,6 +24,19 @@ endif
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
 
+SRCROOT = $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/)
+BUILD_DIR :=$(SRCROOT)/bin
+BUILD_ROOT = $(SRCROOT)/build
+OS=$(shell go env GOOS)
+ARCH=$(shell go env GOARCH)
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+$(BUILD_ROOT):
+	mkdir -p $@
+	mkdir -p $@/luigi
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
