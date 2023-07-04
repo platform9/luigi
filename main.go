@@ -30,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	plumberv1 "github.com/platform9/luigi/api/v1"
 	"github.com/platform9/luigi/controllers"
@@ -86,6 +87,9 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkPlugins")
 		os.Exit(1)
 	}
+
+	mgr.GetWebhookServer().Register("/mutate-v1-networkplugins", &webhook.Admission{Handler: &controllers.NetworkPluginsValidator{Client: mgr.GetClient()}})
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

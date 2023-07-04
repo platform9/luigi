@@ -14,4 +14,7 @@ resources:
   kind: NetworkPlugins
   path: github.com/platform9/luigi/api/v1
   version: v1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 version: "3"
