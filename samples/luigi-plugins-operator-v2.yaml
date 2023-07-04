@@ -388,7 +388,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-weebhook-multus-pmk-2737743
+        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-weebhook-multus-pmk-2737978
         livenessProbe:
           httpGet:
             path: /healthz
