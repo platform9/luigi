@@ -9,10 +9,21 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    cert-manager.io/inject-ca-from: luigi-system/luigi-serving-cert
     controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: networkplugins.plumber.k8s.pf9.io
 spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          namespace: system
+          name: webhook-service
+          path: /convert
+      conversionReviewVersions:
+      - v1
   group: plumber.k8s.pf9.io
   names:
     kind: NetworkPlugins
@@ -27,14 +38,10 @@ spec:
         description: NetworkPlugins is the Schema for the networkplugins API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -334,6 +341,26 @@ spec:
   selector:
     control-plane: controller-manager
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: luigi
+    app.kubernetes.io/instance: webhook-service
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: service
+    app.kubernetes.io/part-of: luigi
+  name: luigi-webhook-service
+  namespace: luigi-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -403,3 +430,64 @@ spec:
           allowPrivilegeEscalation: false
       serviceAccountName: luigi-controller-manager
       terminationGracePeriodSeconds: 10
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: luigi
+    app.kubernetes.io/instance: serving-cert
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: certificate
+    app.kubernetes.io/part-of: luigi
+  name: luigi-serving-cert
+  namespace: luigi-system
+spec:
+  dnsNames:
+  - luigi-webhook-service.luigi-system.svc
+  - luigi-webhook-service.luigi-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: luigi-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: luigi-selfsigned-issuer
+  namespace: luigi-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-v1-networkplugins
+  failurePolicy: Fail
+  name: np.plumber.io
+  rules:
+  - apiGroups:
+    - plumber.k8s.pf9.io
+    apiVersions:
+    - v1
+    operations:
+    - get
+    - list
+    - watch
+    - CREATE
+    - UPDATE
+    - patch
+    - DELETE
+    resources:
+    - networkplugins
+  sideEffects: None
