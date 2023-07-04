@@ -341,25 +341,7 @@ spec:
   selector:
     control-plane: controller-manager
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app.kubernetes.io/component: webhook
-    app.kubernetes.io/created-by: luigi
-    app.kubernetes.io/instance: webhook-service
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/name: service
-    app.kubernetes.io/part-of: luigi
-  name: luigi-webhook-service
-  namespace: luigi-system
-spec:
-  ports:
-  - port: 443
-    protocol: TCP
-    targetPort: 9443
-  selector:
-    control-plane: controller-manager
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -405,7 +387,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: docker.io/platform9/luigi-plugins:v0.4.2
+        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-weebhook-multus-pmk-2737652
         livenessProbe:
           httpGet:
             path: /healthz
@@ -431,6 +413,28 @@ spec:
       serviceAccountName: luigi-controller-manager
       terminationGracePeriodSeconds: 10
 ---
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: luigi
+    app.kubernetes.io/instance: webhook-service
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: service
+    app.kubernetes.io/part-of: luigi
+  name: webhook-service
+  namespace: luigi-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+---
+
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -481,12 +485,8 @@ webhooks:
     apiVersions:
     - v1
     operations:
-    - get
-    - list
-    - watch
     - CREATE
     - UPDATE
-    - patch
     - DELETE
     resources:
     - networkplugins

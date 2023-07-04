@@ -3,11 +3,11 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	plumberv1 "github.com/platform9/luigi/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -24,16 +24,17 @@ type NetworkPluginsValidator struct {
 }
 
 func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	log := logf.FromContext(ctx)
-	np := &plumberv1.NetworkPlugins{}
-	err := a.decoder.Decode(req, np)
-	if err != nil {
-		log.Info("ERROR deocding VM object regular")
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-	log.Info("<> Webhook Network Plugin", "NetworkPlugins Req", np)
+	return admission.Errored(http.StatusInternalServerError, fmt.Errorf("Testing"))
+	// log := logf.FromContext(ctx)
+	// np := &plumberv1.NetworkPlugins{}
+	// err := a.decoder.Decode(req, np)
+	// if err != nil {
+	// 	log.Info("ERROR deocding VM object regular")
+	// 	return admission.Errored(http.StatusBadRequest, err)
+	// }
+	// log.Info("<> Webhook Network Plugin", "NetworkPlugins Req", np)
 
-	return ReturnPatchedVM(np, req)
+	// return ReturnPatchedVM(np, req)
 }
 
 func ReturnPatchedVM(np *plumberv1.NetworkPlugins, req admission.Request) admission.Response {
