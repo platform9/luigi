@@ -30,7 +30,7 @@ spec:
     listKind: NetworkPluginsList
     plural: networkplugins
     singular: networkplugins
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:
@@ -388,7 +388,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-weebhook-multus-pmk-2738082
+        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-AIR-895-singleton-pmk-2739563
         livenessProbe:
           httpGet:
             path: /healthz

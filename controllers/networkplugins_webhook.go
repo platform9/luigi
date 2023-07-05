@@ -38,6 +38,14 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("error listing NetworkPluginsList: %w", err))
 	}
 
+	if req.Operation == admissionv1.Create {
+		if len(networkPluginsList.Items) != 0 {
+			err = fmt.Errorf("NetworkPlugins already exists, only one NetworkPlugins can be installed")
+			log.Info(err.Error())
+			return admission.Denied(err.Error())
+		}
+	}
+
 	multusExist := false
 	for _, networkPlugins := range networkPluginsList.Items {
 		if networkPlugins.Spec.Plugins != nil && networkPlugins.Spec.Plugins.Multus != nil {
@@ -68,6 +76,11 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 
 	}
 
+	if err := a.isNetworkPluginsValid(networkPluginsReq, networkPluginsList); err != nil {
+		log.Error(err, "Networking Plugins already exist, New can not be installed before removing old ones")
+		return admission.Denied(fmt.Sprintf("Networking Plugins already exists: %v", err.Error()))
+	}
+
 	return ReturnPatchedNetworkPlugins(networkPluginsReq, req)
 }
 
@@ -81,6 +94,7 @@ func (a *NetworkPluginsValidator) multusUninstallCheck() (admission.Response, er
 		err = fmt.Errorf("NetworkAttachmentDefinition exists on cluster. multus cannot be removed without deleting the NetworkAttachmentDefinition first")
 		return admission.Denied(err.Error()), err
 	}
+
 	return admission.Response{}, nil
 
 }
@@ -101,4 +115,59 @@ func (a *NetworkPluginsValidator) networkAttachmentDefinitionExists(client clien
 		return false, err
 	}
 	return len(nadList.Items) != 0, nil
+}
+
+func (a *NetworkPluginsValidator) isNetworkPluginsValid(networkPluginsReq *plumberv1.NetworkPlugins, networkPluginsList *plumberv1.NetworkPluginsList) error {
+	reqPlugins := networkPluginsReq.Spec.Plugins
+
+	for _, networkPlugins := range networkPluginsList.Items {
+		if reqPlugins.Multus != nil && networkPlugins.Spec.Plugins.Multus != nil {
+			if reqPlugins.Multus.Namespace != networkPlugins.Spec.Plugins.Multus.Namespace {
+				return fmt.Errorf(" Multus already exists on cluster, remove it and reinstall ")
+			}
+		}
+
+		if reqPlugins.Whereabouts != nil && networkPlugins.Spec.Plugins.Whereabouts != nil {
+			if reqPlugins.Whereabouts.Namespace != networkPlugins.Spec.Plugins.Whereabouts.Namespace {
+				return fmt.Errorf(" Whereabouts already exists on cluster, remove it and reinstall ")
+			}
+
+		}
+
+		if reqPlugins.Sriov != nil && networkPlugins.Spec.Plugins.Sriov != nil {
+			if reqPlugins.Sriov.Namespace != networkPlugins.Spec.Plugins.Sriov.Namespace {
+				return fmt.Errorf(" Sriov already exists on cluster, remove it and reinstall ")
+			}
+
+		}
+
+		if reqPlugins.HostPlumber != nil && networkPlugins.Spec.Plugins.HostPlumber != nil {
+			if reqPlugins.HostPlumber.Namespace != networkPlugins.Spec.Plugins.HostPlumber.Namespace {
+				return fmt.Errorf("HostPlumber already exists on cluster, remove it and reinstall ")
+			}
+
+		}
+
+		if reqPlugins.NodeFeatureDiscovery != nil && networkPlugins.Spec.Plugins.NodeFeatureDiscovery != nil {
+			if reqPlugins.NodeFeatureDiscovery.Namespace != networkPlugins.Spec.Plugins.NodeFeatureDiscovery.Namespace {
+				return fmt.Errorf(" NodeFeatureDiscovery already exists on cluster, remove it and reinstall")
+			}
+
+		}
+
+		if reqPlugins.OVS != nil && networkPlugins.Spec.Plugins.OVS != nil {
+			if reqPlugins.OVS.Namespace != networkPlugins.Spec.Plugins.OVS.Namespace {
+				return fmt.Errorf(" OVS already exists on cluster, remove it and reinstall")
+			}
+
+		}
+
+		if reqPlugins.DhcpController != nil && networkPlugins.Spec.Plugins.DhcpController != nil {
+			if reqPlugins.DhcpController.KubemacpoolNamespace != networkPlugins.Spec.Plugins.DhcpController.KubemacpoolNamespace {
+				return fmt.Errorf(" DhcpController already exists on cluster, remove it and reinstall ")
+			}
+		}
+	}
+
+	return nil
 }

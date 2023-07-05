@@ -6,7 +6,6 @@ repo: github.com/platform9/luigi
 resources:
 - api:
     crdVersion: v1
-    namespaced: true
   controller: true
   domain: k8s.pf9.io
   group: plumber
