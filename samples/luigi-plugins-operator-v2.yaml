@@ -503,3 +503,4 @@ webhooks:
     resources:
     - networkplugins
   sideEffects: None
+  timeoutSeconds: 30
