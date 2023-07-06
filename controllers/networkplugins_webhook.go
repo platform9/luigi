@@ -40,15 +40,15 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 
 	multusExist := false
 	for _, networkPlugins := range networkPluginsList.Items {
-		if networkPlugins.Spec.Plugins.Multus != nil {
+		if networkPlugins.Spec.Plugins != nil && networkPlugins.Spec.Plugins.Multus != nil {
 			multusExist = true
 		}
 	}
 
 	if req.Operation == admissionv1.Delete {
-		if resp, err := a.multusUninstallCheck(); err != nil {
+		if _, err := a.multusUninstallCheck(); err != nil {
 			log.Error(err, "error while doing checks for multus uninstall")
-			return resp
+			return admission.Denied("NetworkPlugins cannot be deleted. Please delete the NetworkAttachmentDefinition first")
 		}
 		return admission.Allowed("Delete request")
 	}
