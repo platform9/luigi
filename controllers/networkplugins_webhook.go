@@ -77,8 +77,8 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 	}
 
 	if err := a.isNetworkPluginsValid(networkPluginsReq, networkPluginsList); err != nil {
-		log.Error(err, "Networking Plugins already exist, New can not be installed before removing old ones")
-		return admission.Denied(fmt.Sprintf("Networking Plugins already exists: %v", err.Error()))
+		log.Error(err, "NetworkPlugins already exist, New can not be installed before removing old ones")
+		return admission.Denied(fmt.Sprintf("NetworkPlugins already exists: %v", err.Error()))
 	}
 
 	return ReturnPatchedNetworkPlugins(networkPluginsReq, req)
