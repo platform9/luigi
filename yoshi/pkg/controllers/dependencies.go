@@ -28,7 +28,7 @@ import (
 const TemplateDir = "/etc/plugin_templates/"
 const DeploymentWaitTimeout = 60
 
-var plugins = []string{"cert-manager.yaml, calico-apiserver.yaml"}
+var plugins = []string{"calico-apiserver.yaml"}
 
 type DeployCtx struct {
 	Client      client.Client
@@ -41,6 +41,7 @@ func NewDeployCtx(log logr.Logger, client client.Client) *DeployCtx {
 	for _, pluginFile := range plugins {
 		split := strings.Split(pluginFile, ".")
 		pluginName := split[0]
+		ctx.pluginPaths = make(map[string]string)
 		ctx.pluginPaths[pluginName] = pluginFile
 	}
 
@@ -53,6 +54,8 @@ func (ctx *DeployCtx) DeployDependencies() error {
 	for pluginName, pluginFile := range ctx.pluginPaths {
 		fullpath := filepath.Join(TemplateDir, pluginFile)
 		yamlfile, err := ioutil.ReadFile(fullpath)
+
+		ctx.Log.Info("Deploying plugin:", "plugin", pluginName, "path", fullpath)
 
 		if err != nil {
 			ctx.Log.Info("Failed to read file:", "pluginFile", fullpath)
@@ -84,10 +87,15 @@ func (ctx *DeployCtx) DeployDependencies() error {
 			}
 		}
 
-		if err := ctx.WaitForDeployment(pluginName, pluginName, DeploymentWaitTimeout); err != nil {
-			ctx.Log.Error(err, "deployment not ready", "name", pluginName)
-			return err
-		}
+		// TODO: For some reason this does not work because client cache is not init'd yet
+		// But client cache is not init'd until manager is Started, but that never returns
+		// For now assume the deployment always succeeds. Could not find a way to init client cache
+		/*
+			if err := ctx.WaitForDeployment(pluginName, pluginName, DeploymentWaitTimeout); err != nil {
+				ctx.Log.Error(err, "deployment not ready", "name", pluginName)
+				return err
+			}
+		*/
 
 	}
 	return nil
@@ -117,9 +125,7 @@ func (ctx *DeployCtx) _waitForDeployment(ch chan error, name, namespace string) 
 		deployment, err := ctx.GetDeployment(name, namespace)
 		if err != nil {
 			ctx.Log.Error(err, "failed to find deployment", "name", name)
-		}
-
-		if deployment.Status.ReadyReplicas > 0 {
+		} else if deployment.Status.ReadyReplicas > 0 {
 			ch <- nil
 			return
 		}

@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 
@@ -24,12 +25,15 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strings"
 	"text/template"
 
+	"github.com/dustin/go-humanize"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,14 +54,14 @@ import (
 const (
 	DefaultNamespace        = "luigi-system"
 	KubemacpoolNamespace    = "dhcp-controller-system"
-	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2573338"
+	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2644970"
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6-pmk-6"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2571007"
 	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-2571186"
-	OvsImage                = "docker.io/platform9/openvswitch:v2.17.5"
+	OvsImage                = "docker.io/platform9/openvswitch:v2.17.5-1"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.28.0"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.28.0"
-	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.4.1"
+	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.5.1"
 	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v1.0"
 	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:latest"
 	KubemacpoolRangeStart   = "02:55:43:00:00:00"
@@ -69,6 +73,7 @@ const (
 	DeleteDir               = TemplateDir + "delete/"
 	NetworkPluginsConfigMap = "pf9-networkplugins-config"
 	IpReconcilerSchedule    = "*/5 * * * *"
+	HugepageSize            = "2Mi"
 )
 
 // NetworkPluginsReconciler reconciles a NetworkPlugins object
@@ -481,11 +486,12 @@ func (ovsConfig *OvsT) WriteConfigToTemplate(outputDir, registry string) error {
 	}
 
 	if ovsConfig.DPDK != nil {
-                if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" {
-                        return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory are required parameters to enable Dpdk")
-                }
-                config["DPDK"] = ovsConfig.DPDK
-        }
+		if ovsConfig.DPDK.LcoreMask == "" || ovsConfig.DPDK.SocketMem == "" || ovsConfig.DPDK.PmdCpuMask == "" || ovsConfig.DPDK.HugepageMemory == "" {
+			return fmt.Errorf("LcoreMask, SocketMem, PmdCpuMask, HugepageMemory are required parameters to enable Dpdk")
+		}
+		config["HugepageSize"] = GetHugepageSize()
+		config["DPDK"] = ovsConfig.DPDK
+	}
 
 	// Apply the OVS DaemonSet
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "ovs", "ovs-daemons.yaml"))
@@ -916,4 +922,33 @@ func (r *NetworkPluginsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&plumberv1.NetworkPlugins{}).
 		Complete(r)
+}
+
+func GetHugepageSize() string {
+	// Get the hugepage size from meminfo and convert it into bibytes from KB
+	var hugepagesize int64
+	f, err := os.Open("/proc/meminfo")
+	if err != nil {
+		fmt.Printf("unable to open /proc/meminfo:%s\n", err)
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		if bytes.HasPrefix(s.Bytes(), []byte(`Hugepagesize:`)) {
+			_, err = fmt.Sscanf(s.Text(), "Hugepagesize:%d", &hugepagesize)
+			if err != nil {
+				fmt.Printf("unable to read Hugepagesize from /proc/info: %s\n", err)
+			}
+			break
+		}
+	}
+	if err = s.Err(); err != nil {
+		fmt.Printf("scanner error: %s\n", err)
+	}
+	// Converting size in KB to bibytes annotation. For example 1.0 GiB -> 1Gi
+	r := humanize.BigIBytes(big.NewInt(hugepagesize * 1024))
+	r = strings.Replace(r, ".0 ", "", 1)
+	r = strings.Replace(r, "B", "", 1)
+	fmt.Printf("Hugepages: %+v", r)
+	return r
 }

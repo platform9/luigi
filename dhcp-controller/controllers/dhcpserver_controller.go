@@ -389,6 +389,7 @@ func (r *DHCPServerReconciler) backendVM(v dhcpv1alpha1.DHCPServer) *unstructure
 			Running: &t,
 			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
 				Spec: kubevirtv1.VirtualMachineInstanceSpec{
+					NodeSelector: v.Spec.NodeSelector,
 					AccessCredentials: []kubevirtv1.AccessCredential{{
 						UserPassword: &kubevirtv1.UserPasswordAccessCredential{
 							Source: kubevirtv1.UserPasswordAccessCredentialSource{

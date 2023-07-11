@@ -38,14 +38,21 @@ type NetworkWizardSpec struct {
 }
 
 type BGPConfig struct {
-	// Comma separated list of physical routers to peer with
-	RemotePeers []string `json:"peers,omitempty"`
+	// Physical routers to peer with
+	RemotePeers []BGPPeer `json:"peers,omitempty"`
 
 	// ASN of peer router
 	RemoteASN *uint32 `json:"remoteASN,omitempty"`
 
 	// ASN to use for the cluster's BGP advertisements
 	MyASN *uint32 `json:"myASN,omitempty"`
+}
+
+type BGPPeer struct {
+	PeerIP *string `json:"peerIP"`
+
+	// Adds a static route that may be needed to connect to a peer.
+	ReachableBy *string `json:"reachableBy,omitempty"`
 }
 
 func (n NetworkWizard) ParseCIDR() (net.IP, *net.IPNet, error) {

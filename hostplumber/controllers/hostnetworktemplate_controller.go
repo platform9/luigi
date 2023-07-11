@@ -322,12 +322,12 @@ func applyOvsConfig(ovsConfigList []*plumberv1.OvsConfig) error {
 		bridgeName := (*ovsConfig).BridgeName
 		dpdk := (*ovsConfig).Dpdk
 		var BondMode, Lacp string
-                var MtuRequest int
+		var MtuRequest int
 		if (*ovsConfig).Params != nil {
-                        MtuRequest = (*ovsConfig).Params.MtuRequest
-                        BondMode = (*ovsConfig).Params.BondMode
-                        Lacp = (*ovsConfig).Params.Lacp
-                }
+			MtuRequest = (*ovsConfig).Params.MtuRequest
+			BondMode = (*ovsConfig).Params.BondMode
+			Lacp = (*ovsConfig).Params.Lacp
+		}
 
 		var nic1, nic2 string
 		interfaces := strings.Split(nodeInterface, ",")
@@ -356,9 +356,9 @@ func applyOvsConfig(ovsConfigList []*plumberv1.OvsConfig) error {
 		}
 
 		if length == 2 {
-                        nic1 = interfaces[0]
-                        nic2 = interfaces[1]
-                }
+			nic1 = interfaces[0]
+			nic2 = interfaces[1]
+		}
 		if length == 2 && dpdk == false {
 			if err := createOvsBond(nic1, nic2, bridgeName, MtuRequest, BondMode, Lacp); err != nil {
 				log.Error(err, "Failed to create", "OVS bond for", bridgeName)

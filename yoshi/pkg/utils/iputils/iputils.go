@@ -34,7 +34,7 @@ func GenerateRandomMAC() (string, error) {
 	MAC[0] |= 0x02
 	MAC[0] &= 0xfe
 
-	MACStr := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x\n", MAC[0], MAC[1], MAC[2], MAC[3], MAC[4], MAC[5])
+	MACStr := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", MAC[0], MAC[1], MAC[2], MAC[3], MAC[4], MAC[5])
 
 	return MACStr, nil
 }
