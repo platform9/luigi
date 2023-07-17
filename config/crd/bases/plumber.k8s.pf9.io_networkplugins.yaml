@@ -13,7 +13,7 @@ spec:
     listKind: NetworkPluginsList
     plural: networkplugins
     singular: networkplugins
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1
     schema:
