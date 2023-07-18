@@ -101,3 +101,8 @@ spec:
 ```
 
 That is it! Now that you have the secondary CNIs and other related plugins deployed, you may need to prep the nodes before you can actually create Multus Networks and assign them to Pods. In order to do so, use Luigi's own HostPlumber plugin: https://github.com/platform9/luigi/blob/master/hostplumber/README.md
+
+
+##### Dev note
+This project need to migrate to Kubebuilder/v4.
+weekhooks where added manually `make generate && make manifestes` will not add required feild for webhook in crds and luigi deployment. refer `samples/luigi-plugins-operator-v2.yaml`
