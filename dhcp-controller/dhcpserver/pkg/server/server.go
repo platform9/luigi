@@ -409,6 +409,8 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 
 				if event.Op&fsnotify.Write == fsnotify.Write && oldmd5 != newmd5 {
 					serverLog.Info("Write Event Detected .....")
+					// Sleep for avoiding reading of truncated lease file
+					time.Sleep(500 * time.Millisecond)
 
 					// Read the file and update IPAllocations CR
 					oldmd5, err = readLeaseFile(lf, leasePath)
