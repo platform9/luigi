@@ -104,5 +104,5 @@ That is it! Now that you have the secondary CNIs and other related plugins deplo
 
 
 ##### Dev note
-This project need to migrate to Kubebuilder/v4.
-weekhooks where added manually `make generate && make manifestes` will not add required feild for webhook in crds and luigi deployment. refer `samples/luigi-plugins-operator-v2.yaml`
+This project needs to migrate to Kubebuilder/v4.
+webhooks where added manually `make generate && make manifestes` will not add required feild for webhook in crds and luigi deployment. refer `samples/luigi-plugins-operator-v2.yaml`
