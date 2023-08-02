@@ -94,7 +94,6 @@ func (a *NetworkPluginsValidator) multusUninstallCheck() (admission.Response, er
 		err = fmt.Errorf("NetworkAttachmentDefinition exists on cluster. multus cannot be removed without deleting the NetworkAttachmentDefinition first")
 		return admission.Denied(err.Error()), err
 	}
-
 	return admission.Response{}, nil
 
 }

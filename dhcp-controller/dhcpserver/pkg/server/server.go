@@ -14,11 +14,8 @@ import (
 
 	"time"
 
-	"crypto/md5"
 	"encoding/csv"
-	"encoding/hex"
 	"encoding/json"
-	"io"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -311,12 +308,12 @@ func updateRecord(lf map[string]LeaseFile, record LeaseFile, isupdate bool) {
 
 }
 
-func readLeaseFile(lf map[string]LeaseFile, leasePath string) (string, error) {
+func readLeaseFile(lf map[string]LeaseFile, leasePath string) error {
 	serverLog.Info("Reading leasefile...")
 	f, err := os.Open(leasePath)
 	if err != nil {
 		serverLog.Error(err, "Cannot open lease file")
-		return "", err
+		return err
 	}
 	defer f.Close()
 
@@ -326,7 +323,7 @@ func readLeaseFile(lf map[string]LeaseFile, leasePath string) (string, error) {
 	err = gocsv.UnmarshalCSVWithoutHeaders(csvReader2, &records)
 	if err != nil && err != gocsv.ErrEmptyCSVFile {
 		serverLog.Error(err, "Cannot parse lease file")
-		return "", err
+		return err
 	}
 
 	// Check if record exists in leasefile
@@ -357,33 +354,23 @@ func readLeaseFile(lf map[string]LeaseFile, leasePath string) (string, error) {
 	tmp, _ := json.MarshalIndent(lf, "", "	")
 	serverLog.Info(string(tmp))
 
-	return hash_file_md5(leasePath)
+	return nil
 }
 
 func writeLeaseFile(lf map[string]LeaseFile, leasePath string) {}
 
-func hash_file_md5(filePath string) (string, error) {
-	var returnMD5String string
-	file, err := os.Open(filePath)
+func get_file_size(leasePath string) int64 {
+	file, err := os.Stat(leasePath)
 	if err != nil {
-		return returnMD5String, err
+		serverLog.Error(err, "Cannot get lease file size")
 	}
-	defer file.Close()
-	hash := md5.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return returnMD5String, err
-	}
-	hashInBytes := hash.Sum(nil)[:16]
-	returnMD5String = hex.EncodeToString(hashInBytes)
-	return returnMD5String, nil
-
+	return file.Size()
 }
 
 // Starts watching leasefile. Ends if error in accessing/reading leasefile
 func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 	serverLog.Info("Starting Watcher....")
 	var watcher *fsnotify.Watcher
-	var oldmd5 string       //Hash Comparison
 	done := make(chan bool) //Ending the function
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -402,16 +389,20 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 			case event := <-watcher.Events:
 				// Check if file is actually updated. fsnotify gives multiple write events
 				// depending on the editor and platform
-				newmd5, err := hash_file_md5(leasePath)
-				if err != nil {
-					done <- true
-				}
-
-				if event.Op&fsnotify.Write == fsnotify.Write && oldmd5 != newmd5 {
+				if event.Op&fsnotify.Write == fsnotify.Write {
 					serverLog.Info("Write Event Detected .....")
+					// Sleep for avoiding reading of truncated lease file
+					fsize := get_file_size(leasePath)
+					if fsize == 0 {
+						time.Sleep(500 * time.Millisecond)
+						fsize = get_file_size(leasePath)
+						if fsize == 0 {
+							time.Sleep(500 * time.Millisecond)
+						}
+					}
 
 					// Read the file and update IPAllocations CR
-					oldmd5, err = readLeaseFile(lf, leasePath)
+					err = readLeaseFile(lf, leasePath)
 					if err != nil {
 						serverLog.Error(err, "Cannot read lease file")
 						done <- true
@@ -427,7 +418,7 @@ func StartWatcher(lf map[string]LeaseFile, leasePath string) {
 		done <- true
 	}()
 
-	oldmd5, err = readLeaseFile(lf, leasePath)
+	err = readLeaseFile(lf, leasePath)
 	if err != nil {
 		serverLog.Error(err, "Cannot read lease file")
 	}
