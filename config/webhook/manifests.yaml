@@ -1,0 +1,32 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-v1-networkplugins
+  failurePolicy: Fail
+  name: np.plumber.io
+  rules:
+  - apiGroups:
+    - plumber.k8s.pf9.io
+    apiVersions:
+    - v1
+    operations:
+    - get
+    - list
+    - watch
+    - CREATE
+    - UPDATE
+    - patch
+    - DELETE
+    resources:
+    - networkplugins
+  sideEffects: None
