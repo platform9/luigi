@@ -56,6 +56,12 @@ spec:
                         type: string
                       imagePullPolicy:
                         type: string
+                      kubemacpoolRangeEnd:
+                        type: string
+                      kubemacpoolRangeStart:
+                        type: string
+                      kubemacpoolnamespace:
+                        type: string
                     type: object
                   hostPlumber:
                     properties:
@@ -88,6 +94,22 @@ spec:
                     properties:
                       cniImage:
                         type: string
+                      dpdk:
+                        properties:
+                          hugepageMemory:
+                            type: string
+                          lcoreMask:
+                            type: string
+                          pmdCpuMask:
+                            type: string
+                          socketMem:
+                            type: string
+                        required:
+                        - hugepageMemory
+                        - lcoreMask
+                        - pmdCpuMask
+                        - socketMem
+                        type: object
                       imagePullPolicy:
                         type: string
                       markerImage:
@@ -96,17 +118,6 @@ spec:
                         type: string
                       ovsImage:
                         type: string
-                      dpdk:
-                        properties:
-                          lcoreMask:
-                            type: string
-                          socketMem:
-                            type: string
-                          pmdCpuMask:
-                            type: string
-                          hugepageMemory:
-                            type: string
-                        type: object
                     type: object
                   sriov:
                     properties:
@@ -388,7 +399,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-weebhook-multus-pmk-2738082
+        image: docker.io/platform9/luigi-plugins:private-master-shubhamc-AIR-895-singleton-pmk-2739563
         livenessProbe:
           httpGet:
             path: /healthz
