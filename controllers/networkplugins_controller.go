@@ -63,7 +63,7 @@ const (
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.28.0"
 	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.5.1"
 	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v1.0"
-	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:latest"
+	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:v0.41.0"
 	KubemacpoolRangeStart   = "02:55:43:00:00:00"
 	KubemacpoolRangeEnd     = "02:55:43:FF:FF:FF"
 	KubeRbacProxyImage      = "gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0"
