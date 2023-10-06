@@ -59,8 +59,16 @@ type SriovConfig struct {
 }
 
 type OvsConfig struct {
-	NodeInterface string `json:"nodeInterface,omitempty"`
-	BridgeName    string `json:"bridgeName,omitempty"`
+	NodeInterface string  `json:"nodeInterface,omitempty"`
+	BridgeName    string  `json:"bridgeName,omitempty"`
+	Dpdk          bool    `json:"dpdk,omitempty"`
+	Params        *Params `json:"params,omitempty"`
+}
+
+type Params struct {
+	MtuRequest int    `json:"mtuRequest,omitempty"`
+	BondMode   string `json:"bondMode,omitempty"`
+	Lacp       string `json:"lacp,omitempty"`
 }
 
 // HostNetworkTemplateStatus defines the observed state of HostNetworkTemplate

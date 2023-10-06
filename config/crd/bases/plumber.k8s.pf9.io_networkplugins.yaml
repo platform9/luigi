@@ -43,6 +43,12 @@ spec:
                         type: string
                       imagePullPolicy:
                         type: string
+                      kubemacpoolRangeEnd:
+                        type: string
+                      kubemacpoolRangeStart:
+                        type: string
+                      kubemacpoolnamespace:
+                        type: string
                     type: object
                   hostPlumber:
                     properties:
@@ -75,6 +81,22 @@ spec:
                     properties:
                       cniImage:
                         type: string
+                      dpdk:
+                        properties:
+                          hugepageMemory:
+                            type: string
+                          lcoreMask:
+                            type: string
+                          pmdCpuMask:
+                            type: string
+                          socketMem:
+                            type: string
+                        required:
+                        - hugepageMemory
+                        - lcoreMask
+                        - pmdCpuMask
+                        - socketMem
+                        type: object
                       imagePullPolicy:
                         type: string
                       markerImage:

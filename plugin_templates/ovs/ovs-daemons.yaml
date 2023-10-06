@@ -28,7 +28,7 @@ spec:
           tolerations:
           - key: node-role.kubernetes.io/master
             operator: Exists
-            effect: NoSchedule
+            effect: NoExecute
 
           initContainers:
             - name: ovs-db-init
@@ -46,6 +46,17 @@ spec:
             - name: ovs-services
               image: {{ .OVSImage }}
               imagePullPolicy: {{ .ImagePullPolicy }}
+{{- if .DPDK }}
+              env:
+              - name: EnableDpdk
+                value: "true"
+              - name: LcoreMask
+                value: "{{ .DPDK.LcoreMask }}"
+              - name: SocketMem
+                value: "{{ .DPDK.SocketMem }}"
+              - name: PmdCpuMask
+                value: "{{ .DPDK.PmdCpuMask }}"
+{{- end }}
               securityContext:
                 capabilities:
                   add: ["NET_ADMIN", "SYS_MODULE", "SYS_NICE"]
@@ -57,11 +68,28 @@ spec:
                   mountPath: /lib/modules
                 - name: var-run-ovs
                   mountPath: /var/run/openvswitch
+                - name: host-sys
+                  mountPath: /sys
+                - name: vfio-dir
+                  mountPath: /dev/vfio
                 - name: var-lib-ovs
                   mountPath: /var/lib/openvswitch
                 - name: var-log-ovs
                   mountPath: /var/log/openvswitch
-
+{{- if .DPDK }}
+                - name: hugepages
+                  mountPath: /dev/hugepages
+                  readOnly: False
+                - name: vhost-sockets
+                  mountPath: /var/lib/vhost_sockets
+                  mountPropagation: HostToContainer
+              resources:
+                limits:
+                  hugepages-{{ .HugepageSize }}: "{{ .DPDK.HugepageMemory }}"
+                  memory: "{{ .DPDK.HugepageMemory }}"
+                requests:
+                  memory: "{{ .DPDK.HugepageMemory }}"
+{{- end }}
           volumes:
             - name: lib-modules
               hostPath:
@@ -72,12 +100,30 @@ spec:
             - name: var-run-ovs
               hostPath:
                   path: /var/run/openvswitch
+            - name: host-sys
+              hostPath: 
+                  path: /sys
+            - name: vfio-dir
+              hostPath:
+                  path: /dev/vfio
             - name: var-lib-ovs
               hostPath:
                   path: /var/lib/openvswitch
             - name: var-log-ovs
               hostPath:
                   path: /var/log/openvswitch
+{{- if .DPDK }}
+            - name: hugepages
+              hostPath:
+                  path: /dev/hugepages
+                  type: Directory
+            - name: vhost-sockets
+              hostPath:
+                  path: /var/lib/vhost_sockets
+            - name: hugepagevolume
+              emptyDir:
+                medium: HugePages-"{{ .HugepageSize }}"
+{{- end }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1

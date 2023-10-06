@@ -27,7 +27,7 @@ spec:
       tolerations:
       - key: node-role.kubernetes.io/master
         operator: Exists
-        effect: NoSchedule
+        effect: NoExecute
       initContainers:
       - name: ovs-cni-plugin
         image: {{ .CNIImage }}
