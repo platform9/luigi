@@ -18,6 +18,9 @@ BUILD_ROOT :=$(SRCROOT)/build
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
 
+clean:
+	rm -rf $(BUILD_DIR)
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -69,7 +72,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: clean manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Build
@@ -146,7 +149,7 @@ $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.17.7-bullseye  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.19.7-bullseye  bash -c "make test"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
