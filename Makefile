@@ -151,12 +151,11 @@ img-test:
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
 
 img-build-push: img-build
 	docker login
 	docker push ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
+	sudo echo ${IMG} > $(BUILD_DIR)/container-tag
 
 scan: $(BUILD_ROOT)
 	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
