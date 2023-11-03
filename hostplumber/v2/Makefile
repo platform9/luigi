@@ -95,7 +95,7 @@ pre-reqs:
 	export PATH=$PATH:/usr/local/kubebuilder/bin
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.17.7-bullseye  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber 1.21-alpine3.18  bash -c "make test"
 
 img-build: img-test $(BUILD_DIR)
 	docker build --network host . -t ${IMG}
