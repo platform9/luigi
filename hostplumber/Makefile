@@ -146,16 +146,15 @@ $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.17.7-bullseye  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.19.7-buster  bash -c "make test"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
 
 img-build-push: img-build docker-push
 	docker login
 	docker push ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
+	echo ${IMG} >> $(BUILD_DIR)/container-tag
 
 scan: $(BUILD_ROOT)
 	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
