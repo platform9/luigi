@@ -1,0 +1,27 @@
+# permissions for end users to view networkwizards.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: networkwizard-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: yoshi
+    app.kubernetes.io/part-of: yoshi
+    app.kubernetes.io/managed-by: kustomize
+  name: networkwizard-viewer-role
+rules:
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - networkwizards
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - networkwizards/status
+  verbs:
+  - get

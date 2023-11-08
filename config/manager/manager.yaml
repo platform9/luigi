@@ -31,7 +31,8 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: controller:latest
+        image: docker.io/xagent003/yoshi:latest
+        imagePullPolicy: Always
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
@@ -52,9 +53,9 @@ spec:
         resources:
           limits:
             cpu: 500m
-            memory: 128Mi
+            memory: 200Mi
           requests:
-            cpu: 10m
+            cpu: 100m
             memory: 64Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

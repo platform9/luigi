@@ -48,6 +48,14 @@ type Ovs struct {
 	OVSImage        string `json:"ovsImage,omitempty"`
 	CNIImage        string `json:"cniImage,omitempty"`
 	MarkerImage     string `json:"markerImage,omitempty"`
+	DPDK            *Dpdk  `json:"dpdk,omitempty"`
+}
+
+type Dpdk struct {
+	LcoreMask      string `json:"lcoreMask"`
+	SocketMem      string `json:"socketMem"`
+	PmdCpuMask     string `json:"pmdCpuMask"`
+	HugepageMemory string `json:"hugepageMemory"`
 }
 
 type NodeFeatureDiscovery struct {
@@ -85,8 +93,11 @@ type Sriov struct {
 }
 
 type DhcpController struct {
-	ImagePullPolicy     string `json:"imagePullPolicy,omitempty"`
-	DhcpControllerImage string `json:"DHCPControllerImage,omitempty"`
+	KubemacpoolNamespace  string `json:"kubemacpoolnamespace,omitempty"`
+	ImagePullPolicy       string `json:"imagePullPolicy,omitempty"`
+	DhcpControllerImage   string `json:"DHCPControllerImage,omitempty"`
+	KubemacpoolRangeStart string `json:"kubemacpoolRangeStart,omitempty"`
+	KubemacpoolRangeEnd   string `json:"kubemacpoolRangeEnd,omitempty"`
 }
 
 // NetworkPluginsStatus defines the observed state of NetworkPlugins
