@@ -27,14 +27,10 @@ spec:
         description: NetworkPlugins is the Schema for the networkplugins API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -89,6 +85,17 @@ spec:
                         type: string
                       ovsImage:
                         type: string
+                      dpdk:
+                        properties:
+                          lcoreMask:
+                            type: string
+                          socketMem:
+                            type: string
+                          pmdCpuMask:
+                            type: string
+                          hugepageMemory:
+                            type: string
+                        type: object
                     type: object
                   sriov:
                     properties:
@@ -348,7 +355,7 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: localhost:5100/kubebuilder/kube-rbac-proxy:v0.11.0
+        image: docker.io/kubebuilder/kube-rbac-proxy:v0.11.0
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -367,7 +374,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: localhost:5100/platform9/luigi-plugins:v0.4.1
+        image: docker.io/platform9/luigi-plugins:v0.4.2
         livenessProbe:
           httpGet:
             path: /healthz

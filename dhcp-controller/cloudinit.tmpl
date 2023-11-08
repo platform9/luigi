@@ -1,0 +1,9 @@
+    #cloud-config
+    runcmd:
+    - "sudo su"
+    - "mkdir /mnt/kubeconfig"
+    - "mount /dev/sda /mnt/kubeconfig"
+    - "mkdir /etc/dnsmasq.d/"
+    - "mount /dev/sdb /etc/dnsmasq.d/"
+    - "iptables -A POSTROUTING -t mangle -p udp --dport bootpc -j CHECKSUM --checksum-fill"
+    - "KUBECONFIG=/mnt/kubeconfig/default.yaml /home/fedora/manager"

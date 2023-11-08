@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -14,15 +15,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	kubevirtv1 "kubevirt.io/api/core/v1"
 
 	dhcpserverv1alpha1 "dhcpserver/api/v1alpha1"
 	"reflect"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"time"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 var (
@@ -47,7 +49,7 @@ func NewClient(timeout time.Duration) (*Client, error) {
 	_ = dhcpserverv1alpha1.AddToScheme(scheme)
 	_ = kubevirtv1.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
-	config, err := rest.InClusterConfig()
+	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +183,7 @@ foundvmi:
 			if macaddr == netinterface.MAC {
 				entityref = vmi.ObjectMeta.Name
 				found = true
+				i.AddVMIAnnotation(context.TODO(), vmi, macaddr, ip)
 				break foundvmi
 			}
 		}
@@ -199,6 +202,7 @@ foundvmi:
 			for _, network := range networkstatus {
 				if macaddr == network["mac"] {
 					entityref = pod.Name
+					i.AddPodAnnotation(context.TODO(), pod, macaddr, ip)
 					break foundpod
 				}
 			}
@@ -259,6 +263,50 @@ func (i *Client) UpdateIPAllocation(ctx context.Context, leaseexpiry string, mac
 	return ipAllocation, nil
 }
 
+// These functions add annotations in the format
+// dhcp.plumber.k8s.pf9.io/dhcpserver: {mac1:ip1, mac2:ip2}
+func (i *Client) AddVMIAnnotation(ctx context.Context, vmi kubevirtv1.VirtualMachineInstance, macaddr string, ip string) {
+	original := client.MergeFrom(vmi.DeepCopy())
+
+	annotations := map[string]string{}
+	val, ok := vmi.Annotations["dhcp.plumber.k8s.pf9.io/dhcpserver"]
+	if ok {
+		json.Unmarshal([]byte(val), &annotations)
+	}
+	annotations[macaddr] = ip
+	annotationbytes, err := json.Marshal(annotations)
+	if err != nil {
+		serverLog.Error(err, "Unable to marshal annotation")
+	}
+	vmi.Annotations["dhcp.plumber.k8s.pf9.io/dhcpserver"] = string(annotationbytes)
+
+	err = i.client.Patch(context.TODO(), &vmi, original)
+	if err != nil {
+		serverLog.Error(err, "Unable to patch annotation to vmi "+vmi.ObjectMeta.Name)
+	}
+}
+
+func (i *Client) AddPodAnnotation(ctx context.Context, pod corev1.Pod, macaddr string, ip string) {
+	original := client.MergeFrom(pod.DeepCopy())
+
+	annotations := map[string]string{}
+	val, ok := pod.Annotations["dhcp.plumber.k8s.pf9.io/dhcpserver"]
+	if ok {
+		json.Unmarshal([]byte(val), &annotations)
+	}
+	annotations[macaddr] = ip
+	annotationbytes, err := json.Marshal(annotations)
+	if err != nil {
+		serverLog.Error(err, "Unable to marshal annotation")
+	}
+	pod.Annotations["dhcp.plumber.k8s.pf9.io/dhcpserver"] = string(annotationbytes)
+
+	err = i.client.Patch(context.TODO(), &pod, original)
+	if err != nil {
+		serverLog.Error(err, "Unable to patch annotation to pod "+pod.Name)
+	}
+}
+
 func (i *Client) GetIPAllocation(ctx context.Context, name string) (*dhcpserverv1alpha1.IPAllocation, error) {
 	ipAllocation := &dhcpserverv1alpha1.IPAllocation{}
 	err := i.client.Get(context.TODO(), types.NamespacedName{
@@ -269,7 +317,6 @@ func (i *Client) GetIPAllocation(ctx context.Context, name string) (*dhcpserverv
 		return nil, err
 	}
 	return ipAllocation, nil
-
 }
 
 func (i *Client) ListIPAllocations(ctx context.Context) ([]dhcpserverv1alpha1.IPAllocation, error) {

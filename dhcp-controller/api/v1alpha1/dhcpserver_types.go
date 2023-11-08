@@ -22,6 +22,8 @@ import (
 
 // DHCPServerSpec defines the desired state of DHCPServer
 type DHCPServerSpec struct {
+	// Node Selector for the DHCPServer VM
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// Details of Networks
 	// +kubebuilder:validation:Required
 	Networks []Network `json:"networks,omitempty"`
@@ -38,7 +40,7 @@ type Network struct {
 	// +kubebuilder:validation:Required
 	NetworkCIDR CIDR `json:"cidr"`
 	// refers to leasetime of IP
-	LeaseDuration string `json:"leaseDuration"`
+	LeaseDuration string `json:"leaseDuration,omitempty"`
 	// refers to vlan
 	VlanID string `json:"vlanId,omitempty"`
 }

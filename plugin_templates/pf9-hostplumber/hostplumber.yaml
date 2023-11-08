@@ -251,8 +251,19 @@ spec:
                   properties:
                     bridgeName:
                       type: string
+                    dpdk:
+                      type: boolean
                     nodeInterface:
                       type: string
+                    params:
+                      properties:
+                        bondMode:
+                          type: string
+                        lacp:
+                          type: string
+                        mtuRequest:
+                          type: integer
+                      type: object
                   type: object
                 type: array
               sriovConfig:
@@ -553,11 +564,17 @@ spec:
           name: host
         - mountPath: /var/run/openvswitch
           name: ovs-var-run
+        - mountPath: /sys
+          name: host-sys
+        - mountPath: /dev/vfio
+          name: vfio-dir
+        - mountPath: /var/log/openvswitch
+          name: var-log-ovs
       hostNetwork: true
       serviceAccountName: hostplumber-controller-manager
       terminationGracePeriodSeconds: 10
       tolerations:
-      - effect: NoSchedule
+      - effect: NoExecute
         key: node-role.kubernetes.io/master
         operator: Exists
       volumes:
@@ -567,3 +584,12 @@ spec:
       - hostPath:
           path: /var/run/openvswitch
         name: ovs-var-run
+      - hostPath:
+          path: /sys
+        name: host-sys
+      - hostPath:
+          path: /dev/vfio
+        name: vfio-dir
+      - hostPath:
+          path: /var/log/openvswitch
+        name: var-log-ovs
