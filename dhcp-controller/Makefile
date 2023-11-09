@@ -1,7 +1,7 @@
 CRD_OPTIONS ?= "crd:preserveUnknownFields=false,crdVersions=v1,trivialVersions=true"
 # Image URL to use all building/pushing image targets
 IMG_REPO = pf9-dhcp-controller
-IMG_TAG = v1.0
+IMG_TAG = v1.1
 IMG_REGISTRY ?= artifactory.platform9.horse/docker-local
 #IMG_REGISTRY = docker.io/platform9
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
