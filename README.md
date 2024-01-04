@@ -70,8 +70,6 @@ spec:
     multus: {}
     whereabouts:
       ipReconcilerSchedule: "*/1 * * * *"
-      ipReconcilerNodeSelector:
-         foo: bar
     # SRIOV actually consists of two plugins - the CNI, and the device-plugin
     # Use HostPlumber to create the actual VFs
     sriov: {}

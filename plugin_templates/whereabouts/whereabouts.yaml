@@ -47,7 +47,40 @@ rules:
   - pods
   verbs:
   - list
+  - watch
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs:
   - get
+- apiGroups: ["k8s.cni.cncf.io"]
+  resources:
+    - network-attachment-definitions
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+    - events
+  verbs:
+  - create
+  - patch
+  - update
+  - get
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: whereabouts-config
+  namespace: {{ .Namespace }}
+  annotations:
+    kubernetes.io/description: |
+      Configmap containing user customizable cronjob schedule
+data:
+  cron-expression:  "{{ .IpReconcilerSchedule }}"
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -72,16 +105,25 @@ spec:
     spec:
       hostNetwork: true      
       serviceAccountName: whereabouts
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
       tolerations:
       - operator: Exists
         effect: NoSchedule
       containers:
       - name: whereabouts
+        command: [ "/bin/sh" ]
+        args:
+          - -c
+          - >
+            SLEEP=false /install-cni.sh &&
+            /ip-control-loop -log-level debug
         image: {{ .WhereaboutsImage }}
         imagePullPolicy: {{ .ImagePullPolicy }}
         env:
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
         - name: WHEREABOUTS_NAMESPACE
           valueFrom:
             fieldRef:
@@ -89,10 +131,10 @@ spec:
         resources:
           requests:
             cpu: "100m"
-            memory: "50Mi"
+            memory: "100Mi"
           limits:
             cpu: "100m"
-            memory: "50Mi"
+            memory: "200Mi"
         securityContext:
           privileged: true
         volumeMounts:
@@ -100,6 +142,8 @@ spec:
           mountPath: /host/opt/cni/bin
         - name: cni-net-dir
           mountPath: /host/etc/cni/net.d
+        - name: cron-scheduler-configmap
+          mountPath: /cron-schedule
       volumes:
         - name: cnibin
           hostPath:
@@ -107,7 +151,13 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
-
+        - name: cron-scheduler-configmap
+          configMap:
+            name: "whereabouts-config"
+            defaultMode: 0744
+            items:
+            - key: "cron-expression"
+              path: "config"
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -236,57 +286,3 @@ status:
     plural: ""
   conditions: []
   storedVersions: []
-
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: ip-reconciler
-  namespace: {{ .Namespace }}
-  labels:
-    tier: node
-    app: whereabouts
-spec:
-  concurrencyPolicy: Forbid
-  schedule: "{{ .IpReconcilerSchedule }}"
-  jobTemplate:
-    spec:
-      backoffLimit: 0
-      template:
-        metadata:
-          labels:
-            app: whereabouts
-        spec:
-          {{if .NodeSelector -}} nodeSelector:
-          {{- range $label, $val := .NodeSelector}}
-              {{ $label -}} : {{ $val -}}
-          {{end}}
-          {{end -}}
-          priorityClassName: "system-node-critical"
-          containers:
-            - name: whereabouts
-              image: {{ .WhereaboutsImage }}
-              resources:
-                requests:
-                  cpu: "100m"
-                  memory: "50Mi"
-                limits:
-                  cpu: "100m"
-                  memory: "250Mi"
-              command:
-                - /ip-reconciler
-                - -kubeconfig=/host/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig
-              volumeMounts:
-                - name: cni-net-dir
-                  mountPath: /host/etc/cni/net.d
-                - mountPath: /host/var/log/pf9
-                  name: reconciler-log
-          volumes:
-            - name: cni-net-dir
-              hostPath:
-                path: /etc/cni/net.d
-            - name: reconciler-log
-              hostPath:
-                path: /var/log/pf9
-          restartPolicy: OnFailure
-
