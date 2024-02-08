@@ -55,7 +55,7 @@ const (
 	DefaultNamespace        = "luigi-system"
 	KubemacpoolNamespace    = "dhcp-controller-system"
 	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2644970"
-	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6-pmk-2871011"
+	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6.3"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2877848"
 	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-2877839"
 	OvsImage                = "docker.io/platform9/openvswitch:v2.17.5-2"
