@@ -2,7 +2,6 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
@@ -11,6 +10,131 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+  - '*'
+  resources:
+  - pods
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachineinstances
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - '*'
+  resources:
+  - virtualmachines
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ipallocations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ipallocations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - ipallocations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - hostnetworktemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - hostnetworktemplates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - hostnetworktemplates/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
@@ -33,6 +157,32 @@ rules:
   - plumber.k8s.pf9.io
   resources:
   - networkplugins/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - networkwizards
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - networkwizards/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - plumber.k8s.pf9.io
+  resources:
+  - networkwizards/status
   verbs:
   - get
   - patch
