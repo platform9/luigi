@@ -1,0 +1,24 @@
+#cloud-config
+password: fedora
+chpasswd: { expire: False }
+ssh_pwauth: yes
+runcmd:
+  - sudo dnf install -y qemu-guest-agent stress dnsmasq iptables
+  - sudo dnf clean all
+  - sudo hostnamectl set-hostname ""
+  - sudo hostnamectl set-hostname "" --transient
+  - sudo systemctl start qemu-guest-agent
+  - iptables -A POSTROUTING -t mangle -p udp --dport bootpc -j CHECKSUM --checksum-fill
+  - curl https://kubevirt.s3.us-west-2.amazonaws.com/manager -o /home/fedora/manager
+  - chmod +x /home/fedora/manager
+  - "mkdir -p /opt/pf9/ && cd /opt/pf9/"
+  - "curl -LO -k https://github.com/prometheus/node_exporter/releases/download/v1.0.1/node_exporter-1.0.1.linux-amd64.tar.gz"
+  - "gunzip -c node_exporter-1.0.1.linux-amd64.tar.gz | tar xopf -"
+  - "./node_exporter-1.0.1.linux-amd64/node_exporter &"
+  - "sudo /bin/sh -c 'cat > /etc/rc.local <<EOF
+    #!/bin/sh
+    echo \"Starting up node_exporter at :9100!\"
+    /opt/pf9/node_exporter-1.0.1.linux-amd64/node_exporter 2>&1 > /dev/null &
+    EOF'"
+  - "sudo chmod +x /etc/rc.local"
+  - "sudo shutdown"
