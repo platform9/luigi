@@ -46,7 +46,12 @@ jobs:
         run: make test
       - name: Build
         run: make build
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./cover.out
+      - name: Go Coverage
+        uses: gwatts/go-coverage-action@v1.3.0
+      - name: Generate coverage tree map
+        run: |
+         go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest; \
+         go run github.com/nikolaydubina/go-cover-treemap@latest \
+          -coverprofile ${{ steps.coverage.outputs.gocov-agg-pathname }} \
+          -only-folders=true >/tmp/treemap.svg        
+
