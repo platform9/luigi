@@ -20,4 +20,4 @@ updates:
   - package-ecosystem: "docker"
     directory: "/dhcp-controller"
     schedule:
-      interval: "weekly"      
+      interval: "weekly"
