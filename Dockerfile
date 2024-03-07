@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 #FROM gcr.io/distroless/static:nonroot
 
-FROM alpine:3.18
+FROM alpine:3.19
 RUN apk add --no-cache bash
 WORKDIR /
 COPY --from=builder /workspace/manager .
