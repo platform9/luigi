@@ -24,7 +24,7 @@ jobs:
       - name: Print the version of golang
         run: go version
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@4
+        uses: golangci/golangci-lint-action@v4
         with:
           skip-pkg-cache: true
           args: --timeout=5m
