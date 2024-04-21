@@ -1,0 +1,62 @@
+---
+name: docker
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        type: string
+        default: 'openvswitch'
+      runs_on:
+        type: string
+        default: 'ubuntu-latest'
+      build_args:
+        type: string
+        default: ''
+      context:
+        type: string
+        default: 'hostplumber/pkg/ovs-docker'
+      platforms:
+        type: string
+        default: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x"
+      push:
+        type: boolean
+        default: true
+      tag:
+        type: string
+        default: test
+    secrets:
+      registry_username:
+        required: true
+      registry_password:
+        required: true
+    
+jobs:
+  buildx:
+    runs-on: ${{ inputs.runs_on }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Docker BuildX
+        uses: docker/setup-buildx-action@v1
+        
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      
+      # setup Docker buld action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to the Docker Registry
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.registry_username }}
+          password: ${{ secrets.registry_password }}
+  
+      - name: Build/Push image to Docker Container Registry
+        uses: docker/build-push-action@v3
+        with:
+          context: ${{ inputs.context }}
+          tags: ${{ secrets.registry_username }}/${{ inputs.image_name }}:${{ inputs.tag }}
+          push: ${{ inputs.push }}
+          build-args: ${{ inputs.build_args}}
+          platforms: ${{ inputs.platforms }}
