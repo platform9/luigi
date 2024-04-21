@@ -44,7 +44,11 @@ jobs:
           password: ${{ env.PASSWORD }}
 
       - name: Build/Push image to Quay Container Registry
+<<<<<<< HEAD
         uses: docker/build-push-action@v6
+=======
+        uses: docker/build-push-action@v3
+>>>>>>> 08c9617 (Create GitHub workflows to build luigi and openvswitch image)
         with:
           context: hostplumber/pkg/ovs-docker
           tags: quay.io/platform9/openvswitch:${{ env.TAG }}-${{ github.run_number }}
