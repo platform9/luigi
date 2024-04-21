@@ -8,7 +8,7 @@ else
 IMG_TAG ?= $(OVERRIDE_LUIGI_VERSION)
 endif
 
-IMG = platform9/luigi-plugins:$(IMG_TAG)
+IMG = quay.io/platform9/luigi-plugins:$(IMG_TAG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27
 
@@ -160,7 +160,6 @@ img-build: $(BUILD_DIR) img-test
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
 img-build-push: img-build
-	docker login
 	docker push ${IMG}
 	echo ${IMG} > $(BUILD_DIR)/container-tag
 
