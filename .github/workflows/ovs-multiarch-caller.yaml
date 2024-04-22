@@ -15,6 +15,6 @@ jobs:
         uses: actions/workflow-dispatch@v2
         with:
           workflow: ovs-multiarch-build-and-push.yml
-        with:
-          image-name: openvswitch
-          tag: testovs
+          inputs:
+            image-name: openvswitch
+            tag: testovs
