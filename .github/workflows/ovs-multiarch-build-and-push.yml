@@ -3,10 +3,10 @@ name: Static Checks
 on:
   push:
     branches:
-      - private/shweta/ovs-multi-arch
+      - private/shweta/ovs
   pull_request:
     branches:
-      - private/shweta/ovs-multi-arch
+      - private/shweta/ovs
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -39,7 +39,7 @@ on:
     
 jobs:
   buildx:
-    runs-on: ${{ inputs.runs_on }}
+    runs-on: 'ubuntu-latest'
     steps:
       - uses: actions/checkout@v3
 
@@ -56,14 +56,14 @@ jobs:
       - name: Login to the Docker Registry
         uses: docker/login-action@v1
         with:
-          username: ${{ secrets.registry_username }}
-          password: ${{ secrets.registry_password }}
+          username: shwetachavan20
+          password: 50$@Shweta
   
       - name: Build/Push image to Docker Container Registry
         uses: docker/build-push-action@v3
         with:
-          context: ${{ inputs.context }}
-          tags: ${{ secrets.registry_username }}/${{ inputs.image_name }}:${{ inputs.tag }}
-          push: ${{ inputs.push }}
-          build-args: ${{ inputs.build_args}}
-          platfiorms: ${{ inputs.platforms }}
+          context: hostplumber/pkg/ovs-docker
+          tags: shwetachavan20/openvswitch:test1
+          push: true
+          build-args: ""
+          platfiorms: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x"
