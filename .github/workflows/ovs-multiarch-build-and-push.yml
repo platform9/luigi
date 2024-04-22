@@ -5,16 +5,16 @@ on:
     inputs:
       image_name:
         type: string
-        default: 'openvswitch'
+        default: "openvswitch"
       runs_on:
         type: string
-        default: 'ubuntu-latest'
+        default: "ubuntu-latest"
       build_args:
         type: string
-        default: ''
+        default: ""
       context:
         type: string
-        default: 'hostplumber/pkg/ovs-docker'
+        default: "hostplumber/pkg/ovs-docker"
       platforms:
         type: string
         default: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x"
@@ -25,9 +25,11 @@ on:
         type: string
         default: test
     secrets:
-      registry_username:
+      REGISTRY_NAME:
         required: true
-      registry_password:
+      DOCKER_HUB_USERNAME:
+        required: true
+      DOCKER_HUB_PASSWORD:
         required: true
 
 jobs:
@@ -49,14 +51,14 @@ jobs:
       - name: Login to the Docker Registry
         uses: docker/login-action@v1
         with:
-          username: ${{ secrets.registry_username }}
-          password: ${{ secrets.registry_password }}
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
       - name: Build/Push image to Docker Container Registry
         uses: docker/build-push-action@v3
         with:
           context: ${{ inputs.context }}
-          tags: ${{ secrets.registry_username }}/${{ inputs.image_name }}:${{ inputs.tag }}
+          tags: ${{ secrets.REGISTRY_NAME }}/${{ inputs.image_name }}:${{ inputs.tag }}
           push: ${{ inputs.push }}
           build-args: ${{ inputs.build_args}}
           platforms: ${{ inputs.platforms }}
