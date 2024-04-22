@@ -16,5 +16,5 @@ jobs:
         with:
           workflow: ovs-multiarch-build-and-push.yml
           inputs:
-            image-name: openvswitch
+            image_name: openvswitch
             tag: testovs
