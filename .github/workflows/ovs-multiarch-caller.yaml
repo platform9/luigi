@@ -8,14 +8,13 @@ on:
     branches:
       - private/shweta/ovs-multi-arch
 jobs:
-  call-callee:
+  trigger_workflow:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Call Callee Workflow
-        uses: .github/workflows/ovs-multiarch-build-and-push.yml
+      - name: Trigger Docker Image Build
+        uses: actions/workflow-dispatch@v2
+        with:
+          workflow: ovs-multiarch-build-and-push.yml
         with:
           image-name: openvswitch
           tag: testovs

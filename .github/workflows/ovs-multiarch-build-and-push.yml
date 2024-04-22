@@ -1,6 +1,12 @@
 ---
 name: docker
 on:
+  push:
+    branches:
+      - private/shweta/ovs-multi-arch
+  pull_request:
+    branches:
+      - private/shweta/ovs-multi-arch
   workflow_call:
     inputs:
       image_name:
