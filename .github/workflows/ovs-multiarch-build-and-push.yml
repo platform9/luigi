@@ -1,6 +1,13 @@
 ---
-name: docker
+name: Static Checks
 on:
+  push:
+    branches:
+      - private/shweta/ovs-multi-arch
+  pull_request:
+    branches:
+      - private/shweta/ovs-multi-arch
+  workflow_dispatch:
   workflow_call:
     inputs:
       image_name:
@@ -59,4 +66,4 @@ jobs:
           tags: ${{ secrets.registry_username }}/${{ inputs.image_name }}:${{ inputs.tag }}
           push: ${{ inputs.push }}
           build-args: ${{ inputs.build_args}}
-          platforms: ${{ inputs.platforms }}
+          platfiorms: ${{ inputs.platforms }}
