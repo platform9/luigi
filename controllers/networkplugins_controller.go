@@ -66,7 +66,7 @@ const (
 	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:v0.41.0"
 	KubemacpoolRangeStart   = "02:55:43:00:00:00"
 	KubemacpoolRangeEnd     = "02:55:43:FF:FF:FF"
-	KubeRbacProxyImage      = "gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0"
+	KubeRbacProxyImage      = "docker.io/brancz/kube-rbac-proxy:v0.18.0"
 	NfdImage                = "docker.io/platform9/node-feature-discovery:v0.11.3-pmk-2877967"
 	TemplateDir             = "/etc/plugin_templates/"
 	CreateDir               = TemplateDir + "create/"
