@@ -1,6 +1,6 @@
 module github.com/platform9/luigi/yoshi
 
-go 1.21
+go 1.22
 
 require (
 	github.com/go-logr/logr v1.3.0

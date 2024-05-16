@@ -1,6 +1,6 @@
 module dhcp-controller
 
-go 1.21
+go 1.22
 
 require (
 	github.com/apparentlymart/go-cidr v1.1.0
