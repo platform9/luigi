@@ -3,7 +3,7 @@ SHELL=/bin/bash
 VER_LABEL=$(shell ../get-label.bash)
 IMG ?= platform9/hostplumber:$(VER_LABEL)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.23
+ENVTEST_K8S_VERSION = 1.27
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -143,12 +143,12 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230216140739-c98506dc3b8e
 
 img-test:
 	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.21  bash -c "make test"
 
-img-build: $(BUILD_DIR) img-test 
+img-build: $(BUILD_DIR) img-test
 	docker build --network host . -t ${IMG}
 
 img-build-push: img-build docker-push
