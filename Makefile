@@ -1,8 +1,8 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
-#IMG ?= controller:latest
+#LUIGI_IMG ?= controller:latest
 VER_LABEL=$(shell ./get-label.bash)
-IMG ?= platform9/luigi-plugins:$(VER_LABEL)
+LUIGI_IMG ?= platform9/luigi-plugins:$(VER_LABEL)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27
 
@@ -85,11 +85,11 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${LUIGI_IMG} .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	docker push ${LUIGI_IMG}
 
 ##@ Deployment
 
@@ -107,7 +107,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${LUIGI_IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
@@ -150,14 +150,14 @@ img-test:
 	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.21  bash -c "GOFLAGS=-buildvcs=false make test"
 
 img-build: $(BUILD_DIR) img-test
-	docker build --network host . -t ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
+	docker build --network host . -t ${LUIGI_IMG}
+	echo ${LUIGI_IMG} > $(BUILD_DIR)/container-tag
 
 img-build-push: img-build
 	docker login
-	docker push ${IMG}
-	echo ${IMG} > $(BUILD_DIR)/container-tag
+	docker push ${LUIGI_IMG}
+	echo ${LUIGI_IMG} > $(BUILD_DIR)/container-tag
 
 scan: $(BUILD_ROOT)
-	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json --scanners vuln --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
-	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json --scanners vuln --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}
+	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json --scanners vuln --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${LUIGI_IMG}
+	docker run -v $(BUILD_ROOT)/luigi:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json --scanners vuln --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${LUIGI_IMG}
