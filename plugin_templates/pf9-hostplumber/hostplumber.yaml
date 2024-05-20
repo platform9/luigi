@@ -477,7 +477,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    control-plane: controller-manager
+    control-plane: hostplumber-controller-manager
   name: hostplumber-controller-manager-metrics-service
   namespace: {{ .Namespace }}
 spec:
@@ -493,19 +493,19 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
-    control-plane: controller-manager
+    control-plane: hostplumber-controller-manager
   name: hostplumber-controller-manager
   namespace: {{ .Namespace }}
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      control-plane: hostplumber-controller-manager
   template:
     metadata:
       annotations:
         kubectl.kubernetes.io/default-container: manager
       labels:
-        control-plane: controller-manager
+        control-plane: hostplumber-controller-manager
     spec:
       containers:
       - args:
