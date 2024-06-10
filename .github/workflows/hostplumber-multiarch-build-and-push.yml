@@ -42,7 +42,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: hostplumber
-          tags: docker.io/hostplumber:1.0
+          tags: shwetachavan20/hostplumber:1.0
           push: true
           build-args: ""
           platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x

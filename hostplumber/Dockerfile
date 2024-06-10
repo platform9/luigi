@@ -1,8 +1,13 @@
 # Build the manager binary
-FROM golang:1.21 as builder
+FROM golang:1.21-alpine3.18 AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
+
+RUN apk add git
+#RUN go env -w GOPROXY=direct
+#RUN go env -w GOSUMDB=off
+
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
