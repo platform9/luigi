@@ -1,8 +1,12 @@
 # Build the manager binary
-FROM golang:1.21 as builder
+FROM golang:1.21
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
+
+#RUN go env -w GOPROXY=direct
+#RUN go env -w GOSUMDB=off
+
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
@@ -53,7 +57,7 @@ RUN ./configure  --localstatedir=/var --sysconfdir=/etc --with-dpdk=static  && \
     make install
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY  /workspace/manager .
 #USER 65532:65532
 
 ENTRYPOINT ["/manager"]

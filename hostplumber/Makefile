@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 VER_LABEL=$(shell ../get-label.bash)
-IMG ?= platform9/hostplumber:$(VER_LABEL)
+IMG ?= shwetachavan20/hostplumber:test
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
