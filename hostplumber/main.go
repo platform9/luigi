@@ -68,6 +68,10 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	if os.Getenv("METRICS_BIND_ADDRESS") != "" {
+		metricsAddr = os.Getenv("METRICS_BIND_ADDRESS")
+	}
+
 	nodeName := os.Getenv("K8S_NODE_NAME")
 	if nodeName == "" {
 		fmt.Printf("K8S_NODE_NAME env variable not set")
