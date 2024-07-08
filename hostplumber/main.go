@@ -19,7 +19,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -51,6 +54,30 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+func validateIPAddressPort(address string) error {
+	// Split the address into IP and port parts
+	parts := strings.Split(address, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("address must be in the format IP:port")
+	}
+
+	ip, portStr := parts[0], parts[1]
+
+	if net.ParseIP(ip) == nil {
+		return fmt.Errorf("invalid IP address")
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return fmt.Errorf("invalid port")
+	}
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("port must be between 1 and 65535")
+	}
+
+	return nil
+}
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -70,6 +97,12 @@ func main() {
 
 	if os.Getenv("METRICS_BIND_ADDRESS") != "" {
 		metricsAddr = os.Getenv("METRICS_BIND_ADDRESS")
+	}
+
+	err := validateIPAddressPort(metricsAddr)
+	if err != nil {
+		setupLog.Error(err, "METRICS_BIND_ADDRESS is invalid")
+		os.Exit(1)
 	}
 
 	nodeName := os.Getenv("K8S_NODE_NAME")
