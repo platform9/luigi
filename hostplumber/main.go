@@ -55,18 +55,35 @@ func init() {
 }
 
 func validateIPAddressPort(address string) error {
-	// Split the address into IP and port parts
-	parts := strings.Split(address, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf("address must be in the format IP:port")
+	var ip, portStr string
+	if strings.Count(address, ":") > 1 && strings.Contains(address, "[") && strings.Contains(address, "]") {
+		// Address in IPv6 format
+		ipStart := strings.Index(address, "[")
+		ipEnd := strings.Index(address, "]")
+		if ipEnd <= ipStart {
+			return fmt.Errorf("invalid IPv6 address format")
+		}
+		ip = address[ipStart+1 : ipEnd]
+		portStr = address[ipEnd+2:] // After the "]" and ":"
+	} else {
+		parts := strings.Split(address, ":")
+		if len(parts) != 2 {
+			return fmt.Errorf("address must be in the format IP:port")
+		}
+		ip, portStr = parts[0], parts[1]
 	}
 
-	ip, portStr := parts[0], parts[1]
-
-	if net.ParseIP(ip) == nil {
+	// Validate the IP part
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
 		return fmt.Errorf("invalid IP address")
 	}
 
+	if parsedIP.To4() == nil && parsedIP.To16() == nil {
+		return fmt.Errorf("Metric bind address isn't ipv4 or ipv6 address")
+	}
+
+	// Validate the port part
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		return fmt.Errorf("invalid port")
@@ -76,6 +93,7 @@ func validateIPAddressPort(address string) error {
 	}
 
 	return nil
+
 }
 
 func main() {
