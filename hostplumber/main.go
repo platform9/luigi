@@ -19,7 +19,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
+	"strconv"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -67,6 +69,10 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if os.Getenv("METRICS_BIND_ADDRESS") != "" {
+		metricsAddr = os.Getenv("METRICS_BIND_ADDRESS")
+	}
 
 	nodeName := os.Getenv("K8S_NODE_NAME")
 	if nodeName == "" {
