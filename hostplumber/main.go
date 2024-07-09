@@ -53,35 +53,6 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-func validateIPAddressPort(address string) error {
-
-	host, portStr, err := net.SplitHostPort(address)
-	if err != nil {
-		return fmt.Errorf("address must be in the format IP:port")
-	}
-
-	// Validate the IP part
-	parsedIP := net.ParseIP(host)
-	if parsedIP == nil {
-		return fmt.Errorf("invalid IP address")
-	}
-
-	if parsedIP.To4() == nil && parsedIP.To16() == nil {
-		return fmt.Errorf("metric bind address isn't ipv4 or ipv6 address")
-	}
-
-	// Validate the port part
-	port, err := strconv.Atoi(portStr)
-	if err != nil {
-		return fmt.Errorf("invalid port")
-	}
-	if port < 1 || port > 65535 {
-		return fmt.Errorf("port must be between 1 and 65535")
-	}
-
-	return nil
-}
-
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -101,12 +72,6 @@ func main() {
 
 	if os.Getenv("METRICS_BIND_ADDRESS") != "" {
 		metricsAddr = os.Getenv("METRICS_BIND_ADDRESS")
-	}
-
-	err := validateIPAddressPort(metricsAddr)
-	if err != nil {
-		setupLog.Error(err, "metrics bind address is invalid")
-		os.Exit(1)
 	}
 
 	nodeName := os.Getenv("K8S_NODE_NAME")
