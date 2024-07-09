@@ -22,7 +22,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -55,32 +54,20 @@ func init() {
 }
 
 func validateIPAddressPort(address string) error {
-	var ip, portStr string
-	if strings.Count(address, ":") > 1 && strings.Contains(address, "[") && strings.Contains(address, "]") {
-		// Address in IPv6 format
-		ipStart := strings.Index(address, "[")
-		ipEnd := strings.Index(address, "]")
-		if ipEnd <= ipStart {
-			return fmt.Errorf("invalid IPv6 address format")
-		}
-		ip = address[ipStart+1 : ipEnd]
-		portStr = address[ipEnd+2:] // After the "]" and ":"
-	} else {
-		parts := strings.Split(address, ":")
-		if len(parts) != 2 {
-			return fmt.Errorf("address must be in the format IP:port")
-		}
-		ip, portStr = parts[0], parts[1]
+
+	host, portStr, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("address must be in the format IP:port")
 	}
 
 	// Validate the IP part
-	parsedIP := net.ParseIP(ip)
+	parsedIP := net.ParseIP(host)
 	if parsedIP == nil {
 		return fmt.Errorf("invalid IP address")
 	}
 
 	if parsedIP.To4() == nil && parsedIP.To16() == nil {
-		return fmt.Errorf("Metric bind address isn't ipv4 or ipv6 address")
+		return fmt.Errorf("metric bind address isn't ipv4 or ipv6 address")
 	}
 
 	// Validate the port part
@@ -93,7 +80,6 @@ func validateIPAddressPort(address string) error {
 	}
 
 	return nil
-
 }
 
 func main() {
@@ -119,7 +105,7 @@ func main() {
 
 	err := validateIPAddressPort(metricsAddr)
 	if err != nil {
-		setupLog.Error(err, "METRICS_BIND_ADDRESS is invalid")
+		setupLog.Error(err, "metrics bind address is invalid")
 		os.Exit(1)
 	}
 
