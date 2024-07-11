@@ -1,0 +1,48 @@
+---
+name: docker
+on:
+  push:
+    branches:
+      - private/shweta/master 
+  pull_request:
+    branches:
+      - private/shweta/master
+env:
+  IMAGE_NAME: hostplumber
+  RUNS_ON: ubuntu-latest
+  BUILD_ARGS: ""
+  CONTEXT: "hostplumber"
+  PLATFORMS: linux/386,linux/amd64
+  PUSH: true
+  TAG: 1.0
+
+jobs:
+  buildx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Docker BuildX
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      # setup Docker buld action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to the Docker Registry
+        uses: docker/login-action@v1
+        with:
+          username: shwetachavan20
+          password: **********
+
+      - name: Build/Push image to Docker Container Registry
+        uses: docker/build-push-action@v3
+        with:
+          context: hostplumber
+          tags: shwetachavan20/hostplumber:1.0
+          push: true
+          build-args: ""
+          platforms: linux/386,linux/amd64
