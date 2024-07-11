@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 VER_LABEL=$(shell ../get-label.bash)
-IMG ?= platform9/hostplumber:$(VER_LABEL)
+IMG ?= quay.io/platform9/hostplumber:$(VER_LABEL)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27
 
@@ -152,7 +152,6 @@ img-build: $(BUILD_DIR) img-test
 	docker build --network host . -t ${IMG}
 
 img-build-push: img-build docker-push
-	docker login
 	docker push ${IMG}
 	echo ${IMG} >> $(BUILD_DIR)/container-tag
 
