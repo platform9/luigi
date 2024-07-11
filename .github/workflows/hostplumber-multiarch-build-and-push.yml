@@ -1,0 +1,41 @@
+---
+name: docker
+on:
+  push:
+    branches:
+      - 'master'
+      - 'v*'
+      - 'private/**'
+    paths:
+      - hostplumber/**
+
+jobs:
+  buildx:
+    env:
+      USERNAME: ${{ secrets.QUAY_USERNAME }}
+      PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Docker BuildX
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      # setup Docker buld action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to the Quay Registry
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ env.USERNAME }}
+          password: ${{ env.PASSWORD }}
+
+      - name: Build/Push image to Quay Container Registry
+        run:
+          TEAMCITY_BUILD_ID=${{ github.run_number }}
+          make -C hostplumber img-build-push
