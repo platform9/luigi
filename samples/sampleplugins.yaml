@@ -6,7 +6,9 @@ spec:
   # Add fields here
   #privateRegistryBase: "localhost:5100"
   plugins:
-    hostPlumber: {}
+    # Must be preceded by `kubectl create namespace hostplumber`
+    hostPlumber: 
+      namespace: hostplumber
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
