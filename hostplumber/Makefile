@@ -153,7 +153,7 @@ $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230216140739-c98506dc3b8e
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.21  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.21  bash -c "GOFLAGS=-buildvcs=false make test"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
