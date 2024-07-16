@@ -19,9 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"os"
-	"strconv"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
