@@ -348,6 +348,8 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
+        - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - --tls-min-version=VersionTLS12
         image: localhost:5100/kubebuilder/kube-rbac-proxy:v0.11.0
         name: kube-rbac-proxy
         ports:
@@ -367,7 +369,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: localhost:5100/platform9/luigi-plugins:v0.4.1
+        image: localhost:5100/platform9/luigi-plugins:v0.4.4
         livenessProbe:
           httpGet:
             path: /healthz
