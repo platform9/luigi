@@ -451,7 +451,9 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
+        - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - --tls-min-version=VersionTLS12
+        image: quay.io/brancz/kube-rbac-proxy:v0.18.0
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
