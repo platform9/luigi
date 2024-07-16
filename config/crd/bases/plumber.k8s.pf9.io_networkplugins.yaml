@@ -60,9 +60,9 @@ spec:
                         type: string
                       imagePullPolicy:
                         type: string
-                      namespace:
-                        type: string
                       metricsPort:
+                        type: string
+                      namespace:
                         type: string
                     type: object
                   multus:
