@@ -1,6 +1,7 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 ifndef OVERRIDE_HOSTPLUMBER_VERSION
+<<<<<<< HEAD
 	IMG_TAG = $(shell ./get-label.bash)
 else
 	ifneq ($(strip $(OVERRIDE_HOSTPLUMBER_VERSION)),)
@@ -10,6 +11,15 @@ else
 	endif
 endif
 IMG ?= quay.io/platform9/hostplumber:$(IMG_TAG)
+=======
+IMG_TAG = $(shell ../get-label.bash)
+else
+IMG_TAG ?= $(OVERRIDE_HOSTPLUMBER_VERSION)
+endif
+
+IMG = platform9/hostplumber:$(IMG_TAG)
+
+>>>>>>> 0685a84 ([PMK-6474] : Restrict TLS cipher suites for kube-rbac-proxy container (#213))
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29
 
