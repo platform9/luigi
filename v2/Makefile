@@ -93,7 +93,7 @@ pre-reqs:
 	export PATH=$PATH:/usr/local/kubebuilder/bin
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.17.7-bullseye  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.21  bash -c "GOFLAGS=-buildvcs=false make test"
 
 img-build: img-test $(BUILD_DIR)
 	docker build --network host . -t ${IMG}

@@ -55,7 +55,7 @@ const (
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.16.2"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.16.2"
 	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.3"
-	KubeRbacProxyImage      = "gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0"
+	KubeRbacProxyImage      = "quay.io/brancz/kube-rbac-proxy:v0.18.0"
 	NfdImage                = "docker.io/platform9/node-feature-discovery:v0.11.3-pmk-2575337"
 	TemplateDir             = "/etc/plugin_templates/"
 	CreateDir               = TemplateDir + "create/"
