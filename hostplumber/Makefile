@@ -148,8 +148,10 @@ $(ENVTEST): $(LOCALBIN)
 img-test:
 	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.21  bash -c "make test"
 
-img-build: $(BUILD_DIR) img-test 
-	docker build --network host . -t ${IMG}
+img-build: $(BUILD_DIR) img-test
+	docker buildx create --name mybuilder
+	docker buildx use mybuilder
+	docker buildx build --platform linux/386,linux/amd64 --network host . -t ${IMG}
 
 img-build-push: img-build docker-push
 	docker login
