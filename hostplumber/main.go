@@ -72,16 +72,6 @@ func main() {
 		metricsAddr = os.Getenv("METRICS_BIND_ADDRESS")
 	}
 
-	nodeName := os.Getenv("K8S_NODE_NAME")
-	if nodeName == "" {
-		fmt.Printf("K8S_NODE_NAME env variable not set")
-		os.Exit(1)
-	}
-	namespace := os.Getenv("K8S_NAMESPACE")
-	if namespace == "" {
-		fmt.Printf("K8S_NAMESPACE env variable not set")
-		os.Exit(1)
-	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
