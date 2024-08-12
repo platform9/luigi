@@ -198,6 +198,12 @@ func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir, registry
 		config["HostPlumberImage"] = ReplaceContainerRegistry(HostPlumberImage, registry)
 	}
 
+	if hostPlumberConfig.MetricsPort != "" {
+		config["MetricsPort"] = hostPlumberConfig.MetricsPort
+	} else {
+		config["MetricsPort"] = "8080"
+	}
+
 	config["KubeRbacProxyImage"] = ReplaceContainerRegistry(KubeRbacProxyImage, registry)
 
 	t, err := template.ParseFiles(filepath.Join(TemplateDir, "pf9-hostplumber", "hostplumber.yaml"))

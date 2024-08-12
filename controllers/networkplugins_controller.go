@@ -224,7 +224,7 @@ func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir, registry
 	if hostPlumberConfig.MetricsPort != "" {
 		config["MetricsPort"] = hostPlumberConfig.MetricsPort
 	} else {
-		config["MetricsPort"] = 8080
+		config["MetricsPort"] = "8080"
 	}
 
 	config["KubeRbacProxyImage"] = ReplaceContainerRegistry(KubeRbacProxyImage, registry)
