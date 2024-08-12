@@ -65,7 +65,7 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 	err = a.decoder.Decode(req, networkPluginsReq)
 	if err != nil {
 		log.Error(err, "Error decoding NetworkPlugins")
-		fmt.Println(req)
+		log.Println("Request:", req)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
