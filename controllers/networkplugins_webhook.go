@@ -62,6 +62,7 @@ func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Requ
 	}
 
 	networkPluginsReq := &plumberv1.NetworkPlugins{}
+	log.Info("request: ", req)
 	err = a.decoder.Decode(req, networkPluginsReq)
 	if err != nil {
 		log.Error(nil, "request: ", req)
