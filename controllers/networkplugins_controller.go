@@ -54,6 +54,7 @@ import (
 const (
 	DefaultNamespace        = "luigi-system"
 	KubemacpoolNamespace    = "dhcp-controller-system"
+	DefaultMetricsPort      = "8080"
 	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2644970"
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6.3-pmk-3299438"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2877848"
@@ -224,7 +225,7 @@ func (hostPlumberConfig *HostPlumberT) WriteConfigToTemplate(outputDir, registry
 	if hostPlumberConfig.MetricsPort != "" {
 		config["MetricsPort"] = hostPlumberConfig.MetricsPort
 	} else {
-		config["MetricsPort"] = "8080"
+		config["MetricsPort"] = DefaultMetricsPort
 	}
 
 	config["KubeRbacProxyImage"] = ReplaceContainerRegistry(KubeRbacProxyImage, registry)
