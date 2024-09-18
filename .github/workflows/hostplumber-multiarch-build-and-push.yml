@@ -18,14 +18,6 @@ jobs:
       PUSH: true
     runs-on: ubuntu-latest
     steps:
-      - name: print quay creds
-        run:
-           echo ${{ env.USERNAME }} ${{ env.PASSWORD }}
-
-      - name: Set env
-        run:
-          echo "TAG=$(echo "${{ env.BRANCH }}" | tr -d /)" >> $GITHUB_ENV 
-          
       - uses: actions/checkout@v3
 
       - name: Setup Docker BuildX
