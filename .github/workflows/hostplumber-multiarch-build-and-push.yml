@@ -26,11 +26,12 @@ jobs:
         run: echo ${{ github.run_number }}
 
       - name: Set env
-        run:
-          if startsWith(${{ env.BRANCH }}, 'v*')
-             echo "TAG=$(echo "${{ env.BRANCH }}") >> $GITHUB_ENV
+        run: |
+          echo "TAG=$(echo "${{ env.BRANCH }}" | tr -d /)" >> $GITHUB_ENV 
+          if startsWith(${{ env.TAG }}, 'v*')
+             echo "TAG=$(echo "${{ env.BRANCH }}")  >> $GITHUB_ENV
           else
-             echo "TAG=$(echo "${{ env.BRANCH }}" | tr -d /)"-${{ github.run_number }} >> $GITHUB_ENV
+             echo "TAG=$(echo "${{ env.BRANCH }}")-${{ github.run_number }}  >> $GITHUB_ENV
           fi
 
       - uses: actions/checkout@v3
