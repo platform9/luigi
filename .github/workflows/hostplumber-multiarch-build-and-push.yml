@@ -26,9 +26,13 @@ jobs:
         run: echo ${{ github.run_number }}
 
       - name: Set env
-        run: 
-          echo "TAG=$(echo "${{ env.BRANCH }}" | tr -d /)" >> $GITHUB_ENV
-         
+        run:
+          if startsWith(${{ env.BRANCH }}, 'v*')
+             echo "TAG=$(echo "${{ env.BRANCH }}") >> $GITHUB_ENV
+          else
+             echo "TAG=$(echo "${{ env.BRANCH }}" | tr -d /)"-${{ github.run_number }} >> $GITHUB_ENV
+          fi
+
       - uses: actions/checkout@v3
 
       - name: Setup Docker BuildX
@@ -52,7 +56,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: hostplumber
-          tags: quay.io/platform9/hostplumber:${{ env.TAG }}-${{ github.run_number }}
+          tags: quay.io/platform9/hostplumber:${{ env.TAG }}
           push: ${{ env.PUSH }}
           build-args: ${{ env.BUILD_ARGS}}
           platforms: ${{ env.PLATFORMS }}
