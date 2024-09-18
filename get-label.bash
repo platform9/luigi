@@ -1,9 +1,9 @@
 #!/bin/bash
 #First set the suffix to some value, either Teamcity build-id or <abbrev-sha1>
-if [[ -z "${{ github.run_number }}" ]]; then
+if [[ -z "${TEAMCITY_BUILD_ID}" ]]; then
     SUFFIX=$(git rev-parse --short HEAD)
 else
-    SUFFIX=${{ github.run_number }}
+    SUFFIX=${TEAMCITY_BUILD_ID}
 fi
 
 # Get the tag as the version
@@ -11,8 +11,8 @@ TAG=$(git describe --tags HEAD)
 if [[ $? -ne 0 ]]
 then
     # if we cannot get the tag, lets use the <branch>-pmk-<suffix> as the tag name
-    echo "TAG=$(git rev-parse --abbrev-ref HEAD | sed 's/[^a-zA-Z0-9_.]/-/g')-pmk-${SUFFIX}" >> $GITHUB_ENV
+    TAG=$(git rev-parse --abbrev-ref HEAD | sed 's/[^a-zA-Z0-9_.]/-/g')-pmk-${SUFFIX}
 else
-    echo "TAG=$(echo $TAG | sed 's/-.*//')-pmk-${SUFFIX}" >> $GITHUB_ENV
+    TAG=$(echo $TAG | sed 's/-.*//')-pmk-${SUFFIX}
 fi
-echo ${{ env.TAG }}
+echo $TAG
