@@ -59,10 +59,10 @@ const (
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6.3-pmk-3299438"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2877848"
 	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-2877839"
-	OvsImage                = "docker.io/platform9/openvswitch:v2.17.5-2"
+	OvsImage                = "quay.io/platform9/openvswitch:v2.17.5-3"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.28.0"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.28.0"
-	HostPlumberImage        = "docker.io/platform9/hostplumber:v0.5.6"
+	HostPlumberImage        = "quay.io/platform9/hostplumber:v0.5.7"
 	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v1.1"
 	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:v0.41.0"
 	KubemacpoolRangeStart   = "02:55:43:00:00:00"
@@ -959,3 +959,4 @@ func GetHugepageSize() string {
 	fmt.Printf("Hugepages: %+v", r)
 	return r
 }
+
