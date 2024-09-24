@@ -3,10 +3,12 @@ SHELL=/bin/bash
 #IMG ?= controller:latest
 
 ifndef OVERRIDE_LUIGI_VERSION
-ifneq ($(strip $(OVERRIDE_LUIGI_VERSION)),)
 IMG_TAG = $(shell ./get-label.bash)
 else
+ifneq ($(strip $(OVERRIDE_LUIGI_VERSION)),)
 IMG_TAG ?= $(OVERRIDE_LUIGI_VERSION)
+else
+IMG_TAG = $(shell ./get-label.bash)
 endif
 endif
 IMG_TAG = $(shell ./get-label.bash)

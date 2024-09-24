@@ -2,10 +2,12 @@ SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 
 ifndef OVERRIDE_HOSTPLUMBER_VERSION
-ifneq ($(strip $(OVERRIDE_HOSTPLUMBER_VERSION)),)
 IMG_TAG = $(shell ./get-label.bash)
 else
+ifneq ($(strip $(OVERRIDE_HOSTPLUMBER_VERSION)),)
 IMG_TAG ?= $(OVERRIDE_HOSTPLUMBER_VERSION)
+else
+IMG_TAG = $(shell ./get-label.bash)
 endif
 endif
 IMG ?= quay.io/platform9/hostplumber:$(IMG_TAG)
