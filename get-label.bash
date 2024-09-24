@@ -1,9 +1,9 @@
 #!/bin/bash
 #First set the suffix to some value, either Teamcity build-id or <abbrev-sha1>
-if [[ -z "${TEAMCITY_BUILD_ID}" ]]; then
+if [[ -z "${CI_BUILD_ID}" ]]; then
     SUFFIX=$(git rev-parse --short HEAD)
 else
-    SUFFIX=${TEAMCITY_BUILD_ID}
+    SUFFIX=${CI_BUILD_ID}
 fi
 
 # Get the tag as the version

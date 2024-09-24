@@ -1,7 +1,17 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
-VER_LABEL=$(shell ../get-label.bash)
-IMG ?= quay.io/platform9/hostplumber:$(VER_LABEL)
+
+ifndef OVERRIDE_HOSTPLUMBER_VERSION
+	IMG_TAG = $(shell ./get-label.bash)
+else
+	ifneq ($(strip $(OVERRIDE_HOSTPLUMBER_VERSION)),)
+		IMG_TAG ?= $(OVERRIDE_HOSTPLUMBER_VERSION)
+	else
+		IMG_TAG = $(shell ./get-label.bash)
+	endif
+endif
+
+IMG ?= quay.io/platform9/hostplumber:$(IMG_TAG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27
 
@@ -127,7 +137,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.8.0
+CONTROLLER_TOOLS_VERSION ?= v0.15.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -143,10 +153,10 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230216140739-c98506dc3b8e
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.21  bash -c "make test"
+	docker run --rm  -v $(SRCROOT):/hostplumber -w /hostplumber golang:1.22  bash -c "make test"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
