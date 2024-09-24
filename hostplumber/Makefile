@@ -1,7 +1,14 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
-VER_LABEL=$(shell ../get-label.bash)
-IMG ?= quay.io/platform9/hostplumber:$(VER_LABEL)
+
+ifndef OVERRIDE_HOSTPLUMBER_VERSION
+ifneq ($(strip $(OVERRIDE_HOSTPLUMBER_VERSION)),)
+IMG_TAG = $(shell ./get-label.bash)
+else
+IMG_TAG ?= $(OVERRIDE_HOSTPLUMBER_VERSION)
+endif
+endif
+IMG ?= quay.io/platform9/hostplumber:$(IMG_TAG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27
 
