@@ -14,6 +14,7 @@ jobs:
     env:
       USERNAME: ${{ secrets.QUAY_USERNAME }}
       PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      OVERRIDE_HOSTPLUMBER_VERSION: ${{ secrets.OVERRIDE_HOSTPLUMBER_VERSION || '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
