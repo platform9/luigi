@@ -2,9 +2,21 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - '*'
   resources:
@@ -12,9 +24,62 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - '*'
+  resources:
+  - pods
+  - virtualmachineinstances
+  - virtualmachines
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers
+  - ipallocations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers/finalizers
+  - ipallocations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dhcp.plumber.k8s.pf9.io
+  resources:
+  - dhcpservers/status
+  - ipallocations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - plumber.k8s.pf9.io
   resources:
+  - hostnetworktemplates
   - networkplugins
+  - networkwizards
   verbs:
   - create
   - delete
@@ -26,13 +91,17 @@ rules:
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
+  - hostnetworktemplates/finalizers
   - networkplugins/finalizers
+  - networkwizards/finalizers
   verbs:
   - update
 - apiGroups:
   - plumber.k8s.pf9.io
   resources:
+  - hostnetworktemplates/status
   - networkplugins/status
+  - networkwizards/status
   verbs:
   - get
   - patch

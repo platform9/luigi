@@ -1,0 +1,97 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.3
+  name: dhcpservers.dhcp.plumber.k8s.pf9.io
+spec:
+  group: dhcp.plumber.k8s.pf9.io
+  names:
+    kind: DHCPServer
+    listKind: DHCPServerList
+    plural: dhcpservers
+    singular: dhcpserver
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DHCPServer is the Schema for the dhcpservers API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DHCPServerSpec defines the desired state of DHCPServer
+            properties:
+              networks:
+                description: Details of Networks
+                items:
+                  properties:
+                    cidr:
+                      description: refers to CIDR of server
+                      properties:
+                        gateway:
+                          description: refers to gateway IP
+                          type: string
+                        range:
+                          description: refers to cidr range
+                          type: string
+                        range_end:
+                          description: refers to end IP of range
+                          type: string
+                        range_start:
+                          description: refers to start IP of range
+                          type: string
+                      required:
+                      - range
+                      type: object
+                    interfaceIp:
+                      description: refers to IP address to bind interface to
+                      type: string
+                    leaseDuration:
+                      description: refers to leasetime of IP
+                      type: string
+                    networkName:
+                      description: refers to net-attach-def to be served
+                      type: string
+                    vlanId:
+                      description: refers to vlan
+                      type: string
+                  required:
+                  - cidr
+                  - interfaceIp
+                  - networkName
+                  type: object
+                type: array
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: Node Selector for the DHCPServer VM
+                type: object
+            required:
+            - networks
+            type: object
+          status:
+            description: DHCPServerStatus defines the observed state of DHCPServer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

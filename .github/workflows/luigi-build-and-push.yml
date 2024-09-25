@@ -12,6 +12,7 @@ jobs:
     env:
       USERNAME: ${{ secrets.QUAY_USERNAME }}
       PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      OVERRIDE_LUIGI_VERSION: ${{ secrets.OVERRIDE_LUIGI_VERSION || '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

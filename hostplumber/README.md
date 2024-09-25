@@ -1,21 +1,21 @@
 # HostPlumber
+
 HostPlumber is a K8s operator based solution to configure your nodes for advanced networking usecases and view each node's networking information.
 
-It defines two new CRDs called HostNetworkTemplate and HostNetwork, used to configure the host’s networking and view node networking state. 
+It defines two new CRDs called HostNetworkTemplate and HostNetwork, used to configure the host’s networking and view node networking state.
 
 Runs as a Daemonset on each node, responsible for discovering the host’s initial state and populating the HostNetwork CRD, watching the HostNetworkTemplate CRD and determining whether to apply the config template to the host, then reporting the new state to the HostNetwork CRD. It will also periodically check, and enforce the networking configuration has not deviated on each host.
 
 -   Requires privileged securityContext
 
-## What it can do:
+## What it can do
 
- - Configuring SRIOV VFs and drivers
- - Creating VLAN interfaces
- - Creating OVS bridges and adding interfaces
- - Device MTUs
- - IP addresses and Routes
- - And more planned for the future!
-
+- Configuring SRIOV VFs and drivers
+- Creating VLAN interfaces
+- Creating OVS bridges and adding interfaces
+- Device MTUs
+- IP addresses and Routes
+- And more planned for the future!
 
 ## How to deploy
 
@@ -51,7 +51,6 @@ It is best to demonstrate by example. Here is a comprehensive HostNetworkTemplat
       - bridgeName: ovs-br01
         nodeInterface: eno2.1000
 
-
 This example does a few things:
 1. The template will only be applied on nodes with the label network-sriov.capable = "true" *(How is this added? Automatically via node-feature-discovery plugin, also installed by Luigi!)*, AND, with the label foo="bar". If we remove the nodeSelector section, the template would be applied on every node in the cluster
 2. It creates 4 SRIOV VFs, on the NIC eno2, using the i40evf driver
@@ -61,15 +60,18 @@ This example does a few things:
 Of course, it is not necessary to place all configurations in one file. You can create as many HostNetworkTemplate CRDs as you want for different groups of nodes, separate NICs
 
 ## sriovConfig
+
 The sriovConfig section takes a list of device filters, the number of VFs to configure on each device, and the driver to use:
 
- - **numVfs**: Integer specifying how many VFs to create under the device
- - **vfDriver**: The VF driver to use and load - i40evf, ixgbevf for
+- **numVfs**: Integer specifying how many VFs to create under the device
+- **vfDriver**: The VF driver to use and load - i40evf, ixgbevf for
    example. For DPDK/Kubevirt, vfio-pci is typically used
-   
+
 **The actual device(s) can be filtered in ONE of several ways:**
+
  - **pfName** - Name of the NIC, aka Physical Function
- ```
+
+ ```yaml
 apiVersion: plumber.k8s.pf9.io/v1
 kind: HostNetworkTemplate
 metadata:
@@ -95,9 +97,9 @@ spec:
 
 In the above example, we define 2 CRDs, named sriovconfig-enp3s0f1 and sriovconfig-enp3s0f0. It will creates 8 VFs on physical interface enp3s0f1, binds them to the ixgbevf driver. It will also create 4 VFs on interface enp3s0f0 and bind them to the vfio-pci driver
 
- - **Vendor and Device ID** - useful when you want to apply SRIOV configuration to all types of a NIC, where the naming scheme may not be known
+- **Vendor and Device ID** - useful when you want to apply SRIOV configuration to all types of a NIC, where the naming scheme may not be known
 
-```
+```yaml
 apiVersion: plumber.k8s.pf9.io/v1
 kind: HostNetworkTemplate
 metadata:
@@ -110,10 +112,12 @@ spec:
       numVfs: 32
       vfDriver: vfio-pci
 ```
+
 The above will search for all interfaces matching vendor ID 8086 (Intel) and device ID 1528 (representing a particular model of NIC). It will then create 32 VFs on each matching device and bind all of them to the vfio-pci (DPDK driver). This might be useful if you don’t know the interface naming scheme across your hosts or PCI addresses, but you have the same hardware on all hosts and want to target a particular NIC by vendor and device ID.
 
  - **PCI Address**
-```
+
+```yaml
 apiVersion: plumber.k8s.pf9.io/v1
 kind: HostNetworkTemplate
 metadata:
@@ -128,14 +132,18 @@ spec:
       numVfs: 32
       vfDriver: vfio-pci
 ```
+
 The above will configure 32 VFs on PF matching PCI address “`0000:03:00.0”` and 32 VFs on PCI address “0000:03.00.1”, for a total of 64 VFs, and bind each VF to the vfio-pci driver.
 
-## interfaceConfig:
+## interfaceConfig
+
 The interfaceConfig section can currently be used to configure MTUs, create VLAN interfaces, and configure IP addresses. It takes in a list of interfaces specified by name, with the following options for each:
 
-#### IP addresses
+### IP addresses
+
 IP address configuration only makes sense if using nodeSelectors to target one, specific node. Addresses reflect final desired state - anything not present will be deleted
-```
+
+```yaml
 apiVersion: plumber.k8s.pf9.io/v1
 kind: HostNetworkTemplate
 metadata:
@@ -155,12 +163,14 @@ spec:
         address:
           - fc00:1::3/112
 ```
+
 In the above, I target a speciifc node, using the hostname as a label, and configure 2 IPv4 addresses, and an IPv6 address on the interface enp3s0f1. It will also set an MTU of 9000 for jumbo frames.
 
-#### VLAN Interfaces
+### VLAN Interfaces
+
 VLAN interfaces may be needed for some network CNIs that do not perform VLAN tagging of their own, such as macvlan. An example was given at the beginning of the combined config, but here is an example that creates only VLAN interfaces:
 
-```
+```yaml
 apiVersion: plumber.k8s.pf9.io/v1
 kind: HostNetworkTemplate
 metadata:
@@ -179,12 +189,14 @@ spec:
       vlan:
         - id: 999
 ```
+
 A list of interfaces is specified, for eno1 and eno2. A vlan interface on 999, and 1000-1002 is created on each, respectively.
 
-# ovsConfig:
+# ovsConfig
+
 This can be used to create OVS/DPDK bridges, bonds and attach interfaces to them. This does NOT deploy OpenVSwitch or install the ovs-vsctl CLI tools for you. Nor does it install the OVS CNI plugin for k8s. To install them, please use the Luigi NetworkPlugins operator, or install these manually.
 
-```
+```yaml
 apiVersion: plumber.k8s.pf9.io/v1
 kind: HostNetworkTemplate
 metadata:
@@ -219,26 +231,27 @@ spec:
       lacp: "active"
 ```
 
-This will create, 
- - The OVS bridge with name "ovs-br01", and attach the interface eno2.1000 to it.
- - The OVS-DPDK  bridge with name “dpdk-br01". and attach the interface eno2 to it.
- - The OVS bridge with name “ovs-bond01” and add a bond to it using interfaces eno1 and eno2
- - The OVS-DPDK  bridge with name dpdk-bond01 and add a dpdk bond to it using interfaces enp1s0f0 and enp1s0f0. Also enable LACP, set bondMode/mtuRequest to specified values. 
+This will create,
+- The OVS bridge with name "ovs-br01", and attach the interface eno2.1000 to it.
+- The OVS-DPDK  bridge with name “dpdk-br01". and attach the interface eno2 to it.
+- The OVS bridge with name “ovs-bond01” and add a bond to it using interfaces eno1 and eno2
+- The OVS-DPDK  bridge with name dpdk-bond01 and add a dpdk bond to it using interfaces enp1s0f0 and enp1s0f0. Also enable LACP, set bondMode/mtuRequest to specified values.
 
 Please note that nodeInterfaces specified here must already exist - the exception is when using HostPlumber like above, to have it created in the same CRD.
 
 The nodeInterface: may be any physical NIC
 
-# HostNetwork CRD:
+## HostNetwork CRD
+
 The HostNetwork CRD will not be created by the user. Instead, this is a read-only CRD and the Daemonset operator on each node will publish various host settings to this CRD:
 
--   Created: First upon the Daemonset/Operator being deployed
--   Updated: After each application of the HostNetworkTemplate CRD
--   Updated: As a periodic task, every 1 minute
+- Created: First upon the Daemonset/Operator being deployed
+- Updated: After each application of the HostNetworkTemplate CRD
+- Updated: As a periodic task, every 1 minute
 
 There will be one HostNetwork CRD automatically created for each node, with the same name as the K8s Node name:
 
-```
+```yaml
 kubectl get HostNetworks
 
 NAME             AGE
@@ -251,7 +264,7 @@ NAME             AGE
 
 Assume we have created 8 SRIOV VFs, and we inspect node 145.40.65.95:
 
-```
+```shell
 kubectl get hostnetwork 145.40.65.95 -o yaml
 
 apiVersion: plumber.k8s.pf9.io/v1
@@ -458,7 +471,7 @@ status:
 
 We can see a detailed output of all SRIOV information, including each VF and it's PCI address. For example we can see eno1, which supports 64 VFs but does not have any configured yet. On eno2, we can see detailed info for each of the 8 VFs. We also see all other L2 link layer information for each device, along with the IPv4 and IPv6 routing tables
 
-# OS Support
+## OS Support
 
 Currently everything should work on CentOS / RHEL
 For Ubuntu, only SRIOV and OVS configuration will work. It is planned to add Ubuntu support for interface configuration (IP configuration, MTUs, VLAN interfaces)

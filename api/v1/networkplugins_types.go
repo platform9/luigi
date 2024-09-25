@@ -68,6 +68,7 @@ type HostPlumber struct {
 	Namespace        string `json:"namespace,omitempty"`
 	ImagePullPolicy  string `json:"imagePullPolicy,omitempty"`
 	HostPlumberImage string `json:"hostPlumberImage,omitempty"`
+	MetricsPort      string `json:"metricsPort,omitempty"`
 }
 
 type Whereabouts struct {

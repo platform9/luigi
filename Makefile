@@ -1,10 +1,18 @@
 SHELL=/bin/bash
 # Image URL to use all building/pushing image targets
 #IMG ?= controller:latest
-VER_LABEL=$(shell ./get-label.bash)
-IMG ?= quay.io/platform9/luigi-plugins:$(VER_LABEL)
+ifndef OVERRIDE_LUIGI_VERSION
+	IMG_TAG = $(shell ./get-label.bash)
+else
+	ifneq ($(strip $(OVERRIDE_LUIGI_VERSION)),)
+		IMG_TAG ?= $(OVERRIDE_LUIGI_VERSION)
+	else
+		IMG_TAG = $(shell ./get-label.bash)
+	endif
+endif
+IMG ?= quay.io/platform9/luigi-plugins:$(IMG_TAG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.27
+ENVTEST_K8S_VERSION = 1.29
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -128,7 +136,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.8.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.3
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -144,10 +152,10 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230216140739-c98506dc3b8e
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 img-test:
-	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.21  bash -c "GOFLAGS=-buildvcs=false make test"
+	docker run --rm  -v $(SRCROOT):/luigi -w /luigi golang:1.22  bash -c "GOFLAGS=-buildvcs=false make test"
 
 img-build: $(BUILD_DIR) img-test 
 	docker build --network host . -t ${IMG}
