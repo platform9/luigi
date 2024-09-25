@@ -14,21 +14,21 @@ RUN apk add --no-cache make gcc linux-headers bsd-compat-headers binutils coreut
     apk add --no-cache abuild bc cmake ncurses-dev ca-certificates wget && \
     apk add numactl-dev alpine-sdk bsd-compat-headers libexecinfo-dev py3-pip py3-elftools && \
     pip3 install meson ninja && \
-    wget http://dpdk.org/browse/dpdk-stable/snapshot/dpdk-stable-21.11.3.zip && \
-    unzip dpdk-stable-21.11.3.zip 
+    wget http://dpdk.org/browse/dpdk-stable/snapshot/dpdk-stable-23.11.2.zip && \
+    unzip dpdk-stable-23.11.2.zip 
 
-WORKDIR dpdk-stable-21.11.3
+WORKDIR dpdk-stable-23.11.2
 RUN meson build && \
     ninja -C build && \
     ninja -C build install
 
 WORKDIR /
 RUN apk add --no-cache autoconf automake libtool && \
-    wget https://www.openvswitch.org/releases/openvswitch-2.17.5.tar.gz && \
-    gunzip openvswitch-2.17.5.tar.gz && \
-    tar -xf openvswitch-2.17.5.tar 
+    wget https://www.openvswitch.org/releases/openvswitch-3.3.2.tar.gz && \
+    gunzip openvswitch-3.3.2.tar.gz && \
+    tar -xf openvswitch-3.3.2.tar 
 
-WORKDIR openvswitch-2.17.5 
+WORKDIR openvswitch-3.3.2 
 RUN ./configure  --localstatedir=/var --sysconfdir=/etc --with-dpdk=static  && \
     make && \
     make install
