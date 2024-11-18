@@ -62,12 +62,12 @@ const (
 	OvsImage                = "quay.io/platform9/openvswitch:v2.17.5-3"
 	OvsCniImage             = "quay.io/kubevirt/ovs-cni-plugin:v0.28.0"
 	OvsMarkerImage          = "quay.io/kubevirt/ovs-cni-marker:v0.28.0"
-	HostPlumberImage        = "quay.io/platform9/hostplumber:v0.5.7"
+	HostPlumberImage        = "quay.io/platform9/hostplumber:v0.5.8"
 	DhcpControllerImage     = "docker.io/platform9/pf9-dhcp-controller:v1.1"
 	KubemacpoolImage        = "quay.io/kubevirt/kubemacpool:v0.41.0"
 	KubemacpoolRangeStart   = "02:55:43:00:00:00"
 	KubemacpoolRangeEnd     = "02:55:43:FF:FF:FF"
-	KubeRbacProxyImage      = "quay.io/brancz/kube-rbac-proxy:v0.18.0"
+	KubeRbacProxyImage      = "quay.io/brancz/kube-rbac-proxy:v0.18.1"
 	NfdImage                = "docker.io/platform9/node-feature-discovery:v0.11.3-pmk-2877967"
 	TemplateDir             = "/etc/plugin_templates/"
 	CreateDir               = TemplateDir + "create/"
@@ -959,4 +959,3 @@ func GetHugepageSize() string {
 	fmt.Printf("Hugepages: %+v", r)
 	return r
 }
-

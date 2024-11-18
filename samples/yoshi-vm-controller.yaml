@@ -453,7 +453,7 @@ spec:
         - --v=0
         - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
         - --tls-min-version=VersionTLS12
-        image: quay.io/brancz/kube-rbac-proxy:v0.18.0
+        image: quay.io/brancz/kube-rbac-proxy:v0.18.1
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443

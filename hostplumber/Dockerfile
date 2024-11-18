@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.21 as builder
+FROM golang:1.22 AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -24,6 +24,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 FROM alpine:3.16
 WORKDIR /
 
+RUN apk update && apk upgrade
 RUN apk add --no-cache bash
 RUN apk add --no-cache ethtool
 RUN apk add --no-cache pciutils
