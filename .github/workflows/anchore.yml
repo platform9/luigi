@@ -36,7 +36,11 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag platform9/luigi_dev:latest
     - name: Run the Anchore Grype scan action
+<<<<<<< HEAD
       uses: anchore/scan-action@v3
+=======
+      uses: anchore/scan-action@v5
+>>>>>>> 89d432e (Bump anchore/scan-action from 4 to 5 (#263))
       id: scan
       with:
         image: "platform9/luigi_dev:latest"
