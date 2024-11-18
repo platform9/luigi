@@ -1,0 +1,53 @@
+---
+name: docker
+on:
+  push:
+    branches:
+      - 'master'
+      - 'v*'
+      - 'private/**'
+    paths:
+      - hostplumber/**
+
+jobs:
+  buildx:
+    env:
+      USERNAME: ${{ secrets.QUAY_USERNAME }}
+      PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      BUILD_ARGS: ""
+      PLATFORMS: linux/amd64
+      BRANCH: ${{ github.head_ref || github.ref_name }}
+      PUSH: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set env
+        run: 
+          echo "TAG=$(echo "${{ env.BRANCH }}" | tr -d /)" >> $GITHUB_ENV
+         
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker BuildX
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # setup Docker buld action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to the Quay Registry
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ env.USERNAME }}
+          password: ${{ env.PASSWORD }}
+
+      - name: Build/Push image to Quay Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: hostplumber/pkg/ovs-docker
+          tags: quay.io/platform9/openvswitch:${{ env.TAG }}-${{ github.run_number }}
+          push: ${{ env.PUSH }}
+          build-args: ${{ env.BUILD_ARGS}}
+          platforms: ${{ env.PLATFORMS }}

@@ -6,7 +6,12 @@ spec:
   # Add fields here
   #privateRegistryBase: "localhost:5100"
   plugins:
-    hostPlumber: {}
+    hostPlumber:
+      # Optionally, customise the metrics server bind address (port)
+      metricsPort: "8090"
+      # Must be preceded by `kubectl create namespace hostplumber`
+      # Hostplumber can be deployed in its own namespace to avoid webhook conflict with Luigi
+      namespace: hostplumber
     nodeFeatureDiscovery: {}
     multus: {}
     whereabouts:
