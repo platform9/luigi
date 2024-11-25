@@ -1,8 +1,8 @@
 module github.com/platform9/luigi/yoshi
 
-go 1.22
+go 1.23
 
-toolchain go1.22.7
+toolchain go1.23.3
 
 require (
 	github.com/go-logr/logr v1.3.0

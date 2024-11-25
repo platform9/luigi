@@ -2,6 +2,8 @@ module github.com/platform9/luigi
 
 go 1.23
 
+toolchain go1.23.3
+
 require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-logr/logr v1.4.1
