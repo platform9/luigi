@@ -64,8 +64,6 @@ spec:
                         type: string
                       namespace:
                         type: string
-                      metricsPort:
-                        type: string
                     type: object
                   multus:
                     properties:
