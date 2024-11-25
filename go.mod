@@ -1,8 +1,8 @@
 module github.com/platform9/luigi
 
-go 1.22.0
+go 1.23
 
-toolchain go1.22.7
+toolchain go1.23.3
 
 require (
 	github.com/dustin/go-humanize v1.0.1
