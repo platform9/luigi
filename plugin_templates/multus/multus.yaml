@@ -171,9 +171,10 @@ spec:
       - name: kube-multus
         image: {{ .MultusImage }}
         imagePullPolicy: {{ .ImagePullPolicy }}
-        command: ["/entrypoint.sh"]
+        command: ["/thin_entrypoint"]
         args:
         - "--multus-conf-file=auto"
+        - "--multus-autoconfig-dir=/host/etc/cni/net.d"
         - "--cni-version=0.3.1"
         resources:
           requests:
