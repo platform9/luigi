@@ -164,5 +164,5 @@ img-build-push: img-build docker-push
 	echo ${IMG} >> $(BUILD_DIR)/container-tag
 
 scan: $(BUILD_ROOT)
-	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
-	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}
+	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy:0.69.3 image -s CRITICAL,HIGH -f json  --vuln-type library -o /out/library_vulnerabilities.json --exit-code 22 ${IMG}
+	docker run -v $(BUILD_ROOT)/hostplumber:/out -v /var/run/docker.sock:/var/run/docker.sock -v $(HOME)/.trivy:/root/.cache  aquasec/trivy:0.69.3 image -s CRITICAL,HIGH -f json  --vuln-type os -o /out/os_vulnerabilities.json --exit-code 22 ${IMG}
