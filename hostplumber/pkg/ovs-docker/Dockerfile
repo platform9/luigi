@@ -1,4 +1,4 @@
-FROM alpine:3.16
+FROM alpine:3.20.3
 
 RUN apk update && apk upgrade
 RUN apk add --no-cache bash
