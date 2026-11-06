@@ -61,7 +61,18 @@ rules:
       - pods/status
     verbs:
       - get
+      - list
       - update
+      - watch
+  - apiGroups:
+      - "resource.k8s.io"
+    resources:
+      - resourceclaims
+      - resourceclaims/status
+      - resourceslices
+    verbs:
+      - get
+      - list
   - apiGroups:
       - ""
       - events.k8s.io
@@ -166,14 +177,37 @@ spec:
       tolerations:
       - operator: Exists
         effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
       serviceAccountName: multus
+      initContainers:
+      - name: install-multus-binary
+        image: {{ .MultusImage }}
+        imagePullPolicy: {{ .ImagePullPolicy }}
+        command: ["/install_multus"]
+        args:
+        - "--type"
+        - "thin"
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "15Mi"
+        securityContext:
+          privileged: true
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - name: cnibin
+          mountPath: /host/opt/cni/bin
+          mountPropagation: Bidirectional
       containers:
       - name: kube-multus
         image: {{ .MultusImage }}
         imagePullPolicy: {{ .ImagePullPolicy }}
-        command: ["/entrypoint.sh"]
+        command: ["/thin_entrypoint"]
         args:
         - "--multus-conf-file=auto"
+        - "--multus-autoconfig-dir=/host/etc/cni/net.d"
+        - "--cni-conf-dir=/host/etc/cni/net.d"
         - "--cni-version=0.3.1"
         resources:
           requests:
@@ -184,6 +218,7 @@ spec:
             memory: "50Mi"
         securityContext:
           privileged: true
+        terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
         - name: cni
           mountPath: /host/etc/cni/net.d
@@ -191,7 +226,7 @@ spec:
           mountPath: /host/opt/cni/bin
         - name: multus-cfg
           mountPath: /tmp/multus-conf
-      terminationGracePeriodSeconds: 10
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: cni
           hostPath:

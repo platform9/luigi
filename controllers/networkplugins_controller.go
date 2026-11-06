@@ -55,7 +55,7 @@ const (
 	DefaultNamespace        = "luigi-system"
 	KubemacpoolNamespace    = "dhcp-controller-system"
 	DefaultMetricsPort      = "8080"
-	MultusImage             = "docker.io/platform9/multus:v3.7.2-pmk-2644970"
+	MultusImage             = "quay.io/platform9/multus:v4.3.2-thin"
 	WhereaboutsImage        = "docker.io/platform9/whereabouts:v0.6.3-pmk-3299438"
 	SriovCniImage           = "docker.io/platform9/sriov-cni:v2.6.2-pmk-2877848"
 	SriovDpImage            = "docker.io/platform9/sriov-network-device-plugin:v3.3.2-pmk-2877839"
