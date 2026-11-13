@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	plumberv1 "github.com/platform9/luigi/api/v1"
@@ -89,7 +90,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	mgr.GetWebhookServer().Register("/mutate-v1-networkplugins", &webhook.Admission{Handler: &controllers.NetworkPluginsValidator{Client: mgr.GetClient()}})
+	mgr.GetWebhookServer().Register("/mutate-v1-networkplugins", &webhook.Admission{
+		Handler:      controllers.NewNetworkPluginsValidator(mgr.GetClient(), admission.NewDecoder(mgr.GetScheme())),
+		RecoverPanic: true,
+	})
 
 	//+kubebuilder:scaffold:builder
 
