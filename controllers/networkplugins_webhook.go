@@ -17,14 +17,16 @@ import (
 
 // +kubebuilder:webhook:path=/mutate-v1-networkplugins,mutating=true,failurePolicy=fail,sideEffects=None,groups="plumber.k8s.pf9.io",resources=networkplugins,verbs=get;list;watch;create;update;patch;delete,versions=v1,admissionReviewVersions=v1,name=np.plumber.io
 
-func (a *NetworkPluginsValidator) InjectDecoder(d *admission.Decoder) error {
-	a.decoder = d
-	return nil
-}
-
 type NetworkPluginsValidator struct {
 	Client  client.Client
 	decoder *admission.Decoder
+}
+
+// NewNetworkPluginsValidator returns a validator with its decoder set.
+// controller-runtime >= 0.15 no longer injects decoders via InjectDecoder,
+// so the decoder must be supplied explicitly.
+func NewNetworkPluginsValidator(c client.Client, d *admission.Decoder) *NetworkPluginsValidator {
+	return &NetworkPluginsValidator{Client: c, decoder: d}
 }
 
 func (a *NetworkPluginsValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
